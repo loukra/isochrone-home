@@ -30,6 +30,12 @@ export const analyzeRequestSchema = z.object({
 
 export const isochroneRequestSchema = constraintSchema;
 
+export const poiSearchRequestSchema = z.object({
+  constraints: z.array(constraintSchema).min(1),
+  category: z.enum(['gym', 'supermarket', 'station']),
+  maxTravelTimeMinutes: z.number().int().min(1).max(60),
+});
+
 export const geocodeRequestSchema = z.object({
   query: z.string().min(1, 'Bitte gib einen Ort oder eine Adresse ein.'),
   limit: z.number().int().min(1).max(10).optional(),

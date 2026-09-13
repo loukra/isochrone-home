@@ -14,6 +14,7 @@ const CONFIG: AppConfig = {
   openRouteServiceApiKey: 'test-key',
   openRouteServiceIsochroneUrl: 'https://api.heigit.org/openrouteservice',
   openRouteServiceGeocodingUrl: 'https://api.heigit.org/pelias/v1',
+  overpassUrl: 'https://overpass.test/api/interpreter',
   mapStyleUrl: 'https://example.test/style.json',
   mapToken: null,
 };

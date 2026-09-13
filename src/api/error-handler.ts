@@ -36,11 +36,10 @@ export const errorHandler = (
   }
 
   if (error instanceof DomainError) {
-    // details bleiben serverseitig -- sie können Provider-Interna enthalten.
-    if (error.code === 'CONFIGURATION_ERROR') {
-      console.error(
-        `[config] ${error.message}${error.details ? ` ${error.details}` : ''}`,
-      );
+    // details bleiben serverseitig -- sie können Provider-Interna enthalten,
+    // sind aber genau das, was man zur Diagnose braucht.
+    if (error.details !== undefined) {
+      console.error(`[${error.code}] ${error.message} -- ${error.details}`);
     }
 
     response.status(STATUS_BY_CODE[error.code]).json({

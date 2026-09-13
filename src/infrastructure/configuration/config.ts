@@ -4,6 +4,7 @@ import {
   DEFAULT_GEOCODING_BASE_URL,
   DEFAULT_ISOCHRONE_BASE_URL,
 } from '../openrouteservice/client.js';
+import { DEFAULT_OVERPASS_URL } from '../poi/overpass-poi-provider.js';
 
 /** Tokenfreier Raster-Style auf Basis von OpenStreetMap-Tiles. */
 const DEFAULT_MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
@@ -16,6 +17,7 @@ export type AppConfig = {
   openRouteServiceApiKey: string;
   openRouteServiceIsochroneUrl: string;
   openRouteServiceGeocodingUrl: string;
+  overpassUrl: string;
   mapStyleUrl: string;
   mapToken: string | null;
 };
@@ -68,6 +70,7 @@ export const loadConfig = (): AppConfig => {
       'OPENROUTESERVICE_GEOCODING_URL',
       DEFAULT_GEOCODING_BASE_URL,
     ),
+    overpassUrl: readWithDefault('OVERPASS_URL', DEFAULT_OVERPASS_URL),
     mapStyleUrl: readWithDefault('MAP_STYLE_URL', DEFAULT_MAP_STYLE_URL),
     mapToken: readOptional('MAP_TOKEN'),
   };

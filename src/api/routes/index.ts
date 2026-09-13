@@ -4,6 +4,7 @@ import {
   analyzeRequestSchema,
   geocodeRequestSchema,
   isochroneRequestSchema,
+  poiSearchRequestSchema,
 } from '../schemas.js';
 
 /**
@@ -34,6 +35,12 @@ export const createApiRouter = (container: Container): Router => {
     const constraint = isochroneRequestSchema.parse(request.body);
     const result = await container.isochroneQuery.execute(constraint);
     response.json(result);
+  });
+
+  // POI-Suche: sucht bewusst ueber die Region hinaus (siehe PoiSearch).
+  router.post('/pois', async (request, response) => {
+    const parsed = poiSearchRequestSchema.parse(request.body);
+    response.json(await container.poiSearch.execute(parsed));
   });
 
   // Schritt 2: Schnittmenge aller Ziele.

@@ -1,9 +1,12 @@
 import { IsochroneIntersectionStrategy } from '../../application/analysis/isochrone-intersection-strategy.js';
 import { IsochroneQuery } from '../../application/analysis/isochrone-query.js';
+import { PoiSearch } from '../../application/analysis/poi-search.js';
 import { DomainError } from '../../domain/models/errors.js';
 import type { GeocodingProvider } from '../../domain/ports/geocoding-provider.js';
 import type { IsochroneProvider } from '../../domain/ports/isochrone-provider.js';
 import type { LocationAnalysisStrategy } from '../../domain/ports/analysis-strategy.js';
+import type { PoiProvider } from '../../domain/ports/poi-provider.js';
+import { OverpassPoiProvider } from '../poi/overpass-poi-provider.js';
 import { OpenRouteServiceGeocoder } from '../geocoding/openrouteservice-geocoder.js';
 import { CachingIsochroneProvider } from '../isochrone/caching-isochrone-provider.js';
 import { OpenRouteServiceIsochroneProvider } from '../isochrone/openrouteservice-isochrone-provider.js';
@@ -15,6 +18,8 @@ export type Container = {
   isochrones: IsochroneProvider;
   strategy: LocationAnalysisStrategy;
   isochroneQuery: IsochroneQuery;
+  pois: PoiProvider;
+  poiSearch: PoiSearch;
 };
 
 const createGeocoder = (config: AppConfig): GeocodingProvider => {
@@ -72,12 +77,16 @@ const createStrategy = (
 export const createContainer = (config: AppConfig): Container => {
   const geocoding = createGeocoder(config);
   const isochrones = createIsochroneProvider(config);
+  const strategy = createStrategy(config, geocoding, isochrones);
+  const pois = new OverpassPoiProvider(config.overpassUrl);
 
   return {
     config,
     geocoding,
     isochrones,
-    strategy: createStrategy(config, geocoding, isochrones),
+    strategy,
     isochroneQuery: new IsochroneQuery(geocoding, isochrones),
+    pois,
+    poiSearch: new PoiSearch(strategy, pois),
   };
 };
