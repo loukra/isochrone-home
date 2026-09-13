@@ -1,0 +1,48 @@
+{
+  "name": "location-optimizer",
+  "version": "0.1.0",
+  "description": "Findet die gemeinsame erreichbare Wohnregion mehrerer Zielorte via Isochronen-Schnittmenge.",
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "tsx watch src/api/server.ts",
+    "dev:web": "vite",
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit"
+  },
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@turf/bbox": "^7.4.0",
+    "@turf/helpers": "^7.4.0",
+    "@turf/intersect": "^7.4.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "maplibre-gl": "^6.9.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/express": "^5.0.6",
+    "@types/geojson": "^7946.0.16",
+    "@types/node": "^26.5.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.5",
+    "eslint": "^10.10.0",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.13",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.0",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.0"
+  },
+  "private": true
+}
