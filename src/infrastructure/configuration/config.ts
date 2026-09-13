@@ -20,6 +20,27 @@ export type AppConfig = {
   overpassUrl: string;
   mapStyleUrl: string;
   mapToken: string | null;
+  /** Ablageort des Plattencaches; darf jederzeit geloescht werden. */
+  cacheDirectory: string;
+  /** Haltedauer je Datentyp -- siehe cache/namespaces.ts. */
+  cacheIsochroneDays: number;
+  cachePoiHours: number;
+  cacheGeocodeDays: number;
+  cacheRouteDays: number;
+};
+
+/** Positive Zahl aus der Umgebung, sonst der Vorgabewert. */
+const readNumber = (key: string, fallback: number): number => {
+  const raw = readOptional(key);
+  if (raw === null) return fallback;
+
+  const value = Number.parseFloat(raw);
+
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new DomainError('CONFIGURATION_ERROR', `${key} muss eine positive Zahl sein.`);
+  }
+
+  return value;
 };
 
 const readOptional = (key: string): string | null => {
@@ -50,10 +71,14 @@ export const loadConfig = (): AppConfig => {
     );
   }
 
+  // 0 ist erlaubt und bedeutet "das Betriebssystem wählt einen freien Port";
+  // welchen es war, meldet der Server beim Start. Die Mac-App nutzt das bewusst
+  // *nicht* -- sie braucht einen festen Origin, sonst wäre ihr localStorage bei
+  // jedem Start leer (siehe CLAUDE.md, Mac-App).
   const port = Number.parseInt(readWithDefault('PORT', '3001'), 10);
 
-  if (!Number.isInteger(port) || port <= 0) {
-    throw new DomainError('CONFIGURATION_ERROR', 'PORT muss eine positive Zahl sein.');
+  if (!Number.isInteger(port) || port < 0) {
+    throw new DomainError('CONFIGURATION_ERROR', 'PORT muss eine Zahl ab 0 sein.');
   }
 
   return {
@@ -73,5 +98,10 @@ export const loadConfig = (): AppConfig => {
     overpassUrl: readWithDefault('OVERPASS_URL', DEFAULT_OVERPASS_URL),
     mapStyleUrl: readWithDefault('MAP_STYLE_URL', DEFAULT_MAP_STYLE_URL),
     mapToken: readOptional('MAP_TOKEN'),
+    cacheDirectory: readWithDefault('CACHE_DIR', '.cache'),
+    cacheIsochroneDays: readNumber('CACHE_TTL_ISOCHRONE_DAYS', 7),
+    cachePoiHours: readNumber('CACHE_TTL_POI_HOURS', 24),
+    cacheGeocodeDays: readNumber('CACHE_TTL_GEOCODE_DAYS', 30),
+    cacheRouteDays: readNumber('CACHE_TTL_ROUTE_DAYS', 7),
   };
 };

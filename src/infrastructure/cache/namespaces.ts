@@ -1,0 +1,49 @@
+import type { CacheNamespace } from './file-store.js';
+
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
+
+/**
+ * Haltedauer je Datentyp. Die Zahlen sind keine Geschmacksfrage, sondern
+ * folgen daraus, wie schnell die jeweilige Wirklichkeit altert.
+ */
+export const cacheNamespaces = (config: {
+  isochroneDays: number;
+  poiHours: number;
+  geocodeDays: number;
+  routeDays: number;
+}): {
+  isochrones: CacheNamespace;
+  pois: CacheNamespace;
+  geocoding: CacheNamespace;
+  routes: CacheNamespace;
+} => ({
+  /**
+   * Isochronen: Straßennetze ändern sich in Monaten, und ORS baut seinen
+   * Routing-Graphen periodisch neu -- dieselbe Anfrage liefert danach ein
+   * anderes Polygon. Eine Woche begrenzt den Irrtum und kostet bei fünf Zielen
+   * fünf Anfragen pro Woche.
+   */
+  isochrones: { name: 'isochrones', maxAgeMs: config.isochroneDays * DAY },
+
+  /**
+   * Orte: Studios und Supermärkte machen tatsächlich auf und zu. Ein Tag ist
+   * kurz genug, dass eine Neueröffnung auftaucht, und lang genug, dass eine
+   * Suchsitzung den öffentlichen Overpass-Server nicht mehrfach belastet.
+   */
+  pois: { name: 'pois', maxAgeMs: config.poiHours * HOUR },
+
+  /**
+   * Adressen: Ein Ort bleibt, wo er ist. Hier geht es nur darum, dass die
+   * Datenbasis des Geocoders gelegentlich korrigiert wird.
+   */
+  geocoding: { name: 'geocoding', maxAgeMs: config.geocodeDays * DAY },
+
+  /**
+   * Fahrzeiten: dieselbe Wirklichkeit wie bei den Isochronen -- beide beruhen
+   * auf demselben Routing-Graphen und veralten deshalb im selben Takt. Die
+   * Tageszeit steckt bewusst nicht im Schlüssel: ORS rechnet ohne Verkehrslage,
+   * eine Messung um acht Uhr ergibt dasselbe wie eine um drei.
+   */
+  routes: { name: 'routes', maxAgeMs: config.routeDays * DAY },
+});

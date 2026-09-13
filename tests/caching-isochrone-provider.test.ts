@@ -29,6 +29,20 @@ describe('CachingIsochroneProvider', () => {
     expect(delegate.calls).toHaveLength(2);
   });
 
+  it('unterscheidet nach Verkehrsmittel', async () => {
+    // Sonst bekäme das Fahrrad die Autofläche desselben Ortes serviert.
+    const delegate = new StubIsochroneProvider([
+      square(0, 0, 10, 10),
+      square(0, 0, 3, 3),
+    ]);
+    const provider = new CachingIsochroneProvider(delegate);
+
+    await provider.calculate(ORIGIN, OPTIONS);
+    await provider.calculate(ORIGIN, { ...OPTIONS, travelMode: 'cycling' });
+
+    expect(delegate.calls).toHaveLength(2);
+  });
+
   it('teilt parallele Anfragen denselben Provider-Call', async () => {
     const delegate = new StubIsochroneProvider([square(0, 0, 10, 10)]);
     const provider = new CachingIsochroneProvider(delegate);
