@@ -1,10 +1,16 @@
 import { useState, type FormEvent } from 'react';
-import type { GeocodingCandidate } from '../types.js';
+import {
+  TRAVEL_MODES,
+  TRAVEL_MODE_LABELS,
+  type GeocodingCandidate,
+  type TravelMode,
+} from '../types.js';
 
 export type DraftValues = {
   name: string;
   address: string;
   maxTravelTimeMinutes: number;
+  travelMode: TravelMode;
 };
 
 type TargetDraftFormProps = {
@@ -35,6 +41,7 @@ export const TargetDraftForm = ({
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [minutes, setMinutes] = useState('30');
+  const [travelMode, setTravelMode] = useState<TravelMode>('driving');
 
   const parsedMinutes = Number.parseInt(minutes, 10);
   const isValid =
@@ -51,6 +58,7 @@ export const TargetDraftForm = ({
       name: name.trim(),
       address: address.trim(),
       maxTravelTimeMinutes: parsedMinutes,
+      travelMode,
     });
   };
 
@@ -83,7 +91,22 @@ export const TargetDraftForm = ({
       </label>
 
       <label>
-        Max. Fahrzeit (Minuten, max. {maxMinutes})
+        Verkehrsmittel
+        <select
+          value={travelMode}
+          onChange={(event) => setTravelMode(event.target.value as TravelMode)}
+          disabled={busy}
+        >
+          {TRAVEL_MODES.map((mode) => (
+            <option key={mode} value={mode}>
+              {TRAVEL_MODE_LABELS[mode]}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label>
+        Max. Reisezeit (Minuten, max. {maxMinutes})
         <input
           type="number"
           min={1}

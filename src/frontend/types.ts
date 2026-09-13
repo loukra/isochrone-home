@@ -14,6 +14,104 @@ export type MapLayer = {
 
 export type GeocodingCandidate = { label: string; coordinate: Coordinate };
 
+export type LocationCheckResult = {
+  /** null, wenn noch keine helle gemeinsame Region berechnet wurde. */
+  inIntersection: boolean | null;
+  /** null, wenn noch keine dunkelgrüne, verengte Region berechnet wurde. */
+  inPoiRegion: boolean | null;
+};
+
+/** In der Reihenfolge der angefragten Orte. */
+export type LocationCheckResponse = { results: LocationCheckResult[] };
+
+/**
+ * Ein geprüfter Ort in der Liste. Gespeichert wird nur das hier -- das Urteil
+ * und die Fahrzeiten haengen an der aktuellen Region und werden neu geholt.
+ */
+export type CheckedPlace = {
+  id: string;
+  label: string;
+  coordinate: Coordinate;
+  /** Aufgeklappt; erst dann werden die Fahrzeiten gemessen. */
+  open: boolean;
+};
+
+export type TravelTimeLeg = {
+  constraintId: string;
+  /** null = der Kartendienst kennt dorthin keine Route. Kein Fehler. */
+  durationMinutes: number | null;
+  distanceKm: number | null;
+};
+
+export type TravelTimesResponse = { legs: TravelTimeLeg[] };
+
+/** Muss zu POI_CATEGORIES in src/domain/models/poi.ts passen. */
+export const POI_CATEGORIES = [
+  'gym',
+  'supermarket',
+  'station',
+  'kindergarten',
+  'school',
+  'pool',
+  'doctor',
+] as const;
+
+export type PoiCategory = (typeof POI_CATEGORIES)[number];
+
+/** Muss zu TRAVEL_MODES in src/domain/models/analysis.ts passen. */
+export const TRAVEL_MODES = ['driving', 'cycling', 'ebike', 'walking'] as const;
+
+export type TravelMode = (typeof TRAVEL_MODES)[number];
+
+export const TRAVEL_MODE_LABELS: Record<TravelMode, string> = {
+  driving: 'Auto',
+  cycling: 'Fahrrad',
+  ebike: 'E-Bike',
+  walking: 'zu Fuß',
+};
+
+/** Kurzform für die Kopfzeile, wo neben dem Namen kaum Platz ist. */
+export const TRAVEL_MODE_SHORT: Record<TravelMode, string> = {
+  driving: 'Auto',
+  cycling: 'Rad',
+  ebike: 'E-Bike',
+  walking: 'Fuß',
+};
+
+export type FoundPoi = {
+  id: string;
+  category: PoiCategory;
+  name: string;
+  coordinate: Coordinate;
+  brand: string | null;
+  website: string | null;
+  sport: string | null;
+  areaSquareMeters: number | null;
+  /** Luftlinie zur gemeinsamen Region; 0 = innerhalb. */
+  distanceToRegionKm: number;
+};
+
+export type PoiSearchResponse = {
+  category: PoiCategory;
+  pois: FoundPoi[];
+  searchArea: BoundingBox;
+  regionBounds: BoundingBox;
+};
+
+export type PoiConditionResponse = {
+  category: PoiCategory;
+  /** Vereinigung der Isochronen um die gewählten Orte dieser Kategorie. */
+  reachable: AreaFeature | null;
+  /** Ob diese Bedingung allein etwas von der gemeinsamen Region übrig lässt. */
+  satisfiable: boolean;
+};
+
+export type PoiRegionResponse = {
+  conditions: PoiConditionResponse[];
+  /** Alle Bedingungen erfüllt; null = nichts übrig (kein Fehler). */
+  refined: AreaFeature | null;
+};
+
 export type SingleIsochroneResponse = {
   constraintId: string;
   coordinate: Coordinate;
@@ -42,7 +140,14 @@ export type Target = {
   name: string;
   address: string;
   maxTravelTimeMinutes: number;
+  travelMode: TravelMode;
   color: string;
+  /**
+   * Nur die Darstellung auf der Karte. Ein ausgeblendetes Ziel zaehlt weiter
+   * voll in Schnittmenge und Ortssuche -- sonst waere der Schalter ein
+   * stilles Loeschen.
+   */
+  visible: boolean;
   status: TargetStatus;
   /** Bestätigte Koordinate aus dem Geocoding. */
   coordinate: Coordinate | null;

@@ -1,8 +1,14 @@
 import type {
   AnalysisResponse,
+  AreaFeature,
+  Coordinate,
   GeocodingCandidate,
+  LocationCheckResponse,
+  PoiRegionResponse,
+  PoiSearchResponse,
   SingleIsochroneResponse,
   Target,
+  TravelTimesResponse,
 } from './types.js';
 
 export class ApiError extends Error {
@@ -49,7 +55,7 @@ const toConstraint = (target: Target) => ({
   id: target.id,
   name: target.name.trim(),
   address: target.address.trim(),
-  travelMode: 'driving' as const,
+  travelMode: target.travelMode,
   maxTravelTimeMinutes: target.maxTravelTimeMinutes,
   ...(target.coordinate !== null ? { coordinate: target.coordinate } : {}),
 });
@@ -60,8 +66,66 @@ export const geocode = (query: string): Promise<{ candidates: GeocodingCandidate
 export const fetchIsochrone = (target: Target): Promise<SingleIsochroneResponse> =>
   post('/api/isochrone', toConstraint(target));
 
+export const searchPois = (
+  targets: Target[],
+  category: string,
+  maxTravelTimeMinutes: number,
+): Promise<PoiSearchResponse> =>
+  post('/api/pois', {
+    constraints: targets.map(toConstraint),
+    category,
+    maxTravelTimeMinutes,
+  });
+
+export type PoiRegionCondition = {
+  category: string;
+  maxTravelTimeMinutes: number;
+  origins: Coordinate[];
+};
+
+export const refinePoiRegion = (
+  targets: Target[],
+  conditions: PoiRegionCondition[],
+): Promise<PoiRegionResponse> =>
+  post('/api/pois/region', {
+    constraints: targets.map(toConstraint),
+    conditions,
+  });
+
 export const analyze = (targets: Target[]): Promise<AnalysisResponse> =>
   post('/api/analyze', { constraints: targets.map(toConstraint) });
+
+/**
+ * Alle geprüften Orte in einem Aufruf: Die Flächen liegen im Rumpf, und sie je
+ * Ort erneut zu schicken wäre bei fünf Adressen fünfmal dieselbe Geometrie.
+ */
+export const checkLocations = (
+  coordinates: Coordinate[],
+  intersection: AreaFeature | null,
+  poiRegion: AreaFeature | null,
+): Promise<LocationCheckResponse> =>
+  post('/api/locations/check', { coordinates, intersection, poiRegion });
+
+/**
+ * Fahrzeit und Strecke vom geprüften Ort zu den Zielen.
+ *
+ * Getrennt von checkLocation, weil nur dieser Aufruf den Provider kostet: Fällt
+ * er aus, steht das Urteil "liegt in der Region" trotzdem.
+ */
+export const fetchTravelTimes = (
+  origin: Coordinate,
+  targets: Target[],
+): Promise<TravelTimesResponse> =>
+  post('/api/locations/travel-times', {
+    origin,
+    targets: targets
+      .filter((target) => target.coordinate !== null)
+      .map((target) => ({
+        id: target.id,
+        coordinate: target.coordinate,
+        travelMode: target.travelMode,
+      })),
+  });
 
 export type AppSettings = {
   mapStyleUrl: string;

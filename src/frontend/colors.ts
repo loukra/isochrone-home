@@ -15,5 +15,8 @@ const PALETTE = [
 
 export const INTERSECTION_COLOR = '#16a34a';
 
+/** Verengte Region: dieselbe Farbfamilie, aber deutlich dunkler als Gruen. */
+export const POI_REGION_COLOR = '#0f766e';
+
 export const colorAt = (index: number): string =>
   PALETTE[index % PALETTE.length] as string;

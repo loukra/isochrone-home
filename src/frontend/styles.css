@@ -41,11 +41,37 @@ body {
 .sidebar {
   background: var(--panel);
   border-right: 1px solid var(--border);
-  padding: 20px;
+  /* Unten kein Polster: Das liefert das Dock, sonst bliebe darunter ein
+     Streifen, durch den die Liste weiterscrollt. */
+  padding: 20px 20px 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.sidebar-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 9px;
+  background: #eef2f7;
+}
+
+button.sidebar-tab {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 7px 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+button.sidebar-tab--active {
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 12%);
 }
 
 h1 {
@@ -84,7 +110,8 @@ h1 {
 .card__head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  /* Eng, weil in dieser Zeile Name, Verkehrsmittel, Zeit, Auge und x stehen. */
+  gap: 6px;
   font-size: 14px;
 }
 
@@ -93,6 +120,31 @@ h1 {
   height: 12px;
   border-radius: 50%;
   flex: none;
+}
+
+/* Auge neben dem x: gleiche Groesse, aber zurueckhaltender -- Ausblenden ist
+   harmlos und umkehrbar, Loeschen nicht. */
+.card__eye {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.card__eye:hover {
+  color: var(--text);
+}
+
+.card__eye--off {
+  color: var(--accent);
+}
+
+.card__hidden {
+  color: var(--accent);
 }
 
 .remove {
@@ -138,12 +190,114 @@ input:focus-visible {
 .card__minutes {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Verkehrsmittel und Reisezeit stehen beide in der Kopfzeile; der Name darf
+   dafür schrumpfen statt die Zeile zu sprengen. */
+.card__head strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card__mode {
+  font: inherit;
+  font-size: 11.5px;
+  padding: 3px 4px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text);
+  margin-left: auto;
+  flex: none;
+}
+
+.card--draft select {
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text);
+}
+
+/* Fahrzeit steht in der Kopfzeile neben dem Namen -- das spart eine Zeile
+   pro Ziel, und die Sidebar traegt jetzt drei Bereiche statt einem. */
+.card__head .card__minutes {
+  margin-left: 0;
+}
+
+.card__head /* Auge neben dem x: gleiche Groesse, aber zurueckhaltender -- Ausblenden ist
+   harmlos und umkehrbar, Loeschen nicht. */
+.card__eye {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.card__eye:hover {
+  color: var(--text);
+}
+
+.card__eye--off {
+  color: var(--accent);
+}
+
+.card__hidden {
+  color: var(--accent);
+}
+
+.remove {
+  margin-left: 0;
 }
 
 .card__minutes input {
-  width: 74px;
+  width: 44px;
+  font-size: 12.5px;
+  padding: 4px 5px;
+}
+
+/* Der Haken hält seinen Platz auch, wenn es nichts zu übernehmen gibt.
+   Ein Knopf, der erst beim Ändern der Zahl erscheint, verbreitert die
+   Kopfzeile; weil nur der Name darin schrumpfen kann, rutscht alles rechts
+   davon nach links -- Verkehrsmittel und Zahlenfeld wandern unter dem Zeiger
+   weg, der gerade noch auf dem Pfeil stand, und an seiner Stelle liegt dann
+   der Knopf. Der nächste Klick auf den Pfeil übernähme dann ungewollt.
+   Deshalb ein Icon statt des Wortes "Übernehmen": 24px lassen sich dauerhaft
+   freihalten, 90px hätten den Namen dauerhaft verdrängt. */
+.card__apply {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 6px;
+}
+
+.card__apply--idle {
+  visibility: hidden;
+}
+
+.card__head .card__minutes {
+  gap: 3px;
+  font-size: 11.5px;
+}
+
+.card__minutes button {
+  font-size: 12px;
+  padding: 5px 9px;
 }
 
 .card__actions {
@@ -227,6 +381,218 @@ button.link {
   border-top: 1px solid var(--border);
 }
 
+/*
+ * Platz fuer zwei Zeilen, auch wenn nur eine dasteht. Die Meldungen sind
+ * unterschiedlich lang ("Gemeinsame Region gefunden." gegen "Fuer diese
+ * Anforderungen wurde keine ... gefunden."); ohne reservierte Hoehe rutscht
+ * beim Wechsel alles darunter um eine Zeile.
+ */
+.analysis__line {
+  margin: 0;
+  min-height: 2.8em;
+}
+
+/* --- Orte prüfen --------------------------------------------------------- */
+
+.location-check {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.location-check h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.location-check__results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.location-check__place {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.location-check__result {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.location-check__result strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+/* Eine Kachel je geprueftem Ort -- dieselbe Sprache wie die Ziel-Karten oben. */
+.place-cards {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.place-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.place-card__head {
+  display: flex;
+  align-items: stretch;
+}
+
+.place-card__toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  padding: 9px 4px 9px 10px;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.place-card__label {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.place-card__badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 2px;
+  flex: none;
+}
+
+/*
+  Zwei Haken statt zweier Saetze: Bei acht Kacheln liest niemand acht Absaetze,
+  aber jeder sieht zwei Spalten. Die Farben sind dieselben wie die Flaechen auf
+  der Karte -- hell die gemeinsame Region, dunkel die auf Orte verengte.
+*/
+.check-badge {
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.check-badge--yes {
+  color: #fff;
+}
+
+.check-badge--no {
+  color: var(--danger);
+  border-color: #fca5a5;
+}
+
+/* Noch nicht entscheidbar: sichtbar vorhanden, aber ohne Aussage. */
+.check-badge--unknown {
+  color: var(--muted);
+  opacity: 0.65;
+}
+
+.place-card__body {
+  border-top: 1px solid var(--border);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.place-card__body > p {
+  margin: 0;
+}
+
+.travel-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/*
+  Waehrend nachgemessen wird, gehoeren die Zahlen noch zum vorigen Stand.
+  Stehen lassen und abblenden, statt die Liste wegzunehmen -- sonst faellt die
+  Seitenleiste zusammen und springt eine Sekunde spaeter zurueck.
+*/
+.travel-list.is-stale {
+  opacity: 0.5;
+}
+
+.travel-list__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.travel-list__target {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.travel-list__name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.travel-list__mode {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.travel-list__value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex: none;
+  /* Ziffern untereinander, damit die Spalte nicht zappelt. */
+  font-variant-numeric: tabular-nums;
+}
+
+.travel-list__duration {
+  font-weight: 600;
+}
+
+.travel-list__distance {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Die einzige Zahl, die eine Entscheidung aendert: wie weit ueber der Grenze. */
+.travel-list__over {
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .error {
   color: var(--danger);
   font-size: 13px;
@@ -259,4 +625,437 @@ button.link {
   height: 100%;
   gap: 6px;
   color: var(--muted);
+}
+
+/* Eigenes Symbol statt Stecknadel: Der geprüfte Wohnort ist kein Ziel und
+   auch kein POI. */
+.checked-location-marker {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 2px solid #5b21b6;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgb(15 23 42 / 30%);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* --- Orte in der Nähe ---------------------------------------------------- */
+
+.pois {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.pois h2 {
+  font-size: 14px;
+  margin: 0;
+}
+
+.poi-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.poi-controls select {
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text);
+  flex: 1;
+}
+
+.poi-controls input {
+  width: 66px;
+}
+
+.poi-conds {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.poi-cond {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.poi-cond--blocking {
+  border-color: #fca5a5;
+}
+
+.poi-cond__head {
+  display: flex;
+  align-items: stretch;
+}
+
+.poi-cond__toggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  padding: 9px 10px;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Bewusst die vollen Dreiecke U+25BC/U+25BA statt der "small"-Varianten
+   U+25BE/U+25B8 -- die bleiben in jeder Schriftgroesse winzig. */
+.poi-cond__caret {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1;
+  width: 13px;
+  flex: none;
+}
+
+.poi-cond__toggle .dot {
+  width: 9px;
+  height: 9px;
+}
+
+.poi-cond__name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.poi-cond__summary {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.poi-cond__remove {
+  background: none;
+  border: none;
+  padding: 0 11px;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.poi-cond__remove:hover {
+  color: var(--text);
+}
+
+.poi-cond__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 10px 10px;
+  border-top: 1px solid var(--border);
+}
+
+.poi-cond__body .poi-controls {
+  padding-top: 9px;
+}
+
+.poi-cond__body .poi-controls + .poi-controls {
+  padding-top: 0;
+}
+
+.poi-cond__body select {
+  flex: none;
+  font-size: 12px;
+  padding: 5px 7px;
+  margin-left: auto;
+}
+
+.poi-cond__body button {
+  font-size: 13px;
+  padding: 7px 11px;
+}
+
+/*
+ * Veraltet, aber noch da: Waehrend eine Bedingung neu sucht, bleibt die alte
+ * Trefferliste stehen und wird nur abgeblendet. Sie zu entfernen liess die
+ * Seitenleiste um ein paar hundert Pixel zusammenfallen und einen Augenblick
+ * spaeter wieder aufspringen -- der Knopf darunter wanderte einem unter dem
+ * Zeiger weg. Sperren statt verstecken: Die Zahlen gehoeren noch zum alten
+ * Radius, angeklickt werden soll da nichts.
+ */
+.is-stale {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.poi-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.poi-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--border);
+}
+
+.poi-row:last-child {
+  border-bottom: none;
+}
+
+.poi-row--focused {
+  background: #eef2ff;
+}
+
+.poi-row input[type='checkbox'] {
+  margin-top: 3px;
+  width: 15px;
+  height: 15px;
+  flex: none;
+  accent-color: var(--accent);
+}
+
+.poi-row__label {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  cursor: pointer;
+}
+
+.poi-row__name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.poi-row__count {
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 6px;
+}
+
+.poi-row__meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.poi-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  min-width: 160px;
+}
+
+.poi-popup__meta {
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.poi-popup__pick {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.poi-popup__pick input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+}
+
+/* Links vor der Checkbox, gleiche Spaltenbreite wie bei den Bedingungen --
+   so stehen alle Namen auf einer Linie, ob mit Filialen oder ohne. */
+.poi-row__expand {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 2px;
+  width: 13px;
+  flex: none;
+  text-align: left;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.poi-row__expand--empty {
+  cursor: default;
+}
+
+.poi-row__expand:hover {
+  color: var(--text);
+}
+
+.poi-sublist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: #fafafa;
+  border-bottom: 1px solid var(--border);
+}
+
+.poi-row--sub {
+  padding-left: 31px;
+  border-bottom: none;
+}
+
+.poi-row--sub .poi-row__name {
+  font-weight: 400;
+}
+
+.poi-popup a {
+  color: var(--accent);
+  font-size: 12px;
+}
+
+/* --- Statuszeile ---------------------------------------------------------
+   Eine langsame Antwort ohne Anzeige sieht aus wie ein Absturz: Eingaben
+   gesperrt, nichts erklaert warum. Darum klebt die Zeile unten in der
+   Seitenleiste und bleibt beim Scrollen sichtbar. */
+
+/*
+ * Der untere Rand der Seitenleiste: der einzige Knopf und die Statusleiste.
+ * Beide beantworten die Frage "was kann ich jetzt tun / was passiert gerade"
+ * -- die darf nicht davon abhaengen, wie weit man gerade gescrollt hat.
+ * Deckend, weil die Trefferliste dahinter durchlaeuft.
+ */
+.dock {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Deckend bis an den Rand der Seitenleiste -- die Liste soll dahinter
+     verschwinden, nicht daneben durchblitzen. */
+  margin: 0 -20px;
+  padding: 10px 20px 20px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+}
+
+/* Nichts zu zeigen (Tab "Orte pruefen", nichts laeuft): Dann ist das Dock nur
+   noch das untere Polster der Seitenleiste. */
+.dock--empty {
+  padding-top: 0;
+  background: none;
+  border-top: none;
+}
+
+.poi-apply {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Eine Zeile Platz, auch wenn die kuerzere Meldung dasteht -- sonst huepft
+   der Knopf, sobald sich der Grund aendert. */
+.poi-apply__note {
+  margin: 0;
+  min-height: 1.5em;
+  font-size: 12px;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f1f5f9;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.status__spinner {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: status-spin 0.8s linear infinite;
+}
+
+@keyframes status-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Wer Bewegung abgestellt hat, bekommt einen ruhigen Punkt statt eines Rades. */
+@media (prefers-reduced-motion: reduce) {
+  .status__spinner {
+    animation: none;
+    border-color: var(--accent);
+  }
+}
+
+.status__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.status__more,
+.status__time {
+  color: var(--muted);
+}
+
+.status__time {
+  font-variant-numeric: tabular-nums;
+}
+
+.status__slow {
+  flex-basis: 100%;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+
+/*
+ * Der Einpassen-Knopf steht in derselben Gruppe wie „+“ und „−“ und bekommt
+ * sein Zeichen auf demselben Weg wie die: als zentriertes background-image auf
+ * dem Icon-Span. Damit sitzt es mittig und wird im deaktivierten Zustand von
+ * MapLibres eigener Regel abgeblendet -- ohne dass wir etwas nachbauen.
+ */
+.maplibregl-ctrl button.maplibregl-ctrl-fit .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns=%22http:%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width=%2229%22%20height=%2229%22%20viewBox=%220%200%2029%2029%22%20fill=%22none%22%20stroke=%22%23333%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M8%2012V8h4M21%2012V8h-4M8%2017v4h4M21%2017v4h-4%22%2F%3E%3C%2Fsvg%3E");
+}
+
+/* Im Kontrastmodus zeichnet MapLibre seine eigenen Icons weiss -- sonst bliebe
+   dieses eine dunkel und damit unsichtbar. */
+@media (forced-colors: active) {
+  .maplibregl-ctrl button.maplibregl-ctrl-fit .maplibregl-ctrl-icon {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns=%22http:%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width=%2229%22%20height=%2229%22%20viewBox=%220%200%2029%2029%22%20fill=%22none%22%20stroke=%22%23fff%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M8%2012V8h4M21%2012V8h-4M8%2017v4h4M21%2017v4h-4%22%2F%3E%3C%2Fsvg%3E");
+  }
 }
