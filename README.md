@@ -94,22 +94,20 @@ dem eigenen Fenster.
 
 ## Den API-Key musst du selbst mitbringen
 
-Die App liefert **keinen** Schlüssel mit. Du legst dir einen kostenlosen an:
+Die App liefert **keinen** Schlüssel mit. Du legst dir selbst einen an:
 
 1. Account anlegen: https://openrouteservice.org/dev/#/signup
-2. Im Dashboard einen Token erzeugen (Plan: _Free_). Benötigt werden die
-   Dienste **Isochrones**, **Matrix** und **Geocoding**.
+2. Im Dashboard einen Token erzeugen. Benötigt werden die Dienste
+   **Isochrones**, **Matrix** und **Geocoding**.
 3. In die `.env` eintragen:
 
    ```env
    OPENROUTESERVICE_API_KEY=dein-key
    ```
 
-Kein Billing, keine Kreditkarte. Der Free-Plan ist begrenzt (Größenordnung:
-einige hundert Isochronen-Anfragen pro Tag, dazu wenige pro Minute; die Matrix
-hat ein **eigenes** Kontingent). Die genauen Zahlen stehen in deinem Dashboard —
-sie ändern sich gelegentlich, deshalb nennt diese Datei sie nicht verbindlich.
-Ist das Limit erreicht, sagt die App das im Klartext.
+Welche Nutzungsgrenzen und Bedingungen für dich gelten, steht in deinem
+Dashboard. Ist eine Grenze erreicht, sagt die App das im Klartext, statt in einen
+generischen Fehler zu laufen.
 
 Der Key wird **ausschließlich im Backend** benutzt, geht nie ins
 Frontend-Bundle und wird nur über den `Authorization`-Header gesendet, nie als
@@ -117,16 +115,17 @@ URL-Parameter. Die `.env` steht in `.gitignore`.
 
 ## Welche Dienste benutzt werden
 
-| Dienst | Wofür | Schlüssel nötig | Kosten |
-| --- | --- | --- | --- |
-| [OpenRouteService](https://openrouteservice.org) (Isochronen) | Erreichbarkeitsflächen je Ziel | ja | kostenlos, begrenzt |
-| OpenRouteService (Matrix) | Fahrzeit und Strecke im Tab „Orte prüfen" | ja (derselbe) | eigenes Kontingent |
-| OpenRouteService / Pelias | Adresssuche | ja (derselbe) | kostenlos, begrenzt |
-| [Overpass](https://overpass-api.de) (OpenStreetMap) | Orte suchen (Studios, Märkte, Bahnhöfe …) | **nein** | kostenlos |
-| Kartenstil ([OpenFreeMap](https://openfreemap.org)) | Hintergrundkarte | **nein** | kostenlos |
+| Dienst | Wofür | Schlüssel nötig |
+| --- | --- | --- |
+| [OpenRouteService](https://openrouteservice.org) (Isochronen) | Erreichbarkeitsflächen je Ziel | ja |
+| OpenRouteService (Matrix) | Fahrzeit und Strecke im Tab „Orte prüfen" | ja, derselbe |
+| OpenRouteService / Pelias | Adresssuche | ja, derselbe |
+| [Overpass](https://overpass-api.de) (OpenStreetMap) | Orte suchen (Studios, Märkte, Bahnhöfe …) | nein |
+| Kartenstil ([OpenFreeMap](https://openfreemap.org)) | Hintergrundkarte | nein |
 
-Nur OpenRouteService braucht also einen Schlüssel. Overpass und der Kartenstil
-sind offene Dienste — bitte entsprechend rücksichtsvoll benutzen.
+Nur OpenRouteService braucht also einen Schlüssel. Matrix und Isochronen sind
+dort zwei getrennte Dienste — ein Ausfall des einen lässt den anderen stehen.
+Overpass und der Kartenstil sind offene Dienste; bitte rücksichtsvoll benutzen.
 
 Antworten dieser Dienste werden in `.cache/` auf der Platte zwischengespeichert
 (Isochronen 7 Tage, Orte 24 Stunden, Adressen 30 Tage), damit ein Neustart nicht
@@ -142,8 +141,7 @@ MAP_STYLE_URL=https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json
 ```
 
 Braucht der Stil einen Token, kommt er in `MAP_TOKEN`. Nützlich, wenn der
-Standardanbieter gerade langsam ist — das kommt bei kostenlosen Kacheldiensten
-vor.
+Standardanbieter gerade langsam ist — das kommt bei offenen Kacheldiensten vor.
 
 ## Andere Anbieter einbinden
 
