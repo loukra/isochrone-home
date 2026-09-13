@@ -43,20 +43,17 @@ export const MapView = ({ styleUrl, targets, intersection, bounds }: MapViewProp
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
-    // Sobald der Style gesetzt ist, koennen Sources und Layer ergaenzt werden.
-    // Nicht nur auf 'load' hoeren: in manchen Umgebungen (z. B. eingebettete
-    // oder headless gerenderte Views) feuert 'load' nie, obwohl die Karte
-    // sichtbar rendert und 'styledata' kommt.
+    // Erst nach 'load' stehen Style und Worker bereit, um Sources und Layer
+    // aufzunehmen. Feuert das Event nie, ist der MapLibre-Worker kaputt --
+    // siehe optimizeDeps.exclude in vite.config.ts.
     const markReady = () => setStyleReady(true);
     map.on('load', markReady);
-    map.on('styledata', markReady);
     mapRef.current = map;
 
     const markers = markersRef.current;
 
     return () => {
       map.off('load', markReady);
-      map.off('styledata', markReady);
       for (const marker of markers.values()) marker.remove();
       markers.clear();
       map.remove();

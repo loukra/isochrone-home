@@ -5,6 +5,10 @@ import { fileURLToPath, URL } from 'node:url';
 export default defineConfig({
   plugins: [react()],
   root: 'src/frontend',
+  // MapLibre parst Kacheln und GeoJSON in einem Web Worker. Der Dependency-
+  // Optimizer zerlegt diesen Worker, wodurch Kacheln zwar geladen, aber nie
+  // gerendert werden (leere Karte, 'load' feuert nie).
+  optimizeDeps: { exclude: ['maplibre-gl'] },
   publicDir: false,
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },

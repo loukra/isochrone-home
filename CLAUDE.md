@@ -84,6 +84,16 @@ Fehlerbehandlung (§12).
   Adapter (`IsochroneProvider.maxTravelTimeMinutes`), nicht in die Domain, und
   wird über `/api/config` bis in die UI durchgereicht.
 
+## Fallstricke
+
+- **MapLibre muss aus Vites Dependency-Optimizer ausgenommen bleiben**
+  (`optimizeDeps: { exclude: ['maplibre-gl'] }`). MapLibre parst Vektorkacheln
+  *und* GeoJSON in einem Web Worker; der Optimizer zerlegt diesen Worker. Folge:
+  Kacheln werden geladen, aber nie gerendert — leere Karte, keine Isochronen,
+  `map.loaded()` und `isStyleLoaded()` bleiben dauerhaft `false`, `load` feuert
+  nie. Die Symptome sehen nach einem Kartenfehler aus, sind aber ein Build-Thema.
+  Warnzeichen im Vite-Log: `maplibre-gl-worker.mjs ... does not exist`.
+
 ## Harte Regeln
 
 - **Keine API-Keys im Repo, in Logs oder im Frontend-Bundle.** Keys nur in `.env`
