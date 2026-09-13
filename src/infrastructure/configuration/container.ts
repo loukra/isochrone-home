@@ -20,7 +20,10 @@ export type Container = {
 const createGeocoder = (config: AppConfig): GeocodingProvider => {
   switch (config.geocodingProvider) {
     case 'openrouteservice':
-      return new OpenRouteServiceGeocoder(config.openRouteServiceApiKey);
+      return new OpenRouteServiceGeocoder(
+        config.openRouteServiceApiKey,
+        config.openRouteServiceGeocodingUrl,
+      );
     default:
       throw new DomainError(
         'CONFIGURATION_ERROR',
@@ -34,7 +37,10 @@ const createIsochroneProvider = (config: AppConfig): IsochroneProvider => {
   switch (config.isochroneProvider) {
     case 'openrouteservice':
       return new CachingIsochroneProvider(
-        new OpenRouteServiceIsochroneProvider(config.openRouteServiceApiKey),
+        new OpenRouteServiceIsochroneProvider(
+          config.openRouteServiceApiKey,
+          config.openRouteServiceIsochroneUrl,
+        ),
       );
     default:
       throw new DomainError(

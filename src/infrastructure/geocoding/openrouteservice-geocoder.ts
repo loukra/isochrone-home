@@ -4,7 +4,7 @@ import type {
   GeocodingCandidate,
   GeocodingProvider,
 } from '../../domain/ports/geocoding-provider.js';
-import { ORS_BASE_URL, orsFetch } from '../openrouteservice/client.js';
+import { DEFAULT_GEOCODING_BASE_URL, orsFetch } from '../openrouteservice/client.js';
 
 /** Ausschnitt der Pelias-Antwort, den dieser Adapter auswertet. */
 type OrsGeocodeResponse = {
@@ -15,7 +15,10 @@ type OrsGeocodeResponse = {
 };
 
 export class OpenRouteServiceGeocoder implements GeocodingProvider {
-  constructor(private readonly apiKey: string) {}
+  constructor(
+    private readonly apiKey: string,
+    private readonly baseUrl: string = DEFAULT_GEOCODING_BASE_URL,
+  ) {}
 
   async search(address: string, limit = 5): Promise<GeocodingCandidate[]> {
     const query = address.trim();
@@ -27,8 +30,9 @@ export class OpenRouteServiceGeocoder implements GeocodingProvider {
       );
     }
 
-    const url = new URL(`${ORS_BASE_URL}/geocode/search`);
-    url.searchParams.set('api_key', this.apiKey);
+    // Der Key geht ausschliesslich ueber den Authorization-Header, damit er
+    // nicht in URLs, Proxy- oder Server-Logs landet.
+    const url = new URL(`${this.baseUrl}/search`);
     url.searchParams.set('text', query);
     url.searchParams.set('size', String(limit));
 

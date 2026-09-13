@@ -8,6 +8,7 @@ export type DraftValues = {
 };
 
 type TargetDraftFormProps = {
+  maxMinutes: number;
   color: string;
   busy: boolean;
   error: string | null;
@@ -22,6 +23,7 @@ type TargetDraftFormProps = {
  * eine Anfrage aus -- nie beim Tippen (Spec 10).
  */
 export const TargetDraftForm = ({
+  maxMinutes,
   color,
   busy,
   error,
@@ -39,7 +41,8 @@ export const TargetDraftForm = ({
     name.trim().length > 0 &&
     address.trim().length > 0 &&
     Number.isInteger(parsedMinutes) &&
-    parsedMinutes > 0;
+    parsedMinutes > 0 &&
+    parsedMinutes <= maxMinutes;
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -80,11 +83,11 @@ export const TargetDraftForm = ({
       </label>
 
       <label>
-        Max. Fahrzeit (Minuten)
+        Max. Fahrzeit (Minuten, max. {maxMinutes})
         <input
           type="number"
           min={1}
-          max={120}
+          max={maxMinutes}
           value={minutes}
           onChange={(event) => setMinutes(event.target.value)}
           disabled={busy}

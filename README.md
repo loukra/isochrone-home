@@ -36,14 +36,14 @@ npm run dev
 ```
 
 - Frontend: http://localhost:5173
-- Backend:  http://localhost:3001
+- Backend: http://localhost:3001
 
 ### API-Key besorgen
 
 Die App nutzt **OpenRouteService** für Geocoding und Isochronen.
 
 1. Kostenlosen Account anlegen: https://openrouteservice.org/dev/#/signup
-2. Im Dashboard einen Token erzeugen ("Request a token", Plan: *Free*).
+2. Im Dashboard einen Token erzeugen ("Request a token", Plan: _Free_).
    Damit sind die benötigten Dienste **Isochrones** und **Geocoding** freigeschaltet.
 3. Key in die `.env` eintragen:
 
@@ -57,7 +57,31 @@ Tag, wenige Anfragen pro Minute) — für den MVP ausreichend. Wird das Limit
 erreicht, zeigt die App eine entsprechende Meldung an.
 
 Der Key wird **nur im Backend** verwendet und gelangt nie ins Frontend-Bundle.
-Die `.env` ist in `.gitignore` und darf nicht committet werden.
+Er wird ausschließlich über den `Authorization`-Header gesendet, nie als
+URL-Parameter. Die `.env` ist in `.gitignore` und darf nicht committet werden.
+
+#### API-Endpunkte (Stand 09/2026)
+
+`api.openrouteservice.org` wurde zugunsten von `api.heigit.org` abgekündigt
+(angekündigt am 28.04.2026, Abschaltung 24.08.2026). Die App nutzt bereits die
+neuen Adressen:
+
+| Dienst     | URL                                                              |
+| ---------- | ---------------------------------------------------------------- |
+| Isochronen | `https://api.heigit.org/openrouteservice/v2/isochrones/{profil}` |
+| Geocoding  | `https://api.heigit.org/pelias/v1/search`                        |
+
+Bestehende Keys funktionieren unverändert. Beide Basis-URLs lassen sich über
+`OPENROUTESERVICE_ISOCHRONE_URL` bzw. `OPENROUTESERVICE_GEOCODING_URL`
+überschreiben, etwa für eine eigene Instanz.
+
+#### Grenzen des Providers
+
+OpenRouteService begrenzt Isochronen auf **3600 Sekunden = 60 Minuten**
+Fahrzeit. Die App kennt dieses Limit (`IsochroneProvider.maxTravelTimeMinutes`),
+gibt es über `GET /api/config` an das Frontend weiter und lehnt größere Werte
+mit einer verständlichen Meldung ab, statt in einen generischen Providerfehler
+zu laufen.
 
 ### Karte
 
@@ -70,7 +94,7 @@ in `MAP_TOKEN`.
 
 ```bash
 npm run dev        # Frontend + Backend parallel
-npm test           # Vitest (46 Tests)
+npm test           # Vitest (53 Tests)
 npm run lint       # ESLint
 npm run typecheck  # tsc --noEmit
 npm run build      # Produktions-Build des Frontends
@@ -112,12 +136,12 @@ unverändert.
 
 ## API
 
-| Endpoint | Zweck |
-| --- | --- |
-| `GET /api/config` | öffentliche Frontend-Konfiguration (Map-Style), keine Secrets |
-| `POST /api/geocode` | Adress-Kandidaten zur Bestätigung (Schritt 1) |
-| `POST /api/isochrone` | Isochrone genau eines Ziels (Schritt 1) |
-| `POST /api/analyze` | Isochronen + Schnittmenge aller Ziele (Schritt 2) |
+| Endpoint              | Zweck                                                         |
+| --------------------- | ------------------------------------------------------------- |
+| `GET /api/config`     | öffentliche Frontend-Konfiguration (Map-Style), keine Secrets |
+| `POST /api/geocode`   | Adress-Kandidaten zur Bestätigung (Schritt 1)                 |
+| `POST /api/isochrone` | Isochrone genau eines Ziels (Schritt 1)                       |
+| `POST /api/analyze`   | Isochronen + Schnittmenge aller Ziele (Schritt 2)             |
 
 Die Schnittmenge wird ausschließlich serverseitig berechnet. Ein In-Memory-Cache
 (Key: Koordinate + Verkehrsmittel + Minuten) verhindert, dass `analyze` bereits
@@ -127,13 +151,13 @@ Provider-Antworten werden nie ungefiltert durchgereicht.
 
 ### Fehlerfälle
 
-| Situation | Status | Meldung |
-| --- | --- | --- |
-| Ungültige Eingabe | 400 | feldbezogener Hinweis |
-| Adresse nicht gefunden | 404 | „Die Adresse … konnte nicht gefunden werden." |
-| Rate Limit erreicht | 429 | „Das Anfragelimit des Kartendienstes ist erreicht." |
-| Provider nicht erreichbar | 502 | „Die Berechnung konnte momentan nicht durchgeführt werden." |
-| Keine Schnittmenge | 200 | `intersection: null`, Isochronen bleiben sichtbar |
+| Situation                 | Status | Meldung                                                     |
+| ------------------------- | ------ | ----------------------------------------------------------- |
+| Ungültige Eingabe         | 400    | feldbezogener Hinweis                                       |
+| Adresse nicht gefunden    | 404    | „Die Adresse … konnte nicht gefunden werden."               |
+| Rate Limit erreicht       | 429    | „Das Anfragelimit des Kartendienstes ist erreicht."         |
+| Provider nicht erreichbar | 502    | „Die Berechnung konnte momentan nicht durchgeführt werden." |
+| Keine Schnittmenge        | 200    | `intersection: null`, Isochronen bleiben sichtbar           |
 
 Eine leere Schnittmenge ist **kein Fehler**: Die einzelnen Isochronen bleiben auf
 der Karte, damit nachvollziehbar ist, warum es keine gemeinsame Region gibt.

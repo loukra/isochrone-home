@@ -1,6 +1,12 @@
 import { DomainError } from '../../domain/models/errors.js';
 
-export const ORS_BASE_URL = 'https://api.openrouteservice.org';
+/**
+ * api.openrouteservice.org wurde zugunsten von api.heigit.org abgekuendigt
+ * (Ankuendigung vom 28.04.2026, Abschaltung 24.08.2026). Die beiden Dienste
+ * liegen dort unter unterschiedlichen Pfaden, daher zwei Basis-URLs.
+ */
+export const DEFAULT_ISOCHRONE_BASE_URL = 'https://api.heigit.org/openrouteservice';
+export const DEFAULT_GEOCODING_BASE_URL = 'https://api.heigit.org/pelias/v1';
 
 /**
  * Mappt Transport- und HTTP-Fehler von OpenRouteService auf Domain-Fehler.

@@ -49,5 +49,7 @@ export type Target = {
   /** Vom Provider normalisierte Adresse. */
   resolvedLabel: string | null;
   isochrone: AreaFeature | null;
+  /** Vom Backend geliefert; nur fuer das Kartenfitting. */
+  bounds: BoundingBox | null;
   error: string | null;
 };

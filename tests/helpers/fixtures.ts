@@ -77,6 +77,7 @@ export class StubGeocoder implements GeocodingProvider {
 }
 
 export class StubIsochroneProvider implements IsochroneProvider {
+  readonly maxTravelTimeMinutes = 60;
   calls: Array<{ origin: Coordinate; options: IsochroneOptions }> = [];
 
   constructor(private readonly areas: AreaFeature[]) {}

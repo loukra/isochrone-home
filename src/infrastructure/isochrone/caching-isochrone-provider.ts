@@ -21,6 +21,10 @@ const DEFAULT_MAX_ENTRIES = 200;
 export class CachingIsochroneProvider implements IsochroneProvider {
   private readonly cache = new Map<string, Promise<AreaFeature>>();
 
+  get maxTravelTimeMinutes(): number {
+    return this.delegate.maxTravelTimeMinutes;
+  }
+
   constructor(
     private readonly delegate: IsochroneProvider,
     private readonly maxEntries: number = DEFAULT_MAX_ENTRIES,

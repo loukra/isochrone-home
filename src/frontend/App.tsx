@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { analyze, ApiError, fetchIsochrone, fetchMapConfig, geocode } from './api.js';
+import { unionBounds } from './bounds.js';
 import { colorAt } from './colors.js';
 import { TargetCard } from './forms/TargetCard.js';
 import { TargetDraftForm, type DraftValues } from './forms/TargetDraftForm.js';
 import { MapView } from './map/MapView.js';
-import type {
-  AnalysisResponse,
-  BoundingBox,
-  GeocodingCandidate,
-  Target,
-} from './types.js';
+import type { AnalysisResponse, GeocodingCandidate, Target } from './types.js';
 
 type AnalysisState =
   | { kind: 'idle' }
@@ -24,6 +20,8 @@ const messageOf = (error: unknown): string =>
 
 export const App = () => {
   const [mapStyleUrl, setMapStyleUrl] = useState<string | null>(null);
+  /** Providerabhaengige Obergrenze; kommt aus der Backend-Konfiguration. */
+  const [maxMinutes, setMaxMinutes] = useState(60);
   const [targets, setTargets] = useState<Target[]>([]);
   const [colorCursor, setColorCursor] = useState(0);
 
@@ -34,12 +32,13 @@ export const App = () => {
   const [pendingDraft, setPendingDraft] = useState<DraftValues | null>(null);
 
   const [analysis, setAnalysis] = useState<AnalysisState>({ kind: 'idle' });
-  /** Viewport-Ziel; kommt immer vom Backend, nie aus eigener Geometrie. */
-  const [fitBounds, setFitBounds] = useState<BoundingBox | null>(null);
 
   useEffect(() => {
     fetchMapConfig()
-      .then((config) => setMapStyleUrl(config.mapStyleUrl))
+      .then((config) => {
+        setMapStyleUrl(config.mapStyleUrl);
+        setMaxMinutes(config.maxTravelTimeMinutes);
+      })
       .catch(() => setMapStyleUrl(null));
   }, []);
 
@@ -59,7 +58,6 @@ export const App = () => {
 
     try {
       const response = await fetchIsochrone(target);
-      if (response.bounds !== null) setFitBounds(response.bounds);
       setTargets((current) =>
         current.map((item) =>
           item.id === target.id
@@ -68,6 +66,7 @@ export const App = () => {
                 status: 'ready',
                 coordinate: response.coordinate,
                 isochrone: response.layer.geometry,
+                bounds: response.bounds,
                 error: null,
               }
             : item,
@@ -127,6 +126,7 @@ export const App = () => {
           coordinate: chosen.coordinate,
           resolvedLabel: chosen.label,
           isochrone: null,
+          bounds: null,
           error: null,
         };
 
@@ -160,7 +160,12 @@ export const App = () => {
       const updated = targets.find((target) => target.id === id);
       if (updated === undefined) return;
 
-      const next: Target = { ...updated, maxTravelTimeMinutes: minutes, isochrone: null };
+      const next: Target = {
+        ...updated,
+        maxTravelTimeMinutes: minutes,
+        isochrone: null,
+        bounds: null,
+      };
       setTargets((current) => current.map((item) => (item.id === id ? next : item)));
       markAnalysisStale();
       void loadIsochrone(next);
@@ -189,7 +194,6 @@ export const App = () => {
     try {
       const result = await analyze(readyTargets);
       setAnalysis({ kind: 'done', result, stale: false });
-      if (result.bounds !== null) setFitBounds(result.bounds);
     } catch (error) {
       setAnalysis({ kind: 'error', message: messageOf(error) });
     }
@@ -197,6 +201,16 @@ export const App = () => {
 
   const intersection =
     analysis.kind === 'done' && !analysis.stale ? analysis.result.intersection : null;
+
+  /**
+   * Viewport ueber alle aktiven Ziele. Die einzelnen Boxen kommen vom Backend;
+   * hier werden sie nur zusammengefasst, damit beim Hinzufuegen eines Ziels die
+   * bereits vorhandenen sichtbar bleiben (Spec 9).
+   */
+  const fitBounds = useMemo(
+    () => unionBounds(targets.map((target) => target.bounds)),
+    [targets],
+  );
 
   return (
     <div className="layout">
@@ -213,6 +227,7 @@ export const App = () => {
             <TargetCard
               key={target.id}
               target={target}
+              maxMinutes={maxMinutes}
               onRemove={removeTarget}
               onChangeMinutes={changeMinutes}
               onRetry={retry}
@@ -221,6 +236,7 @@ export const App = () => {
 
           {draftOpen ? (
             <TargetDraftForm
+              maxMinutes={maxMinutes}
               color={colorAt(colorCursor)}
               busy={draftBusy}
               error={draftError}

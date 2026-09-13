@@ -63,8 +63,13 @@ export const fetchIsochrone = (target: Target): Promise<SingleIsochroneResponse>
 export const analyze = (targets: Target[]): Promise<AnalysisResponse> =>
   post('/api/analyze', { constraints: targets.map(toConstraint) });
 
-export const fetchMapConfig = async (): Promise<{ mapStyleUrl: string }> => {
+export type AppSettings = {
+  mapStyleUrl: string;
+  maxTravelTimeMinutes: number;
+};
+
+export const fetchMapConfig = async (): Promise<AppSettings> => {
   const response = await fetch('/api/config');
   if (!response.ok) throw new ApiError('CONFIG_ERROR', 'Konfiguration nicht ladbar.');
-  return (await response.json()) as { mapStyleUrl: string };
+  return (await response.json()) as AppSettings;
 };

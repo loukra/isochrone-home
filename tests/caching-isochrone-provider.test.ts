@@ -43,6 +43,7 @@ describe('CachingIsochroneProvider', () => {
 
   it('cached Fehler nicht', async () => {
     const failing = {
+      maxTravelTimeMinutes: 60,
       calls: 0,
       async calculate() {
         this.calls += 1;

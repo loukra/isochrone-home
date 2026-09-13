@@ -5,7 +5,7 @@ import type {
   IsochroneOptions,
   IsochroneProvider,
 } from '../../domain/ports/isochrone-provider.js';
-import { ORS_BASE_URL, orsFetch } from '../openrouteservice/client.js';
+import { DEFAULT_ISOCHRONE_BASE_URL, orsFetch } from '../openrouteservice/client.js';
 
 /** Domain-Verkehrsmittel -> ORS-Profil. Bleibt im Adapter (Spec 13). */
 const PROFILE_BY_TRAVEL_MODE: Record<TravelMode, string> = {
@@ -22,14 +22,30 @@ type OrsIsochroneResponse = {
   }>;
 };
 
+/** ORS lehnt range > 3600 Sekunden mit Fehlercode 3004 ab. */
+const MAX_RANGE_SECONDS = 3600;
+
 export class OpenRouteServiceIsochroneProvider implements IsochroneProvider {
-  constructor(private readonly apiKey: string) {}
+  readonly maxTravelTimeMinutes = MAX_RANGE_SECONDS / 60;
+
+  constructor(
+    private readonly apiKey: string,
+    private readonly baseUrl: string = DEFAULT_ISOCHRONE_BASE_URL,
+  ) {}
 
   async calculate(origin: Coordinate, options: IsochroneOptions): Promise<AreaFeature> {
+    if (options.maxTravelTimeMinutes > this.maxTravelTimeMinutes) {
+      // Vorab abfangen: ORS antwortet sonst mit einem generischen 400er.
+      throw new DomainError(
+        'INVALID_INPUT',
+        `Der Kartendienst unterstützt maximal ${this.maxTravelTimeMinutes} Minuten Fahrzeit.`,
+      );
+    }
+
     const profile = PROFILE_BY_TRAVEL_MODE[options.travelMode];
 
     const payload = (await orsFetch(
-      `${ORS_BASE_URL}/v2/isochrones/${profile}`,
+      `${this.baseUrl}/v2/isochrones/${profile}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

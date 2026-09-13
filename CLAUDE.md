@@ -73,6 +73,17 @@ die **einzelnen Isochronen**, §2/§17/§20 (Button) gilt fuer die **Schnittmeng
 Hinweis: Die Spec hat zweimal `# 11`. Gemeint sind API (§11) und
 Fehlerbehandlung (§12).
 
+## Provider-Fakten (verifiziert 13.09.2026)
+
+- Basis-URLs sind `https://api.heigit.org/openrouteservice` (Isochronen) und
+  `https://api.heigit.org/pelias/v1` (Geocoding). `api.openrouteservice.org`
+  ist abgekündigt (Abschaltung war 24.08.2026) — nicht mehr verwenden.
+- Der API-Key geht **nur** über den `Authorization`-Header, nie als
+  `api_key`-Query-Parameter (sonst landet er in URLs und Logs).
+- ORS begrenzt Isochronen auf 3600 s = **60 Minuten**. Das Limit gehoert in den
+  Adapter (`IsochroneProvider.maxTravelTimeMinutes`), nicht in die Domain, und
+  wird über `/api/config` bis in die UI durchgereicht.
+
 ## Harte Regeln
 
 - **Keine API-Keys im Repo, in Logs oder im Frontend-Bundle.** Keys nur in `.env`

@@ -20,7 +20,7 @@ afterEach(() => {
 
 describe('OpenRouteServiceGeocoder', () => {
   it('mappt Pelias-Features auf Domain-Kandidaten', async () => {
-    mockFetch({
+    const spy = mockFetch({
       json: async () => ({
         features: [
           {
@@ -32,6 +32,12 @@ describe('OpenRouteServiceGeocoder', () => {
     });
 
     const candidates = await new OpenRouteServiceGeocoder('key').search('Münster');
+
+    const [url, init] = spy.mock.calls[0] as [string, RequestInit | undefined];
+    expect(url).toContain('https://api.heigit.org/pelias/v1/search');
+    // Der Key darf nicht in der URL stehen.
+    expect(url).not.toContain('api_key');
+    expect((init?.headers as Record<string, string>).Authorization).toBe('key');
 
     expect(candidates).toEqual([
       { label: 'Münster, Deutschland', coordinate: { latitude: 51.96, longitude: 7.63 } },
@@ -106,7 +112,7 @@ describe('OpenRouteServiceIsochroneProvider', () => {
     );
 
     const [url, init] = spy.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain('/v2/isochrones/driving-car');
+    expect(url).toBe('https://api.heigit.org/openrouteservice/v2/isochrones/driving-car');
     expect(JSON.parse(init.body as string)).toMatchObject({
       locations: [[7.63, 51.96]],
       range: [1800],
@@ -116,6 +122,53 @@ describe('OpenRouteServiceIsochroneProvider', () => {
     // Provider-Properties werden nicht durchgereicht.
     expect(result.properties).toEqual({});
     expect(result.geometry.type).toBe('Polygon');
+  });
+
+  it('meldet eine Fahrzeit über dem Providerlimit als Eingabefehler', async () => {
+    const spy = mockFetch({ json: async () => ({ features: [] }) });
+    const provider = new OpenRouteServiceIsochroneProvider('key');
+
+    expect(provider.maxTravelTimeMinutes).toBe(60);
+
+    await expect(
+      provider.calculate(
+        { latitude: 51.96, longitude: 7.63 },
+        { travelMode: 'driving', maxTravelTimeMinutes: 75 },
+      ),
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+
+    // Gar nicht erst beim Provider anfragen.
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('akzeptiert genau das Providerlimit', async () => {
+    const spy = mockFetch({
+      json: async () => ({
+        features: [
+          {
+            geometry: {
+              type: 'Polygon',
+              coordinates: [
+                [
+                  [0, 0],
+                  [1, 0],
+                  [1, 1],
+                  [0, 0],
+                ],
+              ],
+            },
+          },
+        ],
+      }),
+    });
+
+    await new OpenRouteServiceIsochroneProvider('key').calculate(
+      { latitude: 51.96, longitude: 7.63 },
+      { travelMode: 'driving', maxTravelTimeMinutes: 60 },
+    );
+
+    const [, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string).range).toEqual([3600]);
   });
 
   it('wirft einen Domain-Fehler wenn keine Fläche geliefert wird', async () => {

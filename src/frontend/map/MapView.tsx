@@ -42,12 +42,21 @@ export const MapView = ({ styleUrl, targets, intersection, bounds }: MapViewProp
     });
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
-    map.on('load', () => setStyleReady(true));
+
+    // Sobald der Style gesetzt ist, koennen Sources und Layer ergaenzt werden.
+    // Nicht nur auf 'load' hoeren: in manchen Umgebungen (z. B. eingebettete
+    // oder headless gerenderte Views) feuert 'load' nie, obwohl die Karte
+    // sichtbar rendert und 'styledata' kommt.
+    const markReady = () => setStyleReady(true);
+    map.on('load', markReady);
+    map.on('styledata', markReady);
     mapRef.current = map;
 
     const markers = markersRef.current;
 
     return () => {
+      map.off('load', markReady);
+      map.off('styledata', markReady);
       for (const marker of markers.values()) marker.remove();
       markers.clear();
       map.remove();

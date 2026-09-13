@@ -3,6 +3,7 @@ import type { Target } from '../types.js';
 
 type TargetCardProps = {
   target: Target;
+  maxMinutes: number;
   onRemove: (id: string) => void;
   onChangeMinutes: (id: string, minutes: number) => void;
   onRetry: (id: string) => void;
@@ -11,6 +12,7 @@ type TargetCardProps = {
 /** Ein bereits bestätigtes Ziel. Änderungen werden ebenfalls bestätigt. */
 export const TargetCard = ({
   target,
+  maxMinutes,
   onRemove,
   onChangeMinutes,
   onRetry,
@@ -19,7 +21,7 @@ export const TargetCard = ({
 
   const parsed = Number.parseInt(minutes, 10);
   const changed = parsed !== target.maxTravelTimeMinutes;
-  const valid = Number.isInteger(parsed) && parsed > 0 && parsed <= 120;
+  const valid = Number.isInteger(parsed) && parsed > 0 && parsed <= maxMinutes;
 
   return (
     <div className="card">
@@ -49,7 +51,7 @@ export const TargetCard = ({
         <input
           type="number"
           min={1}
-          max={120}
+          max={maxMinutes}
           value={minutes}
           onChange={(event) => setMinutes(event.target.value)}
           disabled={target.status === 'loading'}

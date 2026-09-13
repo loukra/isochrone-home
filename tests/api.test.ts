@@ -12,6 +12,8 @@ const CONFIG: AppConfig = {
   geocodingProvider: 'openrouteservice',
   isochroneProvider: 'openrouteservice',
   openRouteServiceApiKey: 'test-key',
+  openRouteServiceIsochroneUrl: 'https://api.heigit.org/openrouteservice',
+  openRouteServiceGeocodingUrl: 'https://api.heigit.org/pelias/v1',
   mapStyleUrl: 'https://example.test/style.json',
   mapToken: null,
 };
@@ -42,7 +44,7 @@ const stubOrs = (options: {
       return { ok: false, status: options.status, json: async () => ({}) };
     }
 
-    if (url.includes('/geocode/search')) {
+    if (url.includes('/pelias/v1/search')) {
       return {
         ok: true,
         status: 200,
@@ -96,6 +98,7 @@ describe('GET /api/config', () => {
     expect(body).toEqual({
       mapStyleUrl: CONFIG.mapStyleUrl,
       analysisStrategy: 'isochrone-intersection',
+      maxTravelTimeMinutes: 60,
     });
     expect(JSON.stringify(body)).not.toContain('test-key');
   });

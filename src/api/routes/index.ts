@@ -18,6 +18,7 @@ export const createApiRouter = (container: Container): Router => {
     response.json({
       mapStyleUrl: container.config.mapStyleUrl,
       analysisStrategy: container.strategy.id,
+      maxTravelTimeMinutes: container.isochrones.maxTravelTimeMinutes,
     });
   });
 
