@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OverpassPoiProvider } from '../src/infrastructure/poi/overpass-poi-provider.js';
 import type { BoundingBox } from '../src/domain/models/geo.js';
+import { POI_CATEGORIES } from '../src/domain/models/poi.js';
+import { OSM_FILTERS } from '../src/infrastructure/poi/category-tags.js';
 
 const AREA: BoundingBox = [7.998, 52.876, 8.654, 53.397];
 
@@ -23,6 +25,58 @@ afterEach(() => {
 });
 
 describe('OverpassPoiProvider', () => {
+  it('fragt Bahnhöfe *und* Haltepunkte ab', async () => {
+    // OSM trennt beides; ohne railway=halt fehlen die kleinen Pendelstationen.
+    const spy = vi.fn().mockResolvedValue(jsonResponse({ elements: [] }));
+    vi.stubGlobal('fetch', spy);
+
+    await new OverpassPoiProvider().search('station', AREA);
+
+    const body = decodeURIComponent(
+      (spy.mock.calls[0] as [string, RequestInit])[1].body as string,
+    );
+    expect(body).toContain('[railway=station]');
+    expect(body).toContain('[railway=halt]');
+  });
+
+  it('kennt für jede Kategorie mindestens einen Tag', () => {
+    // Eine Kategorie ohne Filter baut die leere Abfrage "nwr();" -- Overpass
+    // antwortet mit einem Syntaxfehler, der nach einer Störung aussieht.
+    for (const category of POI_CATEGORIES) {
+      expect(OSM_FILTERS[category].length).toBeGreaterThan(0);
+    }
+  });
+
+  it('fragt Kitas *und* Krippen ab', async () => {
+    // Kita und Kindergarten sind dasselbe Tag; die Krippe ist ein eigenes.
+    const spy = vi.fn().mockResolvedValue(jsonResponse({ elements: [] }));
+    vi.stubGlobal('fetch', spy);
+
+    await new OverpassPoiProvider().search('kindergarten', AREA);
+
+    const body = decodeURIComponent(
+      (spy.mock.calls[0] as [string, RequestInit])[1].body as string,
+    );
+    expect(body).toContain('[amenity=kindergarten]');
+    expect(body).toContain('[amenity=childcare]');
+  });
+
+  it('lässt private Pools aus, behält öffentliche Bäder', async () => {
+    // leisure=swimming_pool trifft auch Gartenpools. Ausgeschlossen wird nur,
+    // was OSM selbst als privat ausweist -- geraten wird nichts.
+    const spy = vi.fn().mockResolvedValue(jsonResponse({ elements: [] }));
+    vi.stubGlobal('fetch', spy);
+
+    await new OverpassPoiProvider().search('pool', AREA);
+
+    const body = decodeURIComponent(
+      (spy.mock.calls[0] as [string, RequestInit])[1].body as string,
+    );
+    expect(body).toContain('[leisure=swimming_pool][access!=private]');
+    expect(body).toContain('[leisure=sports_centre][sport~"swimming"]');
+    expect(body).toContain('[amenity=public_bath]');
+  });
+
   it('mappt Knoten auf Domain-POIs', async () => {
     vi.stubGlobal(
       'fetch',

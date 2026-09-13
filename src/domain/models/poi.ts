@@ -1,9 +1,21 @@
 import type { Coordinate } from './geo.js';
 
-/** Vom MVP unterstützte POI-Kategorien. */
-export type PoiCategory = 'gym' | 'supermarket' | 'station';
+/**
+ * Vom MVP unterstützte POI-Kategorien. Diese Liste ist die eine Quelle: Die
+ * zod-Schemas der API leiten sich daraus ab, damit eine neue Kategorie nicht
+ * an der Validierung scheitert.
+ */
+export const POI_CATEGORIES = [
+  'gym',
+  'supermarket',
+  'station',
+  'kindergarten',
+  'school',
+  'pool',
+  'doctor',
+] as const;
 
-export const POI_CATEGORIES: readonly PoiCategory[] = ['gym', 'supermarket', 'station'];
+export type PoiCategory = (typeof POI_CATEGORIES)[number];
 
 export type Poi = {
   /** Stabile Kennung über Suchläufe hinweg: "<osm-typ>/<osm-id>". */
