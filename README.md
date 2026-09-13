@@ -21,6 +21,17 @@ Jedes Ziel hat eine feste Farbe, die auch im Formular angezeigt wird. Änderst d
 ein Ziel, wird nur dessen Isochrone neu berechnet; das Analyse-Ergebnis wird als
 veraltet markiert, bis du erneut analysierst.
 
+### Gespeicherter Stand
+
+Deine Ziele bleiben nach einem Reload erhalten — samt Isochronen, Farben und
+letztem Analyse-Ergebnis. Der Stand liegt ausschließlich in `localStorage`
+deines Browsers: kein Backend, keine Datenbank, kein Konto. Beim Wiederherstellen
+werden **keine** API-Aufrufe fällig, die Geometrien kommen aus dem Cache.
+
+Entfernst du alle Ziele, wird der Stand gelöscht. Ist der Speicher blockiert
+(z. B. privates Fenster), funktioniert die App normal weiter — nur eben ohne
+Wiederherstellung.
+
 ## Setup
 
 ```bash
@@ -94,7 +105,7 @@ in `MAP_TOKEN`.
 
 ```bash
 npm run dev        # Frontend + Backend parallel
-npm test           # Vitest (53 Tests)
+npm test           # Vitest (65 Tests)
 npm run lint       # ESLint
 npm run typecheck  # tsc --noEmit
 npm run build      # Produktions-Build des Frontends
@@ -165,5 +176,6 @@ der Karte, damit nachvollziehbar ist, warum es keine gemeinsame Region gibt.
 ## Nicht im MVP
 
 Heatmap, Ranking, Scoring, Gewichtungen, POI-Suche, Immobilien, Benutzerkonten,
-Login, Datenbank, Persistenz. Die Architektur ermöglicht diese Erweiterungen,
-implementiert sie aber bewusst nicht.
+Login, Datenbank, serverseitige Persistenz. Die Architektur ermöglicht diese
+Erweiterungen, implementiert sie aber bewusst nicht. Der lokale Browser-Cache
+ist davon ausgenommen: er ist reiner Bedienkomfort und berührt das Backend nicht.

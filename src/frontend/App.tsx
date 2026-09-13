@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { analyze, ApiError, fetchIsochrone, fetchMapConfig, geocode } from './api.js';
 import { unionBounds } from './bounds.js';
 import { colorAt } from './colors.js';
 import { TargetCard } from './forms/TargetCard.js';
 import { TargetDraftForm, type DraftValues } from './forms/TargetDraftForm.js';
 import { MapView } from './map/MapView.js';
+import { clearState, loadState, saveState } from './storage.js';
 import type { AnalysisResponse, GeocodingCandidate, Target } from './types.js';
 
 type AnalysisState =
@@ -18,20 +19,27 @@ const messageOf = (error: unknown): string =>
     ? error.message
     : 'Es ist ein unerwarteter Fehler aufgetreten.';
 
+/** Einmalig beim Start gelesen, damit ein Reload die Ziele nicht verwirft. */
+const restored = loadState();
+
 export const App = () => {
   const [mapStyleUrl, setMapStyleUrl] = useState<string | null>(null);
   /** Providerabhaengige Obergrenze; kommt aus der Backend-Konfiguration. */
   const [maxMinutes, setMaxMinutes] = useState(60);
-  const [targets, setTargets] = useState<Target[]>([]);
-  const [colorCursor, setColorCursor] = useState(0);
+  const [targets, setTargets] = useState<Target[]>(restored?.targets ?? []);
+  const [colorCursor, setColorCursor] = useState(restored?.colorCursor ?? 0);
 
-  const [draftOpen, setDraftOpen] = useState(true);
+  const [draftOpen, setDraftOpen] = useState((restored?.targets.length ?? 0) === 0);
   const [draftBusy, setDraftBusy] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<GeocodingCandidate[]>([]);
   const [pendingDraft, setPendingDraft] = useState<DraftValues | null>(null);
 
-  const [analysis, setAnalysis] = useState<AnalysisState>({ kind: 'idle' });
+  const [analysis, setAnalysis] = useState<AnalysisState>(
+    restored?.analysis != null
+      ? { kind: 'done', result: restored.analysis.result, stale: restored.analysis.stale }
+      : { kind: 'idle' },
+  );
 
   useEffect(() => {
     fetchMapConfig()
@@ -82,6 +90,37 @@ export const App = () => {
       );
     }
   }, []);
+
+  // Jede Aenderung sofort sichern, damit auch ein harter Reload nichts verliert.
+  useEffect(() => {
+    if (targets.length === 0) {
+      // Ohne Ziele gibt es nichts Sinnvolles wiederherzustellen.
+      clearState();
+      return;
+    }
+
+    saveState({
+      targets,
+      colorCursor,
+      // Ein veraltetes Ergebnis wird ohnehin nicht gezeichnet -- nicht sichern.
+      analysis:
+        analysis.kind === 'done' && !analysis.stale
+          ? { result: analysis.result, stale: false }
+          : null,
+    });
+  }, [targets, colorCursor, analysis]);
+
+  // Wiederhergestellte Ziele ohne Geometrie einmalig nachladen.
+  const refetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (refetchedRef.current) return;
+    refetchedRef.current = true;
+
+    for (const target of restored?.targets ?? []) {
+      if (target.isochrone === null) void loadIsochrone(target);
+    }
+  }, [loadIsochrone]);
 
   /** Schritt 1: Ziel bestätigen -> geocodieren -> Isochrone anzeigen. */
   const confirmDraft = useCallback(
