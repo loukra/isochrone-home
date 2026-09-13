@@ -1,4 +1,5 @@
 import intersect from '@turf/intersect';
+import union from '@turf/union';
 import bboxOf from '@turf/bbox';
 import { featureCollection } from '@turf/helpers';
 import type { AreaFeature, BoundingBox, Coordinate } from '../models/geo.js';
@@ -16,6 +17,26 @@ export const intersectAreas = (areas: AreaFeature[]): AreaFeature | null => {
   for (const area of areas.slice(1)) {
     if (result === null) return null;
     result = intersect(featureCollection([result, area])) as AreaFeature | null;
+  }
+
+  return result;
+};
+
+/**
+ * Vereinigung beliebig vieler Flächen, paarweise gefaltet.
+ *
+ * Für POIs ist das die richtige Verknüpfung: es genügt, dass *ein* Studio in
+ * der Zeit erreichbar ist -- nicht alle. Das Ergebnis ist oft ein MultiPolygon,
+ * weil zwei Studios weit auseinander liegen können.
+ */
+export const unionAreas = (areas: AreaFeature[]): AreaFeature | null => {
+  if (areas.length === 0) return null;
+
+  let result: AreaFeature | null = areas[0] ?? null;
+
+  for (const area of areas.slice(1)) {
+    if (result === null) return null;
+    result = union(featureCollection([result, area])) as AreaFeature | null;
   }
 
   return result;

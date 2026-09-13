@@ -7,10 +7,18 @@ import type {
 } from '../../domain/ports/isochrone-provider.js';
 import { DEFAULT_ISOCHRONE_BASE_URL, orsFetch } from '../openrouteservice/client.js';
 
-/** Domain-Verkehrsmittel -> ORS-Profil. Bleibt im Adapter (Spec 13). */
+/**
+ * Domain-Verkehrsmittel -> ORS-Profil. Bleibt im Adapter (Spec 13).
+ *
+ * ORS kennt beim Rad mehrere Profile (`cycling-regular`, `-road`, `-mountain`,
+ * `-electric`). Für die Frage "wo kann ich wohnen" trennen Rennrad und
+ * Mountainbike nichts Sinnvolles -- `cycling-regular` als Alltagsrad und
+ * `cycling-electric` als Pedelec decken den echten Unterschied ab.
+ */
 const PROFILE_BY_TRAVEL_MODE: Record<TravelMode, string> = {
   driving: 'driving-car',
   cycling: 'cycling-regular',
+  ebike: 'cycling-electric',
   walking: 'foot-walking',
 };
 

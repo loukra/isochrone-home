@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Server } from 'node:http';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createApp } from '../src/api/server.js';
 import type { AppConfig } from '../src/infrastructure/configuration/config.js';
 
@@ -17,6 +20,12 @@ const CONFIG: AppConfig = {
   overpassUrl: 'https://overpass.test/api/interpreter',
   mapStyleUrl: 'https://example.test/style.json',
   mapToken: null,
+  // Wird je Test durch ein frisches Verzeichnis ersetzt.
+  cacheDirectory: '',
+  cacheIsochroneDays: 7,
+  cachePoiHours: 24,
+  cacheGeocodeDays: 30,
+  cacheRouteDays: 7,
 };
 
 const polygon = (west: number, south: number, east: number, north: number) => ({
@@ -36,6 +45,7 @@ const polygon = (west: number, south: number, east: number, north: number) => ({
 const stubOrs = (options: {
   geocode?: unknown;
   isochrones?: unknown[];
+  matrix?: unknown;
   status?: number;
 }) => {
   let isochroneIndex = 0;
@@ -43,6 +53,14 @@ const stubOrs = (options: {
   const spy = vi.fn(async (url: string) => {
     if (options.status !== undefined && options.status >= 400) {
       return { ok: false, status: options.status, json: async () => ({}) };
+    }
+
+    if (url.includes('/v2/matrix/')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => options.matrix ?? { durations: [[]], distances: [[]] },
+      };
     }
 
     if (url.includes('/pelias/v1/search')) {
@@ -67,6 +85,7 @@ const stubOrs = (options: {
 
 let server: Server;
 let baseUrl: string;
+let cacheDirectory: string;
 
 const post = (path: string, body: unknown) =>
   realFetch(`${baseUrl}${path}`, {
@@ -76,7 +95,11 @@ const post = (path: string, body: unknown) =>
   });
 
 beforeEach(async () => {
-  const app = createApp(CONFIG);
+  // Eigener Cache je Test: Sonst beantwortet ein Treffer aus dem vorigen Test
+  // die Anfrage, der gestubbte fetch wird nie aufgerufen, und die Zusicherung
+  // prueft nichts mehr.
+  cacheDirectory = await mkdtemp(join(tmpdir(), 'location-optimizer-test-'));
+  const app = createApp({ ...CONFIG, cacheDirectory });
   await new Promise<void>((resolve) => {
     server = app.listen(0, () => resolve());
   });
@@ -88,6 +111,7 @@ beforeEach(async () => {
 afterEach(async () => {
   vi.unstubAllGlobals();
   await new Promise<void>((resolve) => server.close(() => resolve()));
+  await rm(cacheDirectory, { recursive: true, force: true });
 });
 
 describe('GET /api/config', () => {
@@ -102,6 +126,121 @@ describe('GET /api/config', () => {
       maxTravelTimeMinutes: 60,
     });
     expect(JSON.stringify(body)).not.toContain('test-key');
+  });
+});
+
+describe('POST /api/locations/check', () => {
+  it('prüft mehrere Orte in einem Aufruf gegen beide Regionen', async () => {
+    const response = await post('/api/locations/check', {
+      coordinates: [
+        { latitude: 5, longitude: 5 },
+        { latitude: 8, longitude: 8 },
+        { latitude: 50, longitude: 50 },
+      ],
+      intersection: { type: 'Feature', geometry: polygon(0, 0, 10, 10) },
+      poiRegion: { type: 'Feature', geometry: polygon(6, 6, 10, 10) },
+    });
+
+    expect(response.status).toBe(200);
+    // Die Antwort kommt in der Reihenfolge der Anfrage.
+    await expect(response.json()).resolves.toEqual({
+      results: [
+        { inIntersection: true, inPoiRegion: false },
+        { inIntersection: true, inPoiRegion: true },
+        { inIntersection: false, inPoiRegion: false },
+      ],
+    });
+  });
+
+  it('meldet fehlende Regionen explizit als noch nicht prüfbar', async () => {
+    const response = await post('/api/locations/check', {
+      coordinates: [{ latitude: 5, longitude: 5 }],
+      intersection: null,
+      poiRegion: null,
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      results: [{ inIntersection: null, inPoiRegion: null }],
+    });
+  });
+
+  it('lehnt unvollständige GeoJSON-Geometrien ab', async () => {
+    const response = await post('/api/locations/check', {
+      coordinates: [{ latitude: 5, longitude: 5 }],
+      intersection: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [] } },
+      poiRegion: null,
+    });
+
+    expect(response.status).toBe(400);
+  });
+});
+
+describe('POST /api/locations/travel-times', () => {
+  it('misst je Verkehrsmittel gebündelt und liefert Fahrzeit und Strecke', async () => {
+    const spy = stubOrs({
+      matrix: { durations: [[600, 1200]], distances: [[8.4, 17.2]] },
+    });
+
+    const response = await post('/api/locations/travel-times', {
+      origin: { latitude: 53.14, longitude: 8.21 },
+      targets: [
+        {
+          id: 'a',
+          coordinate: { latitude: 53.2, longitude: 8.3 },
+          travelMode: 'driving',
+        },
+        {
+          id: 'b',
+          coordinate: { latitude: 53.3, longitude: 8.4 },
+          travelMode: 'driving',
+        },
+      ],
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      legs: [
+        { constraintId: 'a', durationMinutes: 10, distanceKm: 8.4 },
+        { constraintId: 'b', durationMinutes: 20, distanceKm: 17.2 },
+      ],
+    });
+
+    // Zwei Ziele, ein Verkehrsmittel -- ein einziger Provider-Aufruf.
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('meldet eine fehlende Route als null statt als Fehler', async () => {
+    stubOrs({ matrix: { durations: [[null]], distances: [[null]] } });
+
+    const response = await post('/api/locations/travel-times', {
+      origin: { latitude: 53.14, longitude: 8.21 },
+      targets: [
+        {
+          id: 'a',
+          coordinate: { latitude: 53.2, longitude: 8.3 },
+          travelMode: 'driving',
+        },
+      ],
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      legs: [{ constraintId: 'a', durationMinutes: null, distanceKm: null }],
+    });
+  });
+
+  it('kommt ohne Ziele ohne Provider-Aufruf aus', async () => {
+    const spy = stubOrs({});
+
+    const response = await post('/api/locations/travel-times', {
+      origin: { latitude: 53.14, longitude: 8.21 },
+      targets: [],
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ legs: [] });
+    expect(spy).not.toHaveBeenCalled();
   });
 });
 
@@ -131,6 +270,40 @@ describe('POST /api/isochrone', () => {
     expect(response.status).toBe(200);
     expect(body.constraintId).toBe('a');
     expect(body.layer.type).toBe('isochrone');
+  });
+
+  it('reicht das Verkehrsmittel bis ins ORS-Profil durch', async () => {
+    const spy = stubOrs({
+      geocode: {
+        features: [
+          { geometry: { coordinates: [7.63, 51.96] }, properties: { label: 'Münster' } },
+        ],
+      },
+    });
+
+    const response = await post('/api/isochrone', {
+      id: 'a',
+      name: 'Eltern A',
+      address: 'Münster',
+      travelMode: 'ebike',
+      maxTravelTimeMinutes: 20,
+    });
+
+    expect(response.status).toBe(200);
+    const urls = spy.mock.calls.map((call) => String(call[0]));
+    expect(urls.some((url) => url.includes('/isochrones/cycling-electric'))).toBe(true);
+  });
+
+  it('antwortet mit 400 bei unbekanntem Verkehrsmittel', async () => {
+    const response = await post('/api/isochrone', {
+      id: 'a',
+      name: 'Eltern A',
+      address: 'Münster',
+      travelMode: 'helicopter',
+      maxTravelTimeMinutes: 30,
+    });
+
+    expect(response.status).toBe(400);
   });
 
   it('antwortet mit 400 bei fehlendem Ort', async () => {

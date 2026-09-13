@@ -83,7 +83,47 @@ describe('OpenRouteServiceGeocoder', () => {
   });
 });
 
+const POLYGON_RESPONSE = {
+  json: async () => ({
+    features: [
+      {
+        geometry: {
+          type: 'Polygon',
+          coordinates: [
+            [
+              [0, 0],
+              [1, 0],
+              [1, 1],
+              [0, 0],
+            ],
+          ],
+        },
+        properties: { value: 1800 },
+      },
+    ],
+  }),
+};
+
 describe('OpenRouteServiceIsochroneProvider', () => {
+  it.each([
+    ['driving', 'driving-car'],
+    ['cycling', 'cycling-regular'],
+    ['ebike', 'cycling-electric'],
+    ['walking', 'foot-walking'],
+  ] as const)('bildet %s auf das Profil %s ab', async (travelMode, profile) => {
+    const spy = mockFetch(POLYGON_RESPONSE);
+
+    await new OpenRouteServiceIsochroneProvider('key').calculate(
+      { latitude: 51.96, longitude: 7.63 },
+      { travelMode, maxTravelTimeMinutes: 30 },
+    );
+
+    const [url] = spy.mock.calls[0] as [string];
+    expect(url).toBe(
+      `https://api.heigit.org/openrouteservice/v2/isochrones/${profile}`,
+    );
+  });
+
   it('schickt Sekunden und das driving-car-Profil', async () => {
     const spy = mockFetch({
       json: async () => ({

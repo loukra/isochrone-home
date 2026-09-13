@@ -1,9 +1,19 @@
 import type { AreaFeature, BoundingBox, Coordinate } from './geo.js';
 
-/** Verkehrsmittel. Der MVP unterstützt nur 'driving' (Spec 6.2). */
-export type TravelMode = 'driving' | 'cycling' | 'walking';
+/**
+ * Verkehrsmittel je Ziel. Fachliche Namen, keine Providerprofile -- die
+ * Zuordnung auf `driving-car`, `cycling-electric` usw. gehört in den Adapter.
+ * 'ebike' ist bewusst ein eigener Modus und kein Fahrrad mit Aufschlag: Ein
+ * Pedelec hält am Berg und über die Distanz ein anderes Tempo, und genau das
+ * verschiebt die erreichbare Fläche.
+ */
+export const TRAVEL_MODES = ['driving', 'cycling', 'ebike', 'walking'] as const;
 
-export const SUPPORTED_TRAVEL_MODES: readonly TravelMode[] = ['driving'];
+export type TravelMode = (typeof TRAVEL_MODES)[number];
+
+export const DEFAULT_TRAVEL_MODE: TravelMode = 'driving';
+
+export const SUPPORTED_TRAVEL_MODES: readonly TravelMode[] = TRAVEL_MODES;
 
 export type LocationConstraint = {
   id: string;

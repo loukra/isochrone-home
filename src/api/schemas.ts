@@ -1,8 +1,11 @@
 import { z } from 'zod';
 import {
+  DEFAULT_TRAVEL_MODE,
   MAX_TRAVEL_TIME_MINUTES,
   MIN_TRAVEL_TIME_MINUTES,
+  TRAVEL_MODES,
 } from '../domain/models/analysis.js';
+import { POI_CATEGORIES } from '../domain/models/poi.js';
 
 const coordinateSchema = z.object({
   latitude: z.number().min(-90).max(90),
@@ -13,7 +16,7 @@ export const constraintSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1, 'Jedes Ziel braucht einen Namen.'),
   address: z.string().min(1, 'Bitte gib einen Ort oder eine Adresse ein.'),
-  travelMode: z.enum(['driving']).default('driving'),
+  travelMode: z.enum(TRAVEL_MODES).default(DEFAULT_TRAVEL_MODE),
   maxTravelTimeMinutes: z
     .number()
     .int()
@@ -32,11 +35,101 @@ export const isochroneRequestSchema = constraintSchema;
 
 export const poiSearchRequestSchema = z.object({
   constraints: z.array(constraintSchema).min(1),
-  category: z.enum(['gym', 'supermarket', 'station']),
+  category: z.enum(POI_CATEGORIES),
   maxTravelTimeMinutes: z.number().int().min(1).max(60),
 });
+
+/**
+ * Jeder gewählte Ort kostet einen Isochronen-Call -- über alle Bedingungen
+ * zusammen. Die Obergrenze schützt das Tageskontingent des Providers vor einem
+ * versehentlichen "alle anhaken".
+ */
+const MAX_ORIGINS = 25;
+
+export const poiRegionRequestSchema = z
+  .object({
+    constraints: z.array(constraintSchema).min(1),
+    conditions: z
+      .array(
+        z.object({
+          category: z.enum(POI_CATEGORIES),
+          maxTravelTimeMinutes: z
+            .number()
+            .int()
+            .min(MIN_TRAVEL_TIME_MINUTES)
+            .max(MAX_TRAVEL_TIME_MINUTES),
+          origins: z.array(coordinateSchema),
+        }),
+      )
+      .min(1, 'Wähle mindestens einen Ort aus.'),
+  })
+  .refine(
+    (value) =>
+      value.conditions.reduce((sum, condition) => sum + condition.origins.length, 0) <=
+      MAX_ORIGINS,
+    {
+      message: `Höchstens ${MAX_ORIGINS} Orte auf einmal — sonst wird das Kontingent knapp.`,
+    },
+  );
 
 export const geocodeRequestSchema = z.object({
   query: z.string().min(1, 'Bitte gib einen Ort oder eine Adresse ein.'),
   limit: z.number().int().min(1).max(10).optional(),
+});
+
+/**
+ * Bereits vom Backend gelieferte Flächen dürfen zur reinen Punktprüfung
+ * zurückgesendet werden. Die Geometrie wird dabei nicht verändert.
+ */
+const positionSchema = z.array(z.number()).min(2);
+const ringSchema = z.array(positionSchema).min(4);
+const areaGeometrySchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('Polygon'), coordinates: z.array(ringSchema).min(1) }),
+  z.object({
+    type: z.literal('MultiPolygon'),
+    coordinates: z.array(z.array(ringSchema).min(1)).min(1),
+  }),
+]);
+
+const areaFeatureSchema = z.object({
+  type: z.literal('Feature'),
+  geometry: areaGeometrySchema,
+});
+
+/**
+ * Mehr Ziele zeigt die Seitenleiste ohnehin nicht sinnvoll an, und die
+ * Matrix-API hat je Profil eine Obergrenze an Punkten.
+ */
+const MAX_MEASURED_TARGETS = 25;
+
+/**
+ * Die Ziele kommen hier bereits aufgelöst an: Gemessen wird nur zu Zielen, für
+ * die schon eine Isochrone berechnet wurde. Ein erneutes Geocoding wäre ein
+ * unnötiger Provider-Aufruf (Spec 10).
+ */
+export const travelTimesRequestSchema = z.object({
+  origin: coordinateSchema,
+  targets: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        coordinate: coordinateSchema,
+        travelMode: z.enum(TRAVEL_MODES).default(DEFAULT_TRAVEL_MODE),
+      }),
+    )
+    .max(MAX_MEASURED_TARGETS),
+});
+
+/** Eine Punkt-in-Fläche-Prüfung kostet nichts; die Grenze schützt nur den Rumpf. */
+const MAX_CHECKED_PLACES = 50;
+
+/**
+ * Mehrere Orte in *einem* Aufruf: Die Flächen liegen im Rumpf, und sie je Ort
+ * erneut zu schicken wäre bei fünf geprüften Adressen fünfmal dieselbe
+ * Geometrie. Die Antwort kommt in der Reihenfolge der Anfrage.
+ */
+export const locationCheckRequestSchema = z.object({
+  coordinates: z.array(coordinateSchema).max(MAX_CHECKED_PLACES),
+  intersection: areaFeatureSchema.nullable(),
+  poiRegion: areaFeatureSchema.nullable(),
 });

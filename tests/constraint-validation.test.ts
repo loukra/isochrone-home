@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { validateAnalysisRequest } from '../src/domain/services/constraint-validation.js';
+import { TRAVEL_MODES, type TravelMode } from '../src/domain/models/analysis.js';
 import { DomainError } from '../src/domain/models/errors.js';
 import { constraint } from './helpers/fixtures.js';
 
@@ -49,8 +50,19 @@ describe('validateAnalysisRequest', () => {
     expectInvalid({ constraints: [constraint('a'), constraint('a')] });
   });
 
+  it('akzeptiert jedes unterstützte Verkehrsmittel', () => {
+    for (const travelMode of TRAVEL_MODES) {
+      expect(() =>
+        validateAnalysisRequest({ constraints: [constraint('a', { travelMode })] }),
+      ).not.toThrow();
+    }
+  });
+
   it('lehnt ein nicht unterstütztes Verkehrsmittel ab', () => {
-    expectInvalid({ constraints: [constraint('a', { travelMode: 'walking' })] });
+    // Kommt so nur aus einer veralteten oder manipulierten Anfrage.
+    expectInvalid({
+      constraints: [constraint('a', { travelMode: 'teleport' as TravelMode })],
+    });
   });
 
   it('lehnt eine ungültige Koordinate ab', () => {
