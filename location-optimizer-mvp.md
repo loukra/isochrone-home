@@ -1,3 +1,24 @@
+> **Historisches Dokument — nicht der aktuelle Stand.**
+>
+> Dies ist der urspruengliche Auftrag von September 2026. Die App ist an
+> mehreren Stellen bewusst davon abgewichen, jeweils auf Entscheidung des
+> Nutzers:
+>
+> - **§2** beschreibt eine reine Auto-Isochrone und einen Start per Knopf.
+>   Heute hat jedes Ziel sein eigenes Verkehrsmittel (Auto, Rad, E-Bike, zu
+>   Fuss), und die Schnittmenge rechnet sich von allein.
+> - **§2** verlangt, die Karte automatisch auf das Ergebnis zu zoomen. Das
+>   wurde umgedreht: Der Ausschnitt gehoert dem Nutzer, eingepasst wird einmal
+>   und danach nur auf Knopfdruck.
+> - **§3** verbietet ausdruecklich POI-Suche und Persistenz. Beides gibt es
+>   inzwischen -- die Ortssuche ist Schritt 3 der Bedienung, und Eingaben
+>   ueberleben einen Reload.
+> - **§11** kommt zweimal vor. Gemeint sind API (erstes) und Fehlerbehandlung
+>   (zweites).
+>
+> Massgeblich fuer den heutigen Stand sind `README.md` (was die App tut) und
+> `CLAUDE.md` (warum sie es so tut).
+
 # Location Optimizer – MVP Technical Specification
 
 ## 1. Ziel

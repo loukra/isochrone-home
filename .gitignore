@@ -5,3 +5,9 @@ dist/
 *.log
 .DS_Store
 coverage/
+
+# Plattencache fuer Provider-Antworten; jederzeit loeschbar.
+.cache/
+
+# Lokal gebaute Mac-App -- verweist auf absolute Pfade dieses Rechners.
+LocationOptimizer.app/

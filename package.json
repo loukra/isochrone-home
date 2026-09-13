@@ -7,19 +7,25 @@
     "dev:server": "tsx watch src/api/server.ts",
     "dev:web": "vite",
     "build": "vite build",
+    "start": "node node_modules/tsx/dist/cli.mjs src/api/server.ts",
+    "app": "bash desktop/build-app.sh",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Louis Krause",
+  "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
   "dependencies": {
     "@turf/bbox": "^7.4.0",
     "@turf/helpers": "^7.4.0",
     "@turf/intersect": "^7.4.0",
+    "@turf/union": "^7.4.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "maplibre-gl": "^6.9.0",

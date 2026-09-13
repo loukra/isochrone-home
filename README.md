@@ -1,114 +1,195 @@
 # Location Optimizer
 
-Findet die gemeinsame erreichbare Wohnregion mehrerer Zielorte.
+**Wo kann ich wohnen, damit alle wichtigen Orte in erträglicher Zeit erreichbar
+sind?**
 
-Für jedes Ziel (z. B. "Eltern A, Münster, max. 30 Minuten") wird eine
-Auto-Isochrone berechnet. Die Schnittmenge aller Isochronen ist die Region, aus
-der alle Ziele innerhalb der jeweiligen Fahrzeit erreichbar sind.
+Zwei Menschen arbeiten in verschiedenen Städten, die Eltern wohnen in einer
+dritten, und das Fitnessstudio soll auch nicht eine Stunde entfernt sein. Auf
+einer Karte lässt sich diese Frage nicht beantworten — Luftlinie lügt, weil sie
+über Flüsse hinweg und um Umwege herum rechnet.
 
-## Bedienung
+Die App rechnet stattdessen mit **Fahrzeiten**: Pro Ziel wird eine Isochrone
+berechnet — die Fläche, aus der dieses Ziel innerhalb der erlaubten Zeit
+erreichbar ist. Die **Schnittmenge** aller Isochronen ist die Region, die alle
+Bedingungen gleichzeitig erfüllt.
 
-Zwei Schritte:
+## Was die App kann
 
-1. **Ziel hinzufügen** — Name, Ort und maximale Fahrzeit eintragen, mit `Enter`
-   bzw. "Übernehmen" bestätigen. Erst dann wird geocodiert und die Isochrone
-   dieses Ziels auf der Karte angezeigt. Beim Tippen passiert nichts.
-   Gibt es mehrere Treffer für den Ort, wählst du den richtigen aus.
-2. **Analysieren** — sind alle Ziele gesetzt, berechnet ein Klick auf
-   "Analysieren" die gemeinsame Schnittmenge und hebt sie grün hervor.
+**Schritt 1 — Ziele setzen.** Name, Adresse, Verkehrsmittel (Auto, Fahrrad,
+E-Bike, zu Fuß) und maximale Reisezeit. Jedes Ziel hat sein **eigenes**
+Verkehrsmittel: Eine Person fährt mit dem Auto zur Arbeit, die nächste mit dem
+Rad. Sobald du die Adresse bestätigst, erscheint die Isochrone dieses Ziels.
 
-Jedes Ziel hat eine feste Farbe, die auch im Formular angezeigt wird. Änderst du
-ein Ziel, wird nur dessen Isochrone neu berechnet; das Analyse-Ergebnis wird als
-veraltet markiert, bis du erneut analysierst.
+**Schritt 2 — gemeinsame Region.** Sobald alle Ziele stehen, wird die
+Schnittmenge automatisch berechnet und hervorgehoben. Kein Knopf: Sie kostet
+kein Anbieterkontingent, und niemand setzt Ziele, um die Region *nicht* zu
+sehen.
 
-### Gespeicherter Stand
+**Schritt 3 — Orte in der Nähe.** Fitnessstudio, Supermarkt, Bahnhof,
+Kindergarten, Schule, Schwimmbad, Arzt. Die App sucht sie im Umkreis der Region
+und listet sie auf. Du hakst an, was zählt; erst dann werden Fahrzeiten um diese
+Orte berechnet und die Region entsprechend verengt.
 
-Deine Ziele bleiben nach einem Reload erhalten — samt Isochronen, Farben und
-letztem Analyse-Ergebnis. Der Stand liegt ausschließlich in `localStorage`
-deines Browsers: kein Backend, keine Datenbank, kein Konto. Beim Wiederherstellen
-werden **keine** API-Aufrufe fällig, die Geometrien kommen aus dem Cache.
+Die Suchtreffer sind zunächst nur **Luftlinie** — ein Ort kann außerhalb liegen
+und trotzdem der richtige sein. Erst „Erreichbarkeit berechnen" macht daraus
+eine echte Fahrzeitaussage.
 
-Entfernst du alle Ziele, wird der Stand gelöscht. Ist der Speicher blockiert
-(z. B. privates Fenster), funktioniert die App normal weiter — nur eben ohne
-Wiederherstellung.
+**Tab „Orte prüfen".** Konkrete Adressen gegen die Region halten: Liegt diese
+Wohnung drin? Aufgeklappt zeigt jede Kachel die gemessene Fahrzeit und Strecke
+zu jedem Ziel — inklusive Hinweis, welches Ziel sein Limit reißt.
 
-## Setup
+## Installation
+
+Voraussetzung: **Node.js 22.13 oder neuer** (entwickelt und getestet mit 26).
+Läuft auf Linux, macOS und Windows.
 
 ```bash
+git clone https://github.com/<dein-name>/isochrone-home.git
+cd isochrone-home
 npm install
+```
+
+Dann die Konfiguration anlegen und einen API-Key eintragen (siehe unten):
+
+```bash
 cp .env.example .env
 ```
 
-Trage anschließend deinen OpenRouteService-API-Key in die `.env` ein (siehe
-unten), dann:
+Auf Windows in der PowerShell stattdessen `Copy-Item .env.example .env`.
+
+### Starten
+
+Für den normalen Gebrauch — ein Prozess, der Oberfläche und API ausliefert:
 
 ```bash
-npm run dev
+npm run build
 ```
 
-- Frontend: http://localhost:5173
-- Backend: http://localhost:3001
+```bash
+npm start
+```
 
-### API-Key besorgen
+Danach http://localhost:3001 im Browser öffnen.
 
-Die App nutzt **OpenRouteService** für Geocoding und Isochronen.
+Zum Entwickeln stattdessen `npm run dev` (Vite auf Port 5173, Backend auf 3001,
+mit Hot Reload).
 
-1. Kostenlosen Account anlegen: https://openrouteservice.org/dev/#/signup
-2. Im Dashboard einen Token erzeugen ("Request a token", Plan: _Free_).
-   Damit sind die benötigten Dienste **Isochrones** und **Geocoding** freigeschaltet.
-3. Key in die `.env` eintragen:
+### Als Mac-App (optional)
+
+Der Ordner `desktop/` enthält eine schlanke macOS-Hülle: ein Fenster, das die
+Oberfläche anzeigt, und den Server als Kindprozess dahinter. Fenster zu heißt
+Server aus.
+
+```bash
+npm run app
+```
+
+Das erzeugt `LocationOptimizer.app` im Projektordner. Sie ist an **diesen**
+Rechner gebunden — Projektpfad und Node-Pfad werden beim Bauen fest eingetragen
+— und nicht weitergebbar. Wird das Projekt verschoben, einmal neu bauen.
+
+Der Ordner ist **optional und nur für macOS**. Auf Windows und Linux ist der
+Weg über `npm start` und den Browser der richtige; es fehlt dort nichts außer
+dem eigenen Fenster.
+
+## Den API-Key musst du selbst mitbringen
+
+Die App liefert **keinen** Schlüssel mit. Du legst dir einen kostenlosen an:
+
+1. Account anlegen: https://openrouteservice.org/dev/#/signup
+2. Im Dashboard einen Token erzeugen (Plan: _Free_). Benötigt werden die
+   Dienste **Isochrones**, **Matrix** und **Geocoding**.
+3. In die `.env` eintragen:
 
    ```env
    OPENROUTESERVICE_API_KEY=dein-key
    ```
 
-Kein Billing und keine Kreditkarte nötig. Der Free-Plan ist limitiert
-(Größenordnung: 500 Isochronen-Anfragen pro Tag, 1.000 Geocoding-Anfragen pro
-Tag, wenige Anfragen pro Minute) — für den MVP ausreichend. Wird das Limit
-erreicht, zeigt die App eine entsprechende Meldung an.
+Kein Billing, keine Kreditkarte. Der Free-Plan ist begrenzt (Größenordnung:
+einige hundert Isochronen-Anfragen pro Tag, dazu wenige pro Minute; die Matrix
+hat ein **eigenes** Kontingent). Die genauen Zahlen stehen in deinem Dashboard —
+sie ändern sich gelegentlich, deshalb nennt diese Datei sie nicht verbindlich.
+Ist das Limit erreicht, sagt die App das im Klartext.
 
-Der Key wird **nur im Backend** verwendet und gelangt nie ins Frontend-Bundle.
-Er wird ausschließlich über den `Authorization`-Header gesendet, nie als
-URL-Parameter. Die `.env` ist in `.gitignore` und darf nicht committet werden.
+Der Key wird **ausschließlich im Backend** benutzt, geht nie ins
+Frontend-Bundle und wird nur über den `Authorization`-Header gesendet, nie als
+URL-Parameter. Die `.env` steht in `.gitignore`.
 
-#### API-Endpunkte (Stand 09/2026)
+## Welche Dienste benutzt werden
 
-`api.openrouteservice.org` wurde zugunsten von `api.heigit.org` abgekündigt
-(angekündigt am 28.04.2026, Abschaltung 24.08.2026). Die App nutzt bereits die
-neuen Adressen:
+| Dienst | Wofür | Schlüssel nötig | Kosten |
+| --- | --- | --- | --- |
+| [OpenRouteService](https://openrouteservice.org) (Isochronen) | Erreichbarkeitsflächen je Ziel | ja | kostenlos, begrenzt |
+| OpenRouteService (Matrix) | Fahrzeit und Strecke im Tab „Orte prüfen" | ja (derselbe) | eigenes Kontingent |
+| OpenRouteService / Pelias | Adresssuche | ja (derselbe) | kostenlos, begrenzt |
+| [Overpass](https://overpass-api.de) (OpenStreetMap) | Orte suchen (Studios, Märkte, Bahnhöfe …) | **nein** | kostenlos |
+| Kartenstil ([OpenFreeMap](https://openfreemap.org)) | Hintergrundkarte | **nein** | kostenlos |
 
-| Dienst     | URL                                                              |
-| ---------- | ---------------------------------------------------------------- |
-| Isochronen | `https://api.heigit.org/openrouteservice/v2/isochrones/{profil}` |
-| Geocoding  | `https://api.heigit.org/pelias/v1/search`                        |
+Nur OpenRouteService braucht also einen Schlüssel. Overpass und der Kartenstil
+sind offene Dienste — bitte entsprechend rücksichtsvoll benutzen.
 
-Bestehende Keys funktionieren unverändert. Beide Basis-URLs lassen sich über
-`OPENROUTESERVICE_ISOCHRONE_URL` bzw. `OPENROUTESERVICE_GEOCODING_URL`
-überschreiben, etwa für eine eigene Instanz.
+Antworten dieser Dienste werden in `.cache/` auf der Platte zwischengespeichert
+(Isochronen 7 Tage, Orte 24 Stunden, Adressen 30 Tage), damit ein Neustart nicht
+erneut Kontingent kostet. Der Ordner enthält keine Nutzerdaten und darf jederzeit
+gelöscht werden.
 
-#### Grenzen des Providers
+### Anderen Kartenstil verwenden
 
-OpenRouteService begrenzt Isochronen auf **3600 Sekunden = 60 Minuten**
-Fahrzeit. Die App kennt dieses Limit (`IsochroneProvider.maxTravelTimeMinutes`),
-gibt es über `GET /api/config` an das Frontend weiter und lehnt größere Werte
-mit einer verständlichen Meldung ab, statt in einen generischen Providerfehler
-zu laufen.
+Der Standard braucht keinen Token. Ein anderer Stil geht über die `.env`:
 
-### Karte
+```env
+MAP_STYLE_URL=https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json
+```
 
-Standardmäßig wird ein tokenfreier Style verwendet
-(`https://tiles.openfreemap.org/styles/liberty`). Ein anderer Style lässt sich
-über `MAP_STYLE_URL` in der `.env` setzen; braucht dieser einen Token, kommt er
-in `MAP_TOKEN`.
+Braucht der Stil einen Token, kommt er in `MAP_TOKEN`. Nützlich, wenn der
+Standardanbieter gerade langsam ist — das kommt bei kostenlosen Kacheldiensten
+vor.
+
+## Andere Anbieter einbinden
+
+Die fachliche Logik kennt keinen Anbieter. Alles Externe hängt an fünf
+Schnittstellen in `src/domain/ports/`:
+
+| Port | Aufgabe | Umschaltbar über |
+| --- | --- | --- |
+| `GeocodingProvider` | Adresse → Koordinate | `GEOCODING_PROVIDER` |
+| `IsochroneProvider` | Koordinate + Zeit → Fläche | `ISOCHRONE_PROVIDER` |
+| `TravelTimeProvider` | Punkt → Punkte: Dauer, Strecke | folgt `ISOCHRONE_PROVIDER` |
+| `PoiProvider` | Kategorie + Bereich → Orte | derzeit fest Overpass |
+| `LocationAnalysisStrategy` | das Analyseverfahren selbst | `ANALYSIS_STRATEGY` |
+
+Verdrahtet wird ausschließlich in
+`src/infrastructure/configuration/container.ts`. Ein neuer Anbieter ist damit
+eine neue Klasse in `src/infrastructure/` plus ein `case` im Container — Domain,
+API und Frontend bleiben unangetastet.
+
+**Womit man rechnen muss:** Dass ein anderer Anbieter dieselbe *Frage*
+beantwortet, heißt nicht, dass er dieselbe *Antwort* liefert. Anzupassen ist
+üblicherweise:
+
+- **Das Format.** Manche liefern GeoJSON, andere WKT oder ein eigenes Schema.
+  Die Umrechnung gehört in den Adapter, nicht in die Domain — Provider-Typen
+  bleiben grundsätzlich **innerhalb** ihres Adapters.
+- **Die Grenzen.** OpenRouteService deckelt Isochronen bei 60 Minuten. Andere
+  Anbieter deckeln woanders oder gar nicht. Deshalb trägt der Port die
+  Eigenschaft `maxTravelTimeMinutes` und reicht sie bis in die Oberfläche
+  durch — sonst läuft man in eine nichtssagende Fehlermeldung.
+- **Die Verkehrsmittel.** Die App bietet vier an (Auto, Fahrrad, E-Bike, zu
+  Fuß). Wer die nicht alle kennt, muss sie im Adapter abbilden oder ablehnen.
+- **Die Fehler.** Rate Limit, unbekannte Adresse, Ausfall — jeder Anbieter
+  benennt sie anders. Der Adapter übersetzt sie in die Domain-Fehlertypen,
+  damit die Oberfläche verständlich bleibt.
 
 ## Befehle
 
 ```bash
-npm run dev        # Frontend + Backend parallel
-npm test           # Vitest (65 Tests)
+npm run dev        # Frontend + Backend parallel, Hot Reload (Entwicklung)
+npm start          # ein Prozess, liefert das Build mit aus
+npm run build      # Produktions-Build der Oberfläche
+npm run app        # macOS-App bauen (nur macOS)
+npm test           # Vitest
 npm run lint       # ESLint
 npm run typecheck  # tsc --noEmit
-npm run build      # Produktions-Build des Frontends
 ```
 
 ## Architektur
@@ -119,63 +200,63 @@ frontend → api → application → domain ← infrastructure
 
 ```
 src/
-├── domain/              fachlicher Kern, kennt keine Provider
-│   ├── models/          Coordinate, LocationConstraint, MapLayer, DomainError
-│   ├── ports/           GeocodingProvider, IsochroneProvider, LocationAnalysisStrategy
-│   └── services/        Schnittmenge (Turf), Validierung
-├── application/
-│   └── analysis/        IsochroneIntersectionStrategy, IsochroneQuery
-├── infrastructure/
-│   ├── geocoding/       OpenRouteServiceGeocoder
-│   ├── isochrone/       OpenRouteServiceIsochroneProvider + Caching-Decorator
-│   ├── openrouteservice/ HTTP-Client inkl. Fehler-Mapping
-│   └── configuration/   Config-Laden, Dependency Injection
-├── api/                 Express-Routen, zod-Validierung, Fehler-Handler
+├── domain/              fachlicher Kern, kennt keinen Anbieter
+│   ├── models/          Coordinate, LocationConstraint, Poi, DomainError
+│   ├── ports/           die fünf Schnittstellen aus der Tabelle oben
+│   └── services/        Schnittmenge und Vereinigung (Turf), Validierung
+├── application/         orchestriert über Ports, kennt keine Anbieter
+├── infrastructure/      Adapter: ORS, Overpass, Plattencache, Konfiguration
+├── api/                 Express-Routen, zod-Validierung, Fehler-Mapping
 └── frontend/            React + MapLibre
+desktop/                 optionale macOS-Hülle (Swift)
 ```
 
-Die Domain hängt **nicht** von OpenRouteService ab. Provider werden über
-Interfaces (Ports) eingebunden und in
-`src/infrastructure/configuration/container.ts` verdrahtet. Ein ESLint-Regel-Set
-verbietet Imports aus `infrastructure/`, `api/` und `frontend/` innerhalb von
-`src/domain/`.
+Die Domain hängt von keinem Anbieter ab; eine ESLint-Regel verbietet Imports aus
+`infrastructure/`, `api/` und `frontend/` innerhalb von `src/domain/`.
 
-Das Analyseverfahren ist hinter `LocationAnalysisStrategy` abstrahiert. Eine
-spätere `HeatmapStrategy` wird im Container registriert und über
-`ANALYSIS_STRATEGY` in der `.env` ausgewählt — Frontend und Domain bleiben
-unverändert.
+Die Schnittmenge wird **ausschließlich serverseitig** berechnet — das Frontend
+zeichnet nur, was das Backend liefert.
 
 ## API
 
-| Endpoint              | Zweck                                                         |
-| --------------------- | ------------------------------------------------------------- |
-| `GET /api/config`     | öffentliche Frontend-Konfiguration (Map-Style), keine Secrets |
-| `POST /api/geocode`   | Adress-Kandidaten zur Bestätigung (Schritt 1)                 |
-| `POST /api/isochrone` | Isochrone genau eines Ziels (Schritt 1)                       |
-| `POST /api/analyze`   | Isochronen + Schnittmenge aller Ziele (Schritt 2)             |
-
-Die Schnittmenge wird ausschließlich serverseitig berechnet. Ein In-Memory-Cache
-(Key: Koordinate + Verkehrsmittel + Minuten) verhindert, dass `analyze` bereits
-geholte Isochronen erneut beim Provider anfragt.
-
-Provider-Antworten werden nie ungefiltert durchgereicht.
+| Endpoint | Zweck |
+| --- | --- |
+| `GET /api/config` | öffentliche Frontend-Konfiguration, keine Geheimnisse |
+| `POST /api/geocode` | Adress-Kandidaten zur Bestätigung |
+| `POST /api/isochrone` | Isochrone genau eines Ziels |
+| `POST /api/analyze` | Isochronen + Schnittmenge aller Ziele |
+| `POST /api/pois` | Orte einer Kategorie im Umkreis der Region |
+| `POST /api/pois/region` | Region auf die angehakten Orte verengen |
+| `POST /api/locations/check` | liegen diese Punkte in der Region? |
+| `POST /api/locations/travel-times` | gemessene Fahrzeit und Strecke je Ziel |
 
 ### Fehlerfälle
 
-| Situation                 | Status | Meldung                                                     |
-| ------------------------- | ------ | ----------------------------------------------------------- |
-| Ungültige Eingabe         | 400    | feldbezogener Hinweis                                       |
-| Adresse nicht gefunden    | 404    | „Die Adresse … konnte nicht gefunden werden."               |
-| Rate Limit erreicht       | 429    | „Das Anfragelimit des Kartendienstes ist erreicht."         |
-| Provider nicht erreichbar | 502    | „Die Berechnung konnte momentan nicht durchgeführt werden." |
-| Keine Schnittmenge        | 200    | `intersection: null`, Isochronen bleiben sichtbar           |
+| Situation | Status | Meldung |
+| --- | --- | --- |
+| Ungültige Eingabe | 400 | feldbezogener Hinweis |
+| Adresse nicht gefunden | 404 | „Die Adresse … konnte nicht gefunden werden." |
+| Rate Limit erreicht | 429 | „Das Anfragelimit des Kartendienstes ist erreicht." |
+| Anbieter nicht erreichbar | 502 | „Die Berechnung konnte momentan nicht durchgeführt werden." |
+| Keine Schnittmenge | 200 | `intersection: null`, Isochronen bleiben sichtbar |
 
-Eine leere Schnittmenge ist **kein Fehler**: Die einzelnen Isochronen bleiben auf
-der Karte, damit nachvollziehbar ist, warum es keine gemeinsame Region gibt.
+Eine leere Schnittmenge ist **kein Fehler**: Die einzelnen Isochronen bleiben
+auf der Karte, damit nachvollziehbar ist, warum es keine gemeinsame Region gibt.
 
-## Nicht im MVP
+## Gespeicherter Stand
 
-Heatmap, Ranking, Scoring, Gewichtungen, POI-Suche, Immobilien, Benutzerkonten,
-Login, Datenbank, serverseitige Persistenz. Die Architektur ermöglicht diese
-Erweiterungen, implementiert sie aber bewusst nicht. Der lokale Browser-Cache
-ist davon ausgenommen: er ist reiner Bedienkomfort und berührt das Backend nicht.
+Ziele, Zeiten, Verkehrsmittel, Bedingungen, Häkchen, geprüfte Orte und der
+Kartenausschnitt überleben einen Reload. Sie liegen im `localStorage` des
+Browsers — kein Konto, keine Datenbank, kein Server.
+
+Gespeichert wird nur die **Eingabe**, nie etwas Gerechnetes: Isochronen und
+Regionen werden beim Start neu geholt. Eine Geometrie im Browser hat kein
+Ablaufdatum, ein Stand von vor drei Monaten zeigte sonst still ein Straßennetz
+von vor drei Monaten. Dank Plattencache kostet das Wiederherstellen in der Regel
+keinen einzigen Anbieter-Aufruf.
+
+## Nicht enthalten
+
+Heatmap, Ranking, Scoring, Gewichtungen, Immobilienangebote, Benutzerkonten,
+Login, Datenbank, eigene Routing-Engine. Die Architektur ermöglicht solche
+Erweiterungen, implementiert sie aber bewusst nicht.
