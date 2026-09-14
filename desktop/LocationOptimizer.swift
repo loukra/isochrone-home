@@ -244,6 +244,41 @@ final class PageLogBridge: NSObject, WKScriptMessageHandler {
     }
 }
 
+// MARK: - Region des Rechners an die Seite reichen
+
+/// Reicht das Land, in dem der Rechner steht, an die Oberfläche weiter.
+///
+/// Nötig, weil die WKWebView es **falsch** meldet. Gemessen am 14.09.2026 auf
+/// diesem Rechner: Steht macOS auf englischer Sprache in einem
+/// nicht-englischen Land (`en-DE`, eine reale und verbreitete Einstellung),
+/// liefert `navigator.language` in der App `en-GB` -- WebKit bildet die
+/// Kombination auf das nächstgelegene Standard-Englisch ab und **erfindet
+/// dabei die Region**. Die Oberfläche entschiede daraufhin auf Meilen und
+/// schriebe "Deutschland" hinter jedes Ziel, auf einem Rechner in Deutschland.
+///
+/// Es liegt nicht am Bundle: `CFBundleDevelopmentRegion`,
+/// `CFBundleLocalizations` und echte `.lproj`-Ordner wurden einzeln
+/// durchprobiert und ändern nichts. Reine Standardkombinationen kommen dagegen
+/// richtig an (`de-DE` -> `de-DE`, `en-US` -> `en-US`) -- betroffen ist genau
+/// die Mischung aus Sprache und fremdem Land.
+///
+/// Foundation weiß es richtig (`Locale.current.region` -> `DE`), also reicht
+/// die Hülle es herüber. Die Sprache bleibt unangetastet: Die kommt in allen
+/// gemessenen Fällen korrekt an, und die Oberfläche hat dafür ohnehin einen
+/// Schalter.
+enum HostRegionScript {
+    /// Leer, wenn die Region unbrauchbar ist -- die Seite fällt dann auf ihre
+    /// eigene Erkennung zurück, statt einen erfundenen Wert zu bekommen.
+    static var source: String {
+        guard let region = Locale.current.region?.identifier,
+              region.count <= 3,
+              region.allSatisfy({ $0.isLetter || $0.isNumber })
+        else { return "" }
+
+        return "window.__hostRegion = \"\(region)\";"
+    }
+}
+
 // MARK: - Fenster und Ablauf
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -323,6 +358,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configuration.userContentController.addUserScript(
             WKUserScript(source: PageLogBridge.script, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         )
+        // Muss vor dem Bundle laufen: Die Oberfläche liest die Region beim
+        // Laden einmal aus und fragt danach nicht erneut.
+        let regionScript = HostRegionScript.source
+        if !regionScript.isEmpty {
+            configuration.userContentController.addUserScript(
+                WKUserScript(source: regionScript, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+            )
+        }
         // Voreinstellung ist bereits persistent -- hier nur festgehalten, weil
         // genau daran der localStorage der Oberfläche hängt (Ziele, Zeiten,
         // Häkchen). Ein nicht-persistenter Store würde sie bei jedem Start

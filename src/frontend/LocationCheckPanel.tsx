@@ -14,6 +14,7 @@ import { useTexts, type Texts } from './i18n/index.js';
 import { translateError } from './i18n/errors.js';
 import { verdictText, verdictTone } from './verdict.js';
 import { CaretIcon, CloseIcon } from './components/icons.js';
+import { formatDistance, useUnits, type UnitSystem } from './units.js';
 
 type Props = {
   /** Nur Ziele mit bestätigter Koordinate -- zu einem Entwurf gibt es nichts zu messen. */
@@ -39,11 +40,18 @@ type Props = {
 const formatMinutes = (texts: Texts, minutes: number): string =>
   minutes < 1 ? texts.address.underOneMinute : texts.address.minutes(Math.round(minutes));
 
-/** Unter zehn Kilometern ist die Nachkommastelle eine Aussage, darüber Rauschen. */
-const formatKilometers = (texts: Texts, kilometers: number): string =>
-  `${kilometers.toLocaleString(texts.app.locale, {
-    maximumFractionDigits: kilometers < 10 ? 1 : 0,
-  })} km`;
+/**
+ * Unter zehn Kilometern ist die Nachkommastelle eine Aussage, darüber Rauschen.
+ *
+ * Die Schwelle steht bewusst in Kilometern, also **vor** der Umrechnung: Sie
+ * meint "eine kurze Strecke", und das bleibt dieselbe Strecke, ob sie nun in
+ * Kilometern oder Meilen dasteht.
+ */
+const formatDistanceValue = (
+  texts: Texts,
+  units: UnitSystem,
+  kilometers: number,
+): string => formatDistance(kilometers, units, texts.app.locale, kilometers < 10 ? 1 : 0);
 
 /**
  * Erfüllt, nicht erfüllt, noch nicht entscheidbar -- als Zeichen, nicht als
@@ -107,6 +115,7 @@ const TravelRow = ({
   leg: TravelTimeLeg | undefined;
 }) => {
   const texts = useTexts();
+  const units = useUnits();
   const minutes = leg?.durationMinutes ?? null;
   // Verglichen wird die angezeigte Zahl, nicht die rohe: Sonst stünde bei einer
   // Grenze von 20 Minuten "20 Min" in Rot, weil es in Wahrheit 20,4 waren.
@@ -131,7 +140,7 @@ const TravelRow = ({
           <span className="travel-list__duration">{formatMinutes(texts, minutes)}</span>
           {leg?.distanceKm !== null && leg?.distanceKm !== undefined && (
             <span className="travel-list__distance">
-              {formatKilometers(texts, leg.distanceKm)}
+              {formatDistanceValue(texts, units, leg.distanceKm)}
             </span>
           )}
           {over > 0 && (

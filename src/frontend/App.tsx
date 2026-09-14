@@ -22,6 +22,7 @@ import { type PoiCondition } from './poi/PoiConditionCard.js';
 import { useTexts } from './i18n/index.js';
 import { LanguageSwitch } from './i18n/LanguageSwitch.js';
 import { ThemeSwitch } from './components/ThemeSwitch.js';
+import { UnitSwitch } from './components/UnitSwitch.js';
 import { TooltipLayer } from './components/TooltipLayer.js';
 import { useTheme } from './theme.js';
 import { useSheet } from './sheet.js';
@@ -1263,6 +1264,7 @@ export const App = () => {
             zeigen nur ihr Zeichen.
           */}
           <div className="sidebar__switches">
+            <UnitSwitch />
             <ThemeSwitch />
             <LanguageSwitch />
           </div>

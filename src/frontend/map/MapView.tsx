@@ -24,6 +24,7 @@ import { isPoiSelected } from '../poi/selection.js';
 import { regionDistance } from '../poi/distance.js';
 import { CATEGORY_COLORS, poiIconId, poiIconSvg } from '../poi/icons.js';
 import { useTexts, type Texts } from '../i18n/index.js';
+import { useUnits } from '../units.js';
 
 type MapViewProps = {
   styleUrl: string;
@@ -273,6 +274,7 @@ export const MapView = ({
   const poisRef = useRef(pois);
   poisRef.current = pois;
   const texts = useTexts();
+  const units = useUnits();
   /**
    * Der Karten-Effekt läuft genau einmal beim Einhängen. Über eine Ref liest
    * der Einpassen-Knopf die *aktuelle* Beschriftung, nicht die vom Zeitpunkt
@@ -722,7 +724,7 @@ export const MapView = ({
     if (poi.areaSquareMeters !== null) {
       facts.push(texts.map.floorArea(Math.round(poi.areaSquareMeters)));
     }
-    const distance = regionDistance(poi.distanceToRegionKm);
+    const distance = regionDistance(poi.distanceToRegionKm, units, texts.app.locale);
     facts.push(
       distance === null ? texts.map.insideRegion : texts.map.outsideRegion(distance),
     );
@@ -776,7 +778,7 @@ export const MapView = ({
     };
     // selectedKeys gehoert in die Abhaengigkeiten, damit das Haekchen auch
     // stimmt, wenn die Auswahl ueber die Liste geaendert wird.
-  }, [popupPoiId, pois, selectedKeys, styleReady]);
+  }, [popupPoiId, pois, selectedKeys, styleReady, texts, units]);
 
   /**
    * Die Gegenrichtung zum Klick auf einen Punkt: Der hebt links die Zeile

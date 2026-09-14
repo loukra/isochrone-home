@@ -80,6 +80,19 @@ export const poiRegionRequestSchema = z
 export const geocodeRequestSchema = z.object({
   query: z.string().min(1, 'Bitte gib einen Ort oder eine Adresse ein.'),
   limit: z.number().int().min(1).max(10).optional(),
+  /**
+   * Das Land, in dem die App gerade benutzt wird (ISO 3166-1 alpha-2, aus der
+   * Region des Browsers). Es entscheidet nur, ob der Ländername in der
+   * Bezeichnung steht -- die Suche schränkt es **nicht** ein.
+   *
+   * Optional, weil die Region nicht immer feststellbar ist. Fehlt sie, wird
+   * das Land genannt: eine Zeile zu lang ist besser als eine, die ein Land
+   * verschweigt, das sehr wohl etwas unterschieden hätte.
+   */
+  homeCountry: z
+    .string()
+    .regex(/^[A-Za-z]{2}$/, 'Erwartet wird ein Ländercode wie "DE".')
+    .optional(),
 });
 
 /**

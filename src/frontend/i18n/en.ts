@@ -20,6 +20,13 @@ export const en: Texts = {
     addresses: 'Check addresses',
   },
 
+  units: {
+    label: 'Units',
+    region: 'Match region',
+    metric: 'Kilometres',
+    imperial: 'Miles',
+  },
+
   appearance: {
     label: 'Appearance',
     system: 'Match system',
@@ -97,8 +104,8 @@ export const en: Texts = {
     sortByDistance: 'Nearest first',
     insideRegion: 'inside the region',
     unnamed: 'Unnamed',
-    memberLabel: (name, km) => `${name} (${km} km)`,
-    outsideRegion: (km) => `${km} km outside`,
+    memberLabel: (name, distance) => `${name} (${distance})`,
+    outsideRegion: (distance) => `${distance} outside`,
     area: (squareMeters, approximate) =>
       ` · ${approximate ? 'up to ' : ''}${squareMeters} m²`,
   },
@@ -178,7 +185,7 @@ export const en: Texts = {
     markerLabel: 'Checked address',
     markerDetails: 'Travel times and details are in the card on the left.',
     insideRegion: 'inside the region',
-    outsideRegion: (km) => `${km} km outside`,
+    outsideRegion: (distance) => `${distance} outside`,
     floorArea: (squareMeters) => `${squareMeters} m² floor area`,
     select: 'Select',
     openWebsite: 'Open website',
