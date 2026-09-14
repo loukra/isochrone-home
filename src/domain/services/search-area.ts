@@ -4,70 +4,95 @@ import type { BoundingBox } from '../models/geo.js';
 const KM_PER_DEGREE_LAT = 111.32;
 
 /**
- * Luftlinie je Minute, je Verkehrsmittel an echten Isochronen gemessen
- * (Referenzregion, `smoothing: 0`, größter Abstand vom Startpunkt zum Rand der
- * Fläche):
+ * Luftlinie je Minute -- für alles außer dem Auto, weil nur dort die
+ * Reichweite wirklich linear mit der Zeit wächst. Gemessen an echten
+ * Isochronen (`smoothing: 0`, größter Abstand vom Startpunkt zum Rand der
+ * Fläche), Oldenburg und Delmenhorst, je Stadt und Land:
  *
- * | Verkehrsmittel | 10 Min. | 25 Min. | 45 Min. |
- * | --- | ---: | ---: | ---: |
- * | Auto, Ortsmitte | 5,8-6,7 km | 31,2 km | -- |
- * | Auto, an der Autobahnauffahrt | 10,9 km | 35,4 km | -- |
- * | E-Bike | 3,5 km | 8,7 km | -- |
- * | Rad | 2,9 km | -- | 12,7 km |
- * | zu Fuß | 0,77 km | 2,1 km | 3,8 km |
+ * | | 5 Min. | 15 Min. | 30 Min. | 60 Min. |
+ * | --- | ---: | ---: | ---: | ---: |
+ * | E-Bike | 0,38 | 0,37 | 0,36 | 0,35 |
+ * | Rad | 0,32 | 0,30 | 0,30 | 0,29 |
+ * | zu Fuß | 0,08 | 0,09 | 0,09 | 0,08 |
  *
- * Rad, E-Bike und zu Fuß sind dabei linear -- dieselbe Zahl bei 10 wie bei 45
- * Minuten. **Das Auto ist es nicht**: 0,84 km/min bei 5 Minuten, 1,09 bei 10,
- * 1,36 bei 15, 1,42 bei 25. Die ersten Minuten gehen für die Anfahrt zur
- * schnellen Straße drauf, deshalb kann ein einzelner Wert nur entweder die
- * kurzen oder die langen Zeiten treffen.
- *
- * Getroffen werden die kurzen: 1,1 km/min ist genau die gemessene Reichweite
- * bei 10 Minuten, und zwar die von der Autobahnauffahrt aus -- dem günstigsten
- * Punkt der Referenzregion. Zehn Minuten sind die Vorgabe der Bedingung und
- * die Zeit, die bei Schule, Supermarkt und Kita tatsächlich eingestellt wird.
- *
- * Vorher stand dort 1,5 km/min (*geändert am 14.09.2026 auf Entscheidung des
- * Nutzers*), abgeleitet aus einem geschätzten Tempo statt gemessen. Was das
- * kostete, ist nachgerechnet an 346 Schulen der Referenzregion, echte
- * Fahrzeitmatrix von fünf Stützstellen in der gemeinsamen Region:
- *
- * | Luftlinie zur Region | Schulen | davon in <= 10 Min. | Median-Fahrzeit |
- * | --- | ---: | ---: | ---: |
- * | 0-3 km | 43 | 43 (100 %) | 6 Min. |
- * | 3-5 km | 20 | 5 (25 %) | 11 Min. |
- * | 5-8 km | 33 | 2 (6 %) | 19 Min. |
- * | 8-10 km | 70 | 0 | 25 Min. |
- * | 10-15 km | 92 | 0 | 30 Min. |
- *
- * 258 gefunden, 50 erreichbar -- und alle 50 innerhalb von 6,1 km. Der alte
- * 15-km-Ring bestand zu vier Fünfteln aus Orten, die die Bedingung
- * nachweislich nie erfüllen; die Liste stand voll damit, und die Angabe
- * "x km außerhalb" war für die Entscheidung wertlos.
- *
- * Was bleibt, steht ausdrücklich hier: Bei **langen** Zeiten deckt der Radius
- * die Reichweite nicht mehr ganz ab (25 Min.: 27,5 km gegen 35,4 km gemessen).
- * Ein Ort weit draußen an derselben Autobahn wie die Region wäre dort in der
- * Zeit erreichbar und wird nicht gefunden. Anders als beim Vorfiltern von POIs
- * ist das aber eine Zahl, die hier steht und die man drehen kann -- kein
- * stiller Ausschluss.
- *
- * Rad, E-Bike und zu Fuß liegen bewusst ein gutes Stück über ihrer Messung
- * (0,29 / 0,35 / 0,085): Dort kostet Großzügigkeit fast nichts -- 40 % von
- * 1,2 km sind 400 m --, während 40 % beim Auto fünf Kilometer Ring sind.
- * Ein gemeinsamer Wert ginge ohnehin nicht: Mit dem Autowert durchsuchte eine
- * Bedingung "10 Minuten zu Fuß" einen Ring von 11 km um die Region.
+ * Die Zahl steht über 5 bis 60 Minuten still -- ein einzelner Wert je
+ * Verkehrsmittel trifft das also wirklich. Die Werte hier liegen bewusst ein
+ * Stück darüber (25 bis 30 %): Großzügigkeit kostet hier fast nichts,
+ * 30 % von 1,3 km sind 400 m.
  */
-const KM_PER_MINUTE: Record<TravelMode, number> = {
-  driving: 1.1,
+const KM_PER_MINUTE: Record<Exclude<TravelMode, 'driving'>, number> = {
   ebike: 0.5,
   cycling: 0.4,
   walking: 0.1,
 };
 
+/**
+ * Das Auto ist die Ausnahme: Seine Reichweite wächst **nicht** linear mit der
+ * Zeit, weil die ersten Minuten für die Anfahrt zur schnellen Straße
+ * draufgehen. Gemessen (größte Luftlinie über sieben Startpunkte in
+ * Oldenburg und Delmenhorst -- Zentrum, Land, Kleinstadt, Autobahnauffahrt,
+ * Autobahnkreuz):
+ *
+ * | Fahrzeit | größte Reichweite | je Minute |
+ * | ---: | ---: | ---: |
+ * | 5 Min. | 4,2 km | 0,84 |
+ * | 8 Min. | 8,2 km | 1,03 |
+ * | 10 Min. | 11,1 km | 1,11 |
+ * | 12 Min. | 15,6 km | 1,30 |
+ * | 15 Min. | 20,4 km | 1,36 |
+ * | 20 Min. | 27,7 km | 1,39 |
+ * | 30 Min. | 49,8 km | 1,66 |
+ * | 45 Min. | 81,7 km | 1,82 |
+ * | 60 Min. | 110,5 km | 1,84 |
+ *
+ * Von 0,84 auf 1,84 km/min -- **das Doppelte**. Ein fester Wert kann das nicht
+ * abbilden: 1,5 km/min suchte bei 5 Minuten fast doppelt so weit wie
+ * erreichbar und bei 30 Minuten nur noch neun Zehntel davon. Beides ist ein
+ * Fehler, nur fällt der erste als volle Liste auf und der zweite gar nicht.
+ *
+ * Darum steht hier die gemessene Kurve selbst, mit rund 10 % Luft nach oben.
+ * Dazwischen wird linear interpoliert; weil die Kurve nach oben gekrümmt ist,
+ * liegt jede Sehne über ihr -- Zwischenwerte sind also nie zu knapp.
+ */
+const DRIVING_REACH_KM: ReadonlyArray<readonly [minutes: number, km: number]> = [
+  [5, 5],
+  [8, 9],
+  [10, 12],
+  [12, 17],
+  [15, 23],
+  [20, 31],
+  [30, 55],
+  [45, 90],
+  [60, 122],
+];
+
+const drivingReachKm = (minutes: number): number => {
+  let previous: readonly [number, number] | null = null;
+
+  for (const point of DRIVING_REACH_KM) {
+    const [pointMinutes, pointKm] = point;
+
+    if (minutes <= pointMinutes) {
+      // Unterhalb der ersten Stützstelle gibt es nichts zu interpolieren --
+      // dann gilt die Gerade durch den Nullpunkt.
+      const [fromMinutes, fromKm] = previous ?? [0, 0];
+      const span = pointMinutes - fromMinutes;
+      return fromKm + ((pointKm - fromKm) * (minutes - fromMinutes)) / span;
+    }
+
+    previous = point;
+  }
+
+  // Über 60 Minuten rechnet ORS nicht (`maxTravelTimeMinutes`); falls die
+  // Grenze je steigt, ist Fortschreiben mit der letzten Rate ehrlicher als
+  // ein stiller Deckel.
+  const [lastMinutes, lastKm] = previous ?? [1, 0];
+  return (minutes / lastMinutes) * lastKm;
+};
+
 /** Obergrenze der Luftlinie, die in der angegebenen Zeit erreichbar ist. */
 export const reachRadiusKm = (minutes: number, travelMode: TravelMode): number =>
-  minutes * KM_PER_MINUTE[travelMode];
+  travelMode === 'driving' ? drivingReachKm(minutes) : minutes * KM_PER_MINUTE[travelMode];
 
 /**
  * Erweitert den Suchbereich um die Reichweite.
