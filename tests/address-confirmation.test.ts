@@ -91,3 +91,47 @@ describe('missesHouseNumber', () => {
     expect(missesHouseNumber('Oldenburg', [candidate('place')])).toBe(false);
   });
 });
+
+/**
+ * Die Postleitzahl-Erkennung war fuenfstellig-deutsch. Sie ist nur dafuer da,
+ * eine Postleitzahl nicht faelschlich fuer eine Hausnummer zu halten -- und
+ * lag damit ausserhalb Deutschlands regelmaessig daneben.
+ *
+ * Die Richtung des Fehlers zaehlt hier mehr als seine Haeufigkeit: Einmal zu
+ * viel zu fragen kostet einen Klick, einmal zu wenig einen still verschobenen
+ * Punkt.
+ */
+describe('Postleitzahlen anderer Laender', () => {
+  it('haelt eine niederlaendische Postleitzahl nicht fuer eine Hausnummer', () => {
+    expect(asksForHouseNumber('9745 CC Groningen')).toBe(false);
+    expect(asksForHouseNumber('9745CC Groningen')).toBe(false);
+  });
+
+  it('haelt eine britische Postleitzahl nicht fuer eine Hausnummer', () => {
+    expect(asksForHouseNumber('London SW1A 2AA')).toBe(false);
+  });
+
+  it('haelt eine kanadische Postleitzahl nicht fuer eine Hausnummer', () => {
+    expect(asksForHouseNumber('Ottawa K1A 0B1')).toBe(false);
+  });
+
+  it('erkennt ZIP+4 als Postleitzahl', () => {
+    expect(asksForHouseNumber('Springfield, IL 62704-1234')).toBe(false);
+  });
+
+  it('erkennt die Hausnummer trotzdem, wenn eine danebensteht', () => {
+    expect(asksForHouseNumber('10 Downing Street, London SW1A 2AA')).toBe(true);
+    expect(asksForHouseNumber('Kerkstraat 1, 9745 CC Groningen')).toBe(true);
+    expect(asksForHouseNumber('350 Fifth Avenue, New York, NY 10019')).toBe(true);
+  });
+
+  /**
+   * Bewusst festgehalten: Eine rein vierstellige Postleitzahl gilt weiter als
+   * Hausnummer, weil sie von einer nicht zu unterscheiden ist. Das kostet in
+   * Oesterreich und der Schweiz eine Rueckfrage -- sichtbar, und damit die
+   * harmlose Seite des Irrtums.
+   */
+  it('fragt bei vierstelligen Postleitzahlen lieber einmal zu viel', () => {
+    expect(asksForHouseNumber('1010 Wien')).toBe(true);
+  });
+});

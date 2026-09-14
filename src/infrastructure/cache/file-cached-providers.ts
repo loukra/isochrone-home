@@ -93,13 +93,26 @@ export class FileCachedGeocodingProvider implements GeocodingProvider {
     return coordinate;
   }
 
-  async search(address: string, limit?: number): Promise<GeocodingCandidate[]> {
-    const key = `search|${address.trim().toLowerCase()}|${limit ?? 'default'}`;
+  /**
+   * Das Heimatland gehört in den Schlüssel, obwohl es die Antwort des Anbieters
+   * nicht ändert: Es ändert die **Bezeichnung**, die hier mitgespeichert wird.
+   * Ohne es bekäme der nächste Nutzer aus einem anderen Land dieselbe Zeile aus
+   * dem Cache -- mit einem unterdrückten Ländernamen, der für ihn sehr wohl
+   * etwas unterschieden hätte.
+   */
+  async search(
+    address: string,
+    limit?: number,
+    homeCountry: string | null = null,
+  ): Promise<GeocodingCandidate[]> {
+    const key = `search|${address.trim().toLowerCase()}|${limit ?? 'default'}|${
+      homeCountry ?? 'weltweit'
+    }`;
     const cached = await this.store.get<GeocodingCandidate[]>(this.namespace, key);
 
     if (cached !== null) return cached;
 
-    const candidates = await this.delegate.search(address, limit);
+    const candidates = await this.delegate.search(address, limit, homeCountry);
     if (candidates.length > 0) await this.store.set(this.namespace, key, candidates);
     return candidates;
   }

@@ -822,9 +822,15 @@ PHOTON_URL=                            # leer = photon.komoot.io
   Bezeichnung nicht danach unterscheidet, wer gerade geantwortet hat. Vorher
   hingen die Regeln am Feldschnitt von Pelias.
   - Die Anbieter sind sich beim Ländercode nicht einig (Pelias „DEU", Photon
-    „DE"). `HOME_COUNTRY` nennt deshalb beide Schreibweisen, statt eine
-    Umrechnungstabelle aller Länder für eine Frage anzulegen, die nur dieses
-    eine Land betrifft.
+    „DE"). Das Heimatland kommt zweistellig herein, wie Browser und Photon es
+    kennen; Pelias' dreistelliger Code passt darauf nie, und **dieser Adapter
+    nennt das eigene Land deshalb auch daheim**. Bewusst in Kauf genommen: Er
+    ist nur noch der Rückfall, der Fehler ist eine zu lange Zeile und keine
+    falsche, und die Alternative wäre eine Umrechnungstabelle aller Länder.
+    Sichtbar ausführlich schlägt still falsch -- dieselbe Regel wie beim
+    Verzicht auf das Vorfiltern von POIs. Festgehalten in
+    `tests/openrouteservice-adapters.test.ts`, damit es niemand für einen
+    Zufall hält.
 
 ### Ein Treffer genügt nicht -- er muss die Frage beantworten
 
@@ -888,13 +894,75 @@ dasselbe. Darum wird die Bezeichnung jetzt aus den Einzelfeldern selbst gesetzt:
 | Ort selbst | Westerstede, NI, Germany | Westerstede, Landkreis Ammerland |
 | Ausland | Kerkstraat 1, Groningen, GR, Netherlands | Kerkstraat 1, 9745CC Groningen, Niederlande |
 
-- **Das Land nennt nur, wer eines anderswo meint** (`HOME_COUNTRY = 'DEU'`).
-  Eine Angabe, die bei jeder Zeile gleich lautet, unterscheidet nichts --
-  derselbe Leitsatz wie beim Schweigen im Erfolgsfall. Die Postleitzahl kommt
-  dafür hinzu: Sie unterscheidet wirklich (Oldenburg gibt es zweimal), und die
-  Zeile wird dadurch kürzer, nicht länger.
+- **Das Land nennt nur, wer eines anderswo meint.** Eine Angabe, die bei jeder
+  Zeile gleich lautet, unterscheidet nichts -- derselbe Leitsatz wie beim
+  Schweigen im Erfolgsfall. Die Postleitzahl kommt dafür hinzu: Sie
+  unterscheidet wirklich (Oldenburg gibt es zweimal), und die Zeile wird
+  dadurch kürzer, nicht länger.
+  - **Welches Land das eigene ist, kommt aus der Region des Browsers**
+    (*geändert am 14.09.2026*; vorher fest `HOME_COUNTRY = ['DE', 'DEU']`).
+    Fest verdrahtet war das richtig, solange die App nur in Deutschland
+    benutzt wurde -- in Frankreich stünde damit hinter jedem Ziel
+    „Frankreich", also genau das Rauschen, gegen das die Regel gebaut ist, nur
+    mit umgekehrtem Vorzeichen. Das Frontend schickt die Region an
+    `/api/geocode` mit; sie entscheidet **nur** über die Anzeige und schränkt
+    die Suche nicht ein.
+  - Ist die Region unbekannt, **steht das Land da**. Eine Zeile zu lang ist
+    besser als eine, die ein Land verschweigt, das sehr wohl etwas
+    unterschieden hätte.
+  - Die Region gehört damit in den **Cache-Schlüssel** des Geocodings. Sie
+    ändert die Antwort des Anbieters nicht, aber die Bezeichnung, und die liegt
+    mit im Cache -- ohne sie bekäme der nächste Nutzer aus einem anderen Land
+    dieselbe Zeile zurück, mit einem unterdrückten Ländernamen, der für ihn
+    etwas bedeutet hätte.
 - **Ist der Ort selbst der Treffer, ordnet der Kreis ein** statt den Namen zu
-  wiederholen -- „Westerstede, Westerstede" wäre keine Auskunft.
+  wiederholen -- „Westerstede, Westerstede" wäre keine Auskunft. Die
+  **Postleitzahl entfällt dann**: Sie gehört zum Ort, und der steht bereits
+  links; an einen Landkreis geklebt („Westerstede, 26655 Landkreis Ammerland")
+  ergibt sie keine Adresse, und eine Stadt hat ohnehin mehrere.
+
+### Die Form der Zeile folgt dem Land des Treffers
+
+*Ergänzt am 14.09.2026.* Nicht dem Land des Nutzers: Wer von Deutschland aus
+eine Adresse in London sucht, will die Londoner Schreibweise sehen.
+
+| Land | Zeile |
+| --- | --- |
+| Vorgabe (DE, AT, NL, IT, …) | `Wehdestraße 7, 26123 Oldenburg` |
+| FR, BE | `10 Rue de Rivoli, 75004 Paris` |
+| GB, IE, NZ | `10 Downing Street, London SW1A 2AA` |
+| US, CA, AU | `650 Fifth Avenue, New York, NY 10019` |
+
+Drei Dinge unterscheiden sich wirklich: ob die Hausnummer vor oder hinter dem
+Straßennamen steht, ob die Postleitzahl vor oder hinter dem Ort steht, und ob
+das Bundesland dazugehört.
+
+- **Das Bundesland nur dort, wo es unterscheidet.** Springfield gibt es in über
+  dreißig US-Staaten; ohne „IL" beantwortet die Zeile nicht, welches gemeint
+  ist. In Deutschland stand „NI" früher in jeder Zeile und unterschied nichts --
+  genau der Grund, warum es entfernt wurde. Es ist dieselbe Regel, nicht die
+  gegenteilige.
+- **Die Tabelle ist absichtlich kurz und unvollständig.** Ein unbekanntes Land
+  bekommt die Vorgabeform; das ist dort höchstens ungewohnt sortiert, nie
+  falsch -- alle Bestandteile stehen da. Eine Tabelle aller Länder wäre Pflege
+  für einen Unterschied, den außer den Einheimischen niemand bemerkt.
+- **Gefunden wurden die drei Fehler durch einen Live-Durchlauf gegen Photon**,
+  nicht durch Nachdenken: Vorher stand dort „Rue de Rivoli 10" (deutsche
+  Reihenfolge auf einer französischen Adresse), „London, SW1A 2AA" (ein Komma,
+  das auf keinem britischen Umschlag steht) und „Westerstede, 26655 Landkreis
+  Ammerland". Den letzten traf keine Fixture, weil in keiner eine
+  Postleitzahl stand.
+  - Die echten Antworten von damals liegen jetzt als Fixtures in
+    `tests/address-label.test.ts`. Der Live-Durchlauf war die **Quelle**, der
+    Test bleibt offline -- echte API-Aufrufe in Unit-Tests messen die
+    Verfügbarkeit eines fremden Dienstes statt dieser Regeln.
+- **Die Postleitzahl-Erkennung im Frontend** (`address.ts`, entscheidet, ob nach
+  einem Haus gefragt war) kennt jetzt neben den fünfstelligen auch die
+  niederländische, britische und kanadische Schreibweise sowie ZIP+4. **Rein
+  vierstellige bleiben draußen** (AT, CH, BE, DK, AU): Sie sind von einer
+  Hausnummer nicht zu unterscheiden -- „Hauptstraße 1234" gibt es --, und sie
+  wegzustreichen hieße, eine echte Hausnummer zu übersehen. Das kostet in Wien
+  eine Rückfrage zu viel, also die sichtbare Seite des Irrtums.
 - **`lang=de` fest, nicht aus der Spracheinstellung.** Die Bezeichnung wird beim
   Bestätigen festgehalten und in `localStorage` gespeichert; hinge sie an einer
   Einstellung, die der Nutzer danach umlegen kann, stünden nach einem
@@ -1316,6 +1384,75 @@ Deutsch (`de.ts`) ist die Urfassung, Englisch (`en.ts`) die Übersetzung.
 - Die Swift-Hülle bleibt davon unberührt und deutsch: sechs Zeichenketten, ein
   eigener Übersetzungsmechanismus wäre mehr Aufbau als Nutzen.
 
+## Einheiten: Kilometer oder Meilen
+
+*Eingeführt am 14.09.2026.* Vorher stand „km" wörtlich in beiden Textkatalogen.
+
+**Die Einheit hängt an der Region, nicht an der Sprache.** Das ist keine
+Feinheit: `en-GB` ist Englisch und Meilen, `en-IE` ist dieselbe Sprache und
+Kilometer. Eine Ableitung aus dem Sprachkatalog träfe einen der beiden immer
+falsch. Die Kataloge bekommen deshalb die fertige Angabe gereicht („2,3 km",
+„1.4 mi") und setzen nur den Satz darum; das **Zahlenformat** kommt weiter aus
+der Sprache (2,3 gegen 2.3).
+
+- Meilen gelten in vier Ländern (`US`, `GB`, `MM`, `LR`) -- eine kurze Liste
+  statt einer Bibliothek. Großbritannien gehört dazu, obwohl es sonst
+  weitgehend metrisch misst: Auf Verkehrsschildern stehen dort Meilen, und um
+  Entfernungen geht es hier. Eine unbekannte Region ergibt Kilometer; raten
+  muss in die häufigere Richtung schiefliegen.
+- **Drei Stellungen im Schalter, nicht zwei** (`UnitSwitch`, oben in der
+  Kopfzeile neben Erscheinungsbild und Sprache). „Wie die Region" ist keine
+  dritte Einheit, sondern die Ansage, nicht wählen zu wollen. Gespeichert wird
+  die **Wahl**, nicht das Ergebnis -- sonst fröre der erste Besuch die gerade
+  geltende Einheit für immer ein. Dieselbe Bauart und dieselbe Begründung wie
+  beim Dunkelmodus.
+- **Der Knopf zeigt die Einheit, nicht die Wahl**: auf „Wie die Region" steht
+  dort „km" oder „mi", dasselbe wie bei der ausdrücklichen Wahl. Die Frage im
+  Vorbeigehen lautet „welche Einheit sehe ich", nicht „wie kam sie zustande";
+  das sagt der Name des Knopfes, und der Haken im offenen Menü. Damit weicht er
+  vom Erscheinungsbild-Schalter ab, der für „Wie das System" ein eigenes
+  Zeichen hat -- dort geht das, weil Sonne und Mond ohnehin Bilder sind.
+- **Über „drin oder draußen" entscheidet weiter die angezeigte Zahl**, jetzt
+  gerundet in der angezeigten **Einheit**. Das verschiebt die Schwelle: In
+  Meilen gilt ein Ort bis rund 80 m als „in der Region", in Kilometern bis rund
+  50 m. Folge der Regel, kein Versehen -- die Alternative wäre „0.0 mi
+  außerhalb", also genau der Widerspruch, gegen den sie gebaut ist.
+- Nebenbei behoben: Die Trefferliste lief über `toFixed(1)` und zeigte als
+  einzige Stelle der App eine erzwungene Nachkommastelle („10.0 km" neben
+  „10 km" in der Adresskachel). Jetzt überall `toLocaleString`.
+
+### Warum es dafür einen Schalter gibt
+
+Weil die Region **nachweislich falsch erkannt werden kann** -- und zwar genau
+in der Mac-App. Gemessen am 14.09.2026:
+
+| Systemeinstellung | `navigator.language` in der `WKWebView` | Region |
+| --- | --- | --- |
+| `de-DE` | `de-DE` | DE ✓ |
+| `en-US` | `en-US` | US ✓ |
+| **`en-DE`** (englisch in Deutschland) | **`en-GB`** | **GB ✗** |
+
+WebKit bildet die Kombination „englische Sprache, nicht-englisches Land" auf das
+nächstgelegene Standard-Englisch ab und **erfindet dabei die Region**. Ohne
+Gegenmittel stünden auf einem Rechner in Deutschland Meilen in der Liste und
+„Deutschland" hinter jedem Ziel.
+
+- **Es liegt nicht am Bundle.** `CFBundleDevelopmentRegion`,
+  `CFBundleLocalizations` und echte `.lproj`-Ordner wurden einzeln
+  durchprobiert; `Bundle.preferredLocalizations` ändert sich dadurch, die
+  Angabe in der WebView nicht.
+- Foundation weiß es dagegen richtig (`Locale.current.region` → `DE`). Die
+  Hülle reicht sie deshalb als `window.__hostRegion` herein
+  (`HostRegionScript`, `atDocumentStart`), und `region.ts` liest sie zuerst.
+  Nachgemessen: Auf demselben Rechner ergibt das DE und damit Kilometer.
+- **Die Sprache bleibt unangetastet** -- die kommt in allen gemessenen Fällen
+  richtig an, und für sie gibt es ohnehin einen Schalter.
+- Im Browser greift die eigene Erkennung: ausdrückliche Region aus
+  `navigator.languages`, sonst die CLDR-Ergänzung
+  (`new Intl.Locale('de').maximize()` → `DE`). Letztere ist eine begründete
+  Vermutung, keine Auskunft -- für `en` lautet sie `US`, also Meilen --, und
+  steht deshalb hinter der ausdrücklichen Angabe.
+
 ## Namen gegen Schlüssel
 
 Die App heisst **Wohnzone**. Umbenannt wurde ausschliesslich, was Menschen
@@ -1412,6 +1549,10 @@ Oberfläche anzeigt, und dahinter der Node-Server als Kindprozess. Quelle:
 - Scheitert der Start, zeigt die App einen **Dialog mit dem `stderr` des Kindes**
   statt eines leeren Fensters. Der häufigste Fall ist der fehlende
   `OPENROUTESERVICE_API_KEY`, bei dem `loadConfig` mit Code 1 abbricht.
+- **Die App meldet der Seite die Region des Rechners** (`HostRegionScript`).
+  Nötig, weil die `WKWebView` sie bei der Systemeinstellung „englisch in einem
+  nicht-englischen Land" erfindet -- Messung und Begründung stehen oben unter
+  „Einheiten".
 - **Die App führt einen eigenen `localStorage`**, getrennt von Safari und Chrome.
   Ziele, die im Browser stehen, tauchen in der App nicht auf — einmal neu
   eingeben. Kontingent kostet das nicht: Der Plattencache liegt beim Backend und

@@ -4,8 +4,24 @@ import type { GeocodingCandidate } from './types.js';
  * Postleitzahlen sind keine Hausnummern. Ohne diesen Schritt gaelte
  * "26123 Oldenburg" als Frage nach einem Haus, und die Bestaetigung einer
  * Stadt waere ein Klick, der nichts klaert.
+ *
+ * Erkannt werden die Schreibweisen, die sich von einer Hausnummer wirklich
+ * unterscheiden lassen:
+ *
+ * - fuenf Ziffern, optional mit ZIP+4 -- DE, FR, ES, IT, US
+ * - vier Ziffern plus zwei Buchstaben -- NL ("9745 CC")
+ * - die Buchstaben-Ziffern-Muster von GB ("SW1A 2AA") und CA ("K1A 0B1")
+ *
+ * **Rein vierstellige Postleitzahlen bleiben absichtlich draussen** (AT, CH,
+ * BE, DK, AU, NZ). Sie sind von einer Hausnummer nicht zu unterscheiden --
+ * "Hauptstraße 1234" gibt es --, und sie hier wegzustreichen hiesse, eine
+ * echte Hausnummer zu uebersehen. Dann uebernaehme die Oberflaeche einen
+ * Ortsmittelpunkt wortlos, und das ist der Fehler, gegen den die ganze Datei
+ * gebaut ist. Die Folge ist eine Rueckfrage zu viel in "1010 Wien" -- ein
+ * Klick, sichtbar, und damit die richtige Richtung.
  */
-const POSTAL_CODE = /\b\d{5}\b/g;
+const POSTAL_CODE =
+  /\b\d{5}(?:-\d{4})?\b|\b\d{4}\s?[A-Za-z]{2}\b|\b[A-Za-z]{1,2}\d[A-Za-z\d]?\s?\d[A-Za-z]{2}\b|\b[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d\b/g;
 
 /**
  * Eine Zahl, die fuer sich steht, mit hoechstens einem angehaengten Buchstaben:

@@ -18,6 +18,7 @@ import {
   type TravelMode,
 } from '../types.js';
 import { useTexts } from '../i18n/index.js';
+import { useUnits } from '../units.js';
 import { Select, type SelectOption } from '../components/Select.js';
 import { NumberField } from '../components/NumberField.js';
 import { CaretIcon, CloseIcon, SearchIcon } from '../components/icons.js';
@@ -89,6 +90,7 @@ export const PoiConditionCard = ({
   onFocusMember,
 }: PoiConditionCardProps) => {
   const texts = useTexts();
+  const units = useUnits();
 
   // Kurzform im Knopf, voller Name im Menü -- wie in der Zielkarte: Die Zeile
   // trägt daneben noch Suchradius und den Knopf "Orte suchen".
@@ -305,7 +307,7 @@ export const PoiConditionCard = ({
                   const nearestDistance =
                     nearest === undefined
                       ? null
-                      : regionDistance(nearest.distanceToRegionKm);
+                      : regionDistance(nearest.distanceToRegionKm, units, texts.app.locale);
                   const many = group.members.length > 1;
                   const isOpen = expanded.has(group.key);
                   // OSM kennt für manche Orte keinen Namen. Der Platzhalter
@@ -375,7 +377,11 @@ export const PoiConditionCard = ({
                       {many && isOpen && (
                         <ul className="poi-sublist">
                           {group.members.map((member) => {
-                            const distance = regionDistance(member.distanceToRegionKm);
+                            const distance = regionDistance(
+                              member.distanceToRegionKm,
+                              units,
+                              texts.app.locale,
+                            );
 
                             return (
                               <li

@@ -46,7 +46,11 @@ export class OpenRouteServiceGeocoder implements GeocodingProvider {
     private readonly baseUrl: string = DEFAULT_GEOCODING_BASE_URL,
   ) {}
 
-  async search(address: string, limit = 5): Promise<GeocodingCandidate[]> {
+  async search(
+    address: string,
+    limit = 5,
+    homeCountry: string | null = null,
+  ): Promise<GeocodingCandidate[]> {
     const query = address.trim();
 
     if (query.length === 0) {
@@ -61,7 +65,7 @@ export class OpenRouteServiceGeocoder implements GeocodingProvider {
     url.searchParams.set('size', String(limit));
 
     const payload = await this.request(url);
-    const candidates = this.toCandidates(payload, query);
+    const candidates = this.toCandidates(payload, query, homeCountry);
     const parsed = payload.geocoding?.query?.parsed_text;
 
     // Pelias fällt still auf den Mittelpunkt eines Ortsteils zurück, wenn es
@@ -75,7 +79,7 @@ export class OpenRouteServiceGeocoder implements GeocodingProvider {
       parsed?.housenumber !== undefined &&
       !candidates.some((candidate) => candidate.precision === 'address')
     ) {
-      const exact = await this.searchStructured(parsed, limit, query);
+      const exact = await this.searchStructured(parsed, limit, query, homeCountry);
       if (exact.length > 0) return dedupe([...exact, ...candidates]);
     }
 
@@ -104,6 +108,7 @@ export class OpenRouteServiceGeocoder implements GeocodingProvider {
     parsed: ParsedQuery,
     limit: number,
     fallbackLabel: string,
+    homeCountry: string | null,
   ): Promise<GeocodingCandidate[]> {
     const street = parsed.street?.trim() ?? '';
     if (street === '') return [];
@@ -119,7 +124,7 @@ export class OpenRouteServiceGeocoder implements GeocodingProvider {
 
     const payload = await this.request(url);
 
-    return this.toCandidates(payload, fallbackLabel).filter(
+    return this.toCandidates(payload, fallbackLabel, homeCountry).filter(
       (candidate) => candidate.precision === 'address',
     );
   }
@@ -139,6 +144,7 @@ export class OpenRouteServiceGeocoder implements GeocodingProvider {
   private toCandidates(
     payload: OrsGeocodeResponse,
     fallbackLabel: string,
+    homeCountry: string | null,
   ): GeocodingCandidate[] {
     const candidates: GeocodingCandidate[] = [];
 
@@ -152,7 +158,7 @@ export class OpenRouteServiceGeocoder implements GeocodingProvider {
       const properties = feature.properties ?? {};
 
       candidates.push({
-        label: labelOf(partsOf(properties), fallbackLabel),
+        label: labelOf(partsOf(properties), fallbackLabel, homeCountry),
         coordinate: { latitude, longitude },
         precision: precisionOf(properties.layer),
       });

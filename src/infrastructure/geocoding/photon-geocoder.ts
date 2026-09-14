@@ -79,7 +79,8 @@ const partsOf = (properties: PhotonProperties): AddressParts => ({
   houseNumber: properties.housenumber,
   postalCode: properties.postcode,
   place: clean(properties.city) !== '' ? properties.city : properties.district,
-  county: clean(properties.county) !== '' ? properties.county : properties.state,
+  county: properties.county,
+  state: properties.state,
   country: properties.country,
   countryCode: properties.countrycode,
 });
@@ -87,7 +88,11 @@ const partsOf = (properties: PhotonProperties): AddressParts => ({
 export class PhotonGeocoder implements GeocodingProvider {
   constructor(private readonly baseUrl: string = DEFAULT_PHOTON_BASE_URL) {}
 
-  async search(address: string, limit = 5): Promise<GeocodingCandidate[]> {
+  async search(
+    address: string,
+    limit = 5,
+    homeCountry: string | null = null,
+  ): Promise<GeocodingCandidate[]> {
     const query = address.trim();
 
     if (query.length === 0) {
@@ -115,7 +120,7 @@ export class PhotonGeocoder implements GeocodingProvider {
       const properties = feature.properties ?? {};
 
       candidates.push({
-        label: labelOf(partsOf(properties), query),
+        label: labelOf(partsOf(properties), query, homeCountry),
         coordinate: { latitude, longitude },
         precision: precisionOf(properties),
       });

@@ -40,7 +40,10 @@ describe('OpenRouteServiceGeocoder', () => {
       }),
     });
 
-    const candidates = await new OpenRouteServiceGeocoder('key').search('Münster');
+    // Pelias meldet den Ländercode dreistellig ("DEU"); das Frontend schickt
+    // die Region zweistellig ("DE"), so wie Browser und Photon sie kennen.
+    // Hier steht deshalb die Schreibweise, die dieser Anbieter selbst braucht.
+    const candidates = await new OpenRouteServiceGeocoder('key').search('Münster', 5, 'DEU');
 
     const [url, init] = spy.mock.calls[0] as [string, RequestInit | undefined];
     expect(url).toContain('https://api.heigit.org/pelias/v1/search');
@@ -56,6 +59,43 @@ describe('OpenRouteServiceGeocoder', () => {
         precision: 'address',
       },
     ]);
+  });
+
+  /**
+   * Bewusst festgehalten, damit es niemand für einen Zufall hält: Mit der
+   * zweistelligen Region aus dem Browser erkennt dieser Adapter das eigene Land
+   * **nicht** wieder, und "Deutschland" steht auch daheim in der Zeile.
+   *
+   * Der Preis dafür wäre eine Umrechnungstabelle aller Länder. Er lohnt hier
+   * nicht: Pelias ist seit dem 14.09.2026 nur noch der Rückfall, und der Fehler
+   * ist eine zu lange Zeile, keine falsche. Sichtbar ausführlich schlägt still
+   * falsch -- dieselbe Regel wie beim Verzicht auf das Vorfiltern von POIs.
+   */
+  it('nennt das Land, wenn die Schreibweise des Codes nicht zusammenpasst', async () => {
+    mockFetch({
+      json: async () => ({
+        features: [
+          {
+            geometry: { coordinates: [7.63, 51.96] },
+            properties: {
+              layer: 'address',
+              name: 'Domplatz 1',
+              housenumber: '1',
+              street: 'Domplatz',
+              postalcode: '48143',
+              locality: 'Münster',
+              country: 'Deutschland',
+              country_a: 'DEU',
+              label: 'Domplatz 1, Münster, NW, Germany',
+            },
+          },
+        ],
+      }),
+    });
+
+    const [candidate] = await new OpenRouteServiceGeocoder('key').search('Münster', 5, 'DE');
+
+    expect(candidate?.label).toBe('Domplatz 1, 48143 Münster, Deutschland');
   });
 
   it('nennt das Land nur, wenn es ein anderes ist', async () => {

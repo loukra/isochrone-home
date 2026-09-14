@@ -18,7 +18,11 @@ export const de = {
     /** Nur auf schmalen Schirmen sichtbar -- der Griff des Bedienblattes. */
     sheetHandle: 'Bedienfeld höher oder niedriger ziehen',
     languageLabel: 'Sprache',
-    /** Für Zahlenformate -- im Deutschen 2,3 km, im Englischen 2.3 km. */
+    /**
+     * Für Zahlenformate -- im Deutschen 2,3 km, im Englischen 2.3 km. Nur das
+     * Format; **welche** Einheit dasteht, entscheidet die Region (siehe
+     * `units.tsx`), nicht die Sprache.
+     */
     locale: 'de-DE',
   },
 
@@ -37,6 +41,20 @@ export const de = {
     system: 'Wie das System',
     light: 'Hell',
     dark: 'Dunkel',
+  },
+
+  /**
+   * Drei Stellungen wie beim Erscheinungsbild: "Wie die Region" ist keine
+   * dritte Einheit, sondern die Ansage, nicht wählen zu wollen. Den Schalter
+   * gibt es, weil die Region nachweislich falsch erkannt werden kann -- in der
+   * Mac-Hülle meldete die WKWebView bei der Systemeinstellung "englisch in
+   * Deutschland" die Region GB (gemessen, siehe `region.ts`).
+   */
+  units: {
+    label: 'Einheit',
+    region: 'Wie die Region',
+    metric: 'Kilometer',
+    imperial: 'Meilen',
   },
 
   analysis: {
@@ -130,8 +148,14 @@ export const de = {
     // OSM führt für diesen Ort kein name-Tag. Steht in der Liste anstelle des
     // Namens -- der Ort selbst ist deshalb nicht weniger brauchbar.
     unnamed: 'Ohne Namen',
-    memberLabel: (name: string, km: string) => `${name} (${km} km)`,
-    outsideRegion: (km: string) => `${km} km außerhalb`,
+    /**
+     * Die Entfernung kommt fertig samt Einheit herein ("2,3 km", "1.4 mi").
+     * Die Einheit haengt an der Region, der Katalog an der Sprache -- "en-GB"
+     * und "en-IE" sind dieselbe Sprache mit verschiedenen Einheiten, also darf
+     * sie hier nicht stehen.
+     */
+    memberLabel: (name: string, distance: string) => `${name} (${distance})`,
+    outsideRegion: (distance: string) => `${distance} außerhalb`,
     area: (squareMeters: number, approximate: boolean) =>
       ` · ${approximate ? 'bis ' : ''}${squareMeters} m²`,
   },
@@ -213,7 +237,7 @@ export const de = {
     markerLabel: 'Geprüfte Adresse',
     markerDetails: 'Fahrzeiten und Einzelheiten stehen links in der Kachel.',
     insideRegion: 'in der Region',
-    outsideRegion: (km: string) => `${km} km außerhalb`,
+    outsideRegion: (distance: string) => `${distance} außerhalb`,
     floorArea: (squareMeters: number) => `${squareMeters} m² Grundfläche`,
     select: 'Auswählen',
     openWebsite: 'Website öffnen',

@@ -31,8 +31,8 @@ export const createApiRouter = (container: Container): Router => {
 
   // Schritt 1a: Adresse bestätigen.
   router.post('/geocode', async (request, response) => {
-    const { query, limit } = geocodeRequestSchema.parse(request.body);
-    const candidates = await container.geocoding.search(query, limit);
+    const { query, limit, homeCountry } = geocodeRequestSchema.parse(request.body);
+    const candidates = await container.geocoding.search(query, limit, homeCountry ?? null);
     response.json({ candidates });
   });
 

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App.js';
 import { LanguageProvider } from './i18n/index.js';
 import { ThemeProvider } from './theme.js';
+import { UnitProvider } from './units.js';
 // Die Schriften werden mitgeliefert, nicht vom System geborgt: `system-ui` ist
 // auf dem Mac eine andere Schrift als unter Windows, und die App soll überall
 // gleich aussehen. Über npm statt über Google Fonts, weil die Mac-App auch
@@ -22,9 +23,11 @@ if (container === null) {
 createRoot(container).render(
   <StrictMode>
     <ThemeProvider>
-      <LanguageProvider>
-        <App />
-      </LanguageProvider>
+      <UnitProvider>
+        <LanguageProvider>
+          <App />
+        </LanguageProvider>
+      </UnitProvider>
     </ThemeProvider>
   </StrictMode>,
 );

@@ -41,7 +41,7 @@ describe('PhotonGeocoder', () => {
   it('mappt einen Haustreffer auf einen Kandidaten mit deutscher Bezeichnung', async () => {
     const spy = mockFetch({ json: async () => ({ features: [house] }) });
 
-    const candidates = await new PhotonGeocoder().search('Astruper Straße 28, Hatten');
+    const candidates = await new PhotonGeocoder().search('Astruper Straße 28, Hatten', 5, 'DE');
 
     const [url] = spy.mock.calls[0] as [string];
     expect(url).toContain('https://photon.komoot.io/api');
@@ -101,7 +101,7 @@ describe('PhotonGeocoder', () => {
       }),
     });
 
-    const [candidate] = await new PhotonGeocoder().search('Westerstede');
+    const [candidate] = await new PhotonGeocoder().search('Westerstede', 5, 'DE');
 
     expect(candidate?.label).toBe('Westerstede, Landkreis Ammerland');
     expect(candidate?.precision).toBe('place');

@@ -11,6 +11,8 @@ export type PeliasProperties = {
   locality?: string;
   localadmin?: string;
   county?: string;
+  /** Bundesland als Kuerzel -- "NI", "IL". */
+  region_a?: string;
   country?: string;
   country_a?: string;
 };
@@ -32,6 +34,7 @@ export const partsOf = (properties: PeliasProperties): AddressParts => ({
       ? properties.locality
       : properties.localadmin,
   county: properties.county,
+  state: properties.region_a,
   country: properties.country,
   countryCode: properties.country_a,
 });

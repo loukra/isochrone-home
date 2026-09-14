@@ -1,3 +1,4 @@
+import { REGION } from './region.js';
 import type {
   AnalysisResponse,
   AreaFeature,
@@ -60,8 +61,16 @@ const toConstraint = (target: Target) => ({
   ...(target.coordinate !== null ? { coordinate: target.coordinate } : {}),
 });
 
+/**
+ * Die Region geht mit, damit die Bezeichnung das eigene Land weglassen kann --
+ * "Wehdestraße 7, 26123 Oldenburg" statt "..., Deutschland". Eine Angabe, die
+ * bei jeder Zeile gleich lautet, unterscheidet nichts.
+ *
+ * Sie schränkt die Suche **nicht** ein: Wer von Deutschland aus eine Adresse in
+ * Frankreich sucht, findet sie unverändert -- sie nennt dann nur ihr Land.
+ */
 export const geocode = (query: string): Promise<{ candidates: GeocodingCandidate[] }> =>
-  post('/api/geocode', { query });
+  post('/api/geocode', REGION === null ? { query } : { query, homeCountry: REGION });
 
 export const fetchIsochrone = (target: Target): Promise<SingleIsochroneResponse> =>
   post('/api/isochrone', toConstraint(target));

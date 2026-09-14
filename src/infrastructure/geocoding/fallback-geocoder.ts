@@ -27,12 +27,16 @@ export class FallbackGeocodingProvider implements GeocodingProvider {
     private readonly fallback: GeocodingProvider,
   ) {}
 
-  async search(address: string, limit?: number): Promise<GeocodingCandidate[]> {
+  async search(
+    address: string,
+    limit?: number,
+    homeCountry: string | null = null,
+  ): Promise<GeocodingCandidate[]> {
     try {
-      return await this.primary.search(address, limit);
+      return await this.primary.search(address, limit, homeCountry);
     } catch (reason) {
       if (!isRetryable(reason)) throw reason;
-      return this.fallback.search(address, limit);
+      return this.fallback.search(address, limit, homeCountry);
     }
   }
 
