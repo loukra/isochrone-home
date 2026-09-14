@@ -4,6 +4,7 @@ import {
   DEFAULT_GEOCODING_BASE_URL,
   DEFAULT_ISOCHRONE_BASE_URL,
 } from '../openrouteservice/client.js';
+import { DEFAULT_PHOTON_BASE_URL } from '../geocoding/photon-geocoder.js';
 import { DEFAULT_OVERPASS_URL } from '../poi/overpass-poi-provider.js';
 
 /** Tokenfreier Raster-Style auf Basis von OpenStreetMap-Tiles. */
@@ -20,10 +21,17 @@ export type AppConfig = {
   port: number;
   analysisStrategy: string;
   geocodingProvider: string;
+  /**
+   * Zweiter Anbieter, falls der erste nicht antwortet. `null` schaltet den
+   * Rueckfall ab. Er springt ausdruecklich *nicht* bei leeren Ergebnissen ein
+   * -- siehe FallbackGeocodingProvider.
+   */
+  geocodingFallbackProvider: string | null;
   isochroneProvider: string;
   openRouteServiceApiKey: string;
   openRouteServiceIsochroneUrl: string;
   openRouteServiceGeocodingUrl: string;
+  photonUrl: string;
   overpassUrl: string;
   mapStyleUrl: string;
   mapStyleUrlDark: string;
@@ -64,12 +72,23 @@ const readWithDefault = (key: string, fallback: string): string =>
  * führen zu einer klaren Fehlermeldung statt zu späteren 401ern (Spec 12).
  */
 export const loadConfig = (): AppConfig => {
-  const geocodingProvider = readWithDefault('GEOCODING_PROVIDER', 'openrouteservice');
+  // Photon ist der Erste, weil es messbar genauer ist: auf 13 ungenauen
+  // Eingaben 12 Treffer auf Platz 1 gegen 3 bei Pelias, und Pelias' Index ist
+  // nachweislich Monate alt (er liefert ein OSM-Objekt aus, das am 28.11.2025
+  // geloescht wurde). Pelias bleibt als Rueckfall verdrahtet -- der Adapter
+  // ist geschrieben und getestet, er wird nur nicht mehr zuerst gefragt.
+  const geocodingProvider = readWithDefault('GEOCODING_PROVIDER', 'photon');
+  const geocodingFallbackProvider = readWithDefault(
+    'GEOCODING_FALLBACK_PROVIDER',
+    'openrouteservice',
+  );
   const isochroneProvider = readWithDefault('ISOCHRONE_PROVIDER', 'openrouteservice');
   const openRouteServiceApiKey = readOptional('OPENROUTESERVICE_API_KEY');
 
   const usesOrs =
-    geocodingProvider === 'openrouteservice' || isochroneProvider === 'openrouteservice';
+    geocodingProvider === 'openrouteservice' ||
+    geocodingFallbackProvider === 'openrouteservice' ||
+    isochroneProvider === 'openrouteservice';
 
   if (usesOrs && openRouteServiceApiKey === null) {
     throw new DomainError(
@@ -93,6 +112,11 @@ export const loadConfig = (): AppConfig => {
     port,
     analysisStrategy: readWithDefault('ANALYSIS_STRATEGY', 'isochrone-intersection'),
     geocodingProvider,
+    geocodingFallbackProvider:
+      geocodingFallbackProvider === 'none' ||
+      geocodingFallbackProvider === geocodingProvider
+        ? null
+        : geocodingFallbackProvider,
     isochroneProvider,
     openRouteServiceApiKey: openRouteServiceApiKey ?? '',
     openRouteServiceIsochroneUrl: readWithDefault(
@@ -103,6 +127,7 @@ export const loadConfig = (): AppConfig => {
       'OPENROUTESERVICE_GEOCODING_URL',
       DEFAULT_GEOCODING_BASE_URL,
     ),
+    photonUrl: readWithDefault('PHOTON_URL', DEFAULT_PHOTON_BASE_URL),
     overpassUrl: readWithDefault('OVERPASS_URL', DEFAULT_OVERPASS_URL),
     mapStyleUrl: readWithDefault('MAP_STYLE_URL', DEFAULT_MAP_STYLE_URL),
     mapStyleUrlDark: readWithDefault('MAP_STYLE_URL_DARK', DEFAULT_MAP_STYLE_URL_DARK),

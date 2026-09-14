@@ -1,4 +1,5 @@
 import type { GeocodingPrecision } from '../../domain/ports/geocoding-provider.js';
+import type { AddressParts } from './address-label.js';
 
 /** Die Felder der Pelias-Antwort, aus denen hier eine Bezeichnung entsteht. */
 export type PeliasProperties = {
@@ -15,49 +16,31 @@ export type PeliasProperties = {
 };
 
 /**
- * Das Land, in dem die App gefragt wird. Es bei jedem einzelnen Ziel
- * mitzuschreiben beantwortet nichts -- eine Adresse im Ausland nennt ihres
- * weiterhin. Wird die App je auf ein anderes Land ausgerichtet, ist das die
- * eine Stelle dafür.
+ * Uebersetzt Pelias' Feldschnitt in die anbieterneutrale Form. Was daraus fuer
+ * eine Zeile wird, entscheidet `labelOf` in address-label.ts -- diese Datei
+ * kennt nur Pelias.
  */
-const HOME_COUNTRY = 'DEU';
-
-const clean = (value: string | undefined): string => value?.trim() ?? '';
-
-/**
- * Pelias setzt seine Labels nach US-Muster zusammen: "Straße, Ort, ST, Land",
- * mit englischem Ländernamen und dem Kürzel des Bundeslandes ("NI"). Beides
- * beantwortet in einer deutschen Adresse keine Frage -- das Kürzel steht in
- * keinem Briefkopf, und "Germany" steht bei jedem Ziel dieser App. Darum wird
- * die Bezeichnung hier aus den Einzelfeldern selbst gesetzt: Name, dann
- * Postleitzahl und Ort, und das Land nur, wenn es ein anderes ist.
- */
-export const labelOf = (properties: PeliasProperties, fallback: string): string => {
-  const street = clean(properties.street);
-  const housenumber = clean(properties.housenumber);
-  const name =
-    clean(properties.name) ||
-    [street, housenumber].filter((part) => part !== '').join(' ');
-
-  const place = clean(properties.locality) || clean(properties.localadmin);
-  // Bei einem Ort selbst wäre der Ort noch einmal der Name; dann ordnet der
-  // Kreis ein ("Westerstede, Landkreis Ammerland") statt ihn zu wiederholen.
-  const area = place === '' || place === name ? clean(properties.county) : place;
-
-  const country = clean(properties.country);
-  const parts = [
-    name,
-    [clean(properties.postalcode), area].filter((part) => part !== '').join(' '),
-    clean(properties.country_a) === HOME_COUNTRY ? '' : country,
-  ].filter((part) => part !== '');
-
-  return parts.length > 0 ? parts.join(', ') : fallback;
-};
+export const partsOf = (properties: PeliasProperties): AddressParts => ({
+  name: properties.name,
+  street: properties.street,
+  houseNumber: properties.housenumber,
+  postalCode: properties.postalcode,
+  // Leerer String zaehlt wie fehlend -- sonst faellt die Zeile auf den Kreis
+  // zurueck, obwohl Pelias die Gemeinde daneben stehen hat.
+  place:
+    (properties.locality ?? '').trim() !== ''
+      ? properties.locality
+      : properties.localadmin,
+  county: properties.county,
+  country: properties.country,
+  countryCode: properties.country_a,
+});
 
 /**
  * Wie genau ein Treffer ist. Pelias' Ebenen sind feiner, als hier jemand
- * unterscheiden muss: Was zählt, ist die Frage "Haus, Straße oder nur Gegend?".
- * `venue` ist ein einzelnes Gebäude und damit so genau wie eine Hausnummer.
+ * unterscheiden muss: Was zaehlt, ist die Frage "Haus, Strasse oder nur
+ * Gegend?". `venue` ist ein einzelnes Gebaeude und damit so genau wie eine
+ * Hausnummer.
  */
 export const precisionOf = (layer: string | undefined): GeocodingPrecision => {
   if (layer === 'address' || layer === 'venue') return 'address';

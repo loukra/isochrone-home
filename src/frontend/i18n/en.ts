@@ -45,6 +45,7 @@ export const en: Texts = {
     namePlaceholder: 'Parents A',
     addressPlaceholder: 'Münster',
     whichAddress: 'Which address do you mean?',
+    noHouseNumber: 'No match for that house number. This is the closest:',
     precision: { street: 'whole street', place: 'place only' },
     submit: 'Apply',
     submitHint: 'Confirm with Enter',
@@ -129,6 +130,8 @@ export const en: Texts = {
     add: 'Add address',
     adding: 'Searching…',
     chooseMatch: 'Please pick the right match:',
+    noHouseNumber: 'No match for that house number. This is the closest:',
+    precision: { street: 'whole street', place: 'place only' },
     empty: 'Please enter an address.',
     duplicate: (label) => `“${label}” is already in the list.`,
     notFound: (label) => `The address “${label}” could not be found.`,
@@ -225,7 +228,8 @@ export const en: Texts = {
       ADDRESS_NOT_FOUND: null,
       PROVIDER_RATE_LIMITED:
         'The map service’s request limit has been reached. Please try again later.',
-      PROVIDER_UNAVAILABLE: 'The calculation could not be run right now. Please try again.',
+      PROVIDER_UNAVAILABLE:
+        'The calculation could not be run right now. Please try again.',
       CONFIGURATION_ERROR: null,
     },
   },

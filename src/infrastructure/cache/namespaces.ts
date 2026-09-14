@@ -46,13 +46,15 @@ export const cacheNamespaces = (config: {
    *
    * Der Namensraum trägt die Fassung des Adapters, aus demselben Grund wie die
    * Glättung bei den Isochronen: Die Schlüssel sind die Eingaben des Nutzers
-   * und ändern sich nicht, die abgelegten Bezeichnungen und die zweite,
-   * strukturierte Anfrage schon. Ohne den Wechsel stünde dreißig Tage lang
-   * "NI, Germany" neben frisch gesetzten deutschen Bezeichnungen -- und der
-   * Ortsteil-Zentroid, gegen den die Nachfrage gebaut ist, käme weiter aus
-   * der Platte.
+   * und ändern sich nicht, die Antworten dahinter schon.
+   *
+   * v3 ist der Wechsel des Anbieters (Pelias -> Photon). Ohne ihn kämen dreißig
+   * Tage lang genau die Antworten von der Platte, gegen die der Wechsel gebaut
+   * ist: der Straßenmittelpunkt statt des Hauses, gemessen bis zu 1530 m
+   * daneben. v2 war der Wechsel der Bezeichnungen ("NI, Germany") und die
+   * strukturierte Nachfrage.
    */
-  geocoding: { name: 'geocoding-v2', maxAgeMs: config.geocodeDays * DAY },
+  geocoding: { name: 'geocoding-v3', maxAgeMs: config.geocodeDays * DAY },
 
   /**
    * Fahrzeiten: dieselbe Wirklichkeit wie bei den Isochronen -- beide beruhen

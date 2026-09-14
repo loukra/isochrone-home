@@ -625,6 +625,125 @@ die **einzelnen Isochronen**, §2/§17/§20 (Button) gilt fuer die **Schnittmeng
 Hinweis: Die Spec hat zweimal `# 11`. Gemeint sind API (§11) und
 Fehlerbehandlung (§12).
 
+## Adresssuche: Photon zuerst, ORS als Rückfall
+
+*Gewechselt am 14.09.2026 auf Entscheidung des Nutzers* („anscheinend ist ja der
+aktuelle überhaupt nicht genau"). Anlass war „Astruper Straße 28, Hatten" --
+eine real existierende Adresse, die nicht gefunden wurde.
+
+Genauer: Sie wurde gefunden, nur nicht als Haus. Pelias antwortete mit
+`match_type: fallback` und dem **Mittelpunkt der Straße**, 405 m daneben. Und
+weil es genau *ein* Treffer war, übernahm die Oberfläche ihn wortlos.
+
+### Warum der Anbieter gewechselt wurde
+
+Der Index von heigits Pelias ist nachweislich alt: Er liefert für „Astruper
+Straße 26" noch `way/599966115` aus -- ein OSM-Objekt, das am **28.11.2025
+gelöscht** wurde. Das Haus Nr. 28 entstand am selben Tag und fehlt dort ganz.
+
+Zwei Messungen, beide in der Referenzregion:
+
+| Messung | Pelias | Nominatim | Photon |
+| --- | ---: | ---: | ---: |
+| 30 zufällige, real existierende Adressen in Hatten | 27/30 (Versatz bis 1530 m) | — | — |
+| 13 ungenaue Eingaben, richtiger Treffer auf Platz 1 | **3/13** | 10/13 | **12/13** |
+
+Die zweite Zeile entschied. Die drei Fälle, die Nominatim nicht schafft, sind
+**alle Tippfehler**, und es antwortet dort mit *null* Treffern -- die App sagte
+„nicht gefunden", obwohl die Adresse existiert und bis auf einen Buchstaben
+richtig geschrieben war. Photon ist für die Eingabe während des Tippens gebaut,
+gleicht also unscharf ab und findet in genau diesen Fällen das Haus auf Platz 1
+(„Astru**b**er Straße 28" → Astruper Straße 28). Nominatim ist ein wörtlicher
+Sucher, Photon ein nachsichtiger; die App braucht den nachsichtigen.
+
+Photons einziger Fehlschlag ist der harmlose: Auf „Wedestraße 7" (fehlendes h)
+liefert es fünfmal „Oldenburger Stadtautobahn", `type: street` -- sichtbar etwas
+anderes, das in der Auswahlliste als „ganze Straße" dasteht. Es rät kein Haus
+zusammen.
+
+Nebenbei entfällt damit `searchStructured`: Die ganze Rückfragemechanik gegen
+den Ortsteil-Zentroid existierte nur, um eine Pelias-Schwäche zu flicken.
+Photon beantwortet „Burnhörn 32 Ocholt Westerstede" von sich aus mit dem Haus.
+Der Code bleibt trotzdem stehen -- er gehört zum Rückfall.
+
+### Austauschbar, aus der Konfiguration
+
+`GEOCODERS` in `container.ts` ist eine Tabelle Name → Adapter; `.env` wählt aus.
+Einen Anbieter zu tauschen heißt: eine Zeile dort, ein Wort in der `.env`.
+
+```
+GEOCODING_PROVIDER=photon              # photon | openrouteservice
+GEOCODING_FALLBACK_PROVIDER=openrouteservice   # oder "none"
+PHOTON_URL=                            # leer = photon.komoot.io
+```
+
+- **Der Rückfall springt nur ein, wenn der Erste nicht *antworten konnte***
+  (`PROVIDER_UNAVAILABLE`, `PROVIDER_RATE_LIMITED`) -- nie bei einem leeren
+  Ergebnis. Das ist die ganze Regel von `FallbackGeocodingProvider`, und sie ist
+  wichtiger, als sie aussieht: Pelias antwortet auf eine unbekannte Hausnummer
+  nicht mit „nichts", sondern mit dem Straßenmittelpunkt. Wer bei leerem
+  Ergebnis weiterfragte, tauschte ein ehrliches „nicht gefunden" gegen eine
+  stille Falschauskunft -- dieselbe Gefahr wie beim Vorfiltern von POIs.
+- Ein Anbieter, der zugleich Erster und Rückfall wäre, wird zu `null`; zweimal
+  denselben zu fragen kostet nur Zeit.
+- **Ein gesetzter Wert in der `.env` gewinnt gegen die neue Vorgabe.** Wer dort
+  `GEOCODING_PROVIDER=openrouteservice` stehen hat, bleibt bei Pelias, bis er
+  die Zeile ändert. Das ist richtig so -- eine ausdrückliche Einstellung
+  hinterrücks zu überschreiben wäre schlimmer --, es muss nur jemand sagen.
+- Photon ist ein Dienst **ohne Schlüssel und ohne Zusage**. Fällt Komoots
+  Instanz aus, trägt der Plattencache (30 Tage) und danach ORS. Reißleine, falls
+  das je dauerhaft wird: Photon ist selbst betreibbar, dann genügt `PHOTON_URL`.
+- Die Adapter reden **nicht** miteinander: Der ORS-Adapter kennt Pelias' Felder,
+  der Photon-Adapter Photons. Was daraus für eine Zeile wird, entscheidet
+  `labelOf` in `geocoding/address-label.ts` -- anbieterneutral, damit sich die
+  Bezeichnung nicht danach unterscheidet, wer gerade geantwortet hat. Vorher
+  hingen die Regeln am Feldschnitt von Pelias.
+  - Die Anbieter sind sich beim Ländercode nicht einig (Pelias „DEU", Photon
+    „DE"). `HOME_COUNTRY` nennt deshalb beide Schreibweisen, statt eine
+    Umrechnungstabelle aller Länder für eine Frage anzulegen, die nur dieses
+    eine Land betrifft.
+
+### Ein Treffer genügt nicht -- er muss die Frage beantworten
+
+Das war der eigentliche Fehler, und er überlebt den Anbieterwechsel: Bei genau
+einem Treffer übernahm die Oberfläche ihn ohne Rückfrage, an **drei** Stellen
+(Zielformular, Stift, „Orte prüfen"). `precision` -- die Angabe, die genau dafür
+existiert -- erreichte den Nutzer nie, weil die Auswahlliste bei einem Treffer
+gar nicht erschien.
+
+`frontend/address.ts` entscheidet das jetzt an einer Stelle für alle drei:
+
+- **`soleAnswer`** gibt den einzelnen Treffer nur heraus, wenn er `address` ist
+  *oder* gar nicht nach einem Haus gefragt war. „Oldenburg" wird also weiter
+  wortlos übernommen -- die Rückfrage kommt nur, wenn die Antwort ungenauer ist
+  als die Frage.
+- **`asksForHouseNumber`** erkennt die Hausnummer in der Eingabe selbst, weil
+  Photon keinen Parser-Auszug mitliefert. Postleitzahlen werden vorher
+  entfernt (sonst wäre „26123 Oldenburg" eine Frage nach einem Haus), und eine
+  Zahl mit Punkt zählt nicht („Straße des 17. Juni"). Die Regel ist bewusst in
+  Richtung Nachfrage schief: einmal zu viel fragen kostet einen Klick, einmal zu
+  wenig einen still verschobenen Punkt.
+- **`missesHouseNumber`** steuert den Text über der Liste. Ist kein Treffer ein
+  Haus, steht dort nicht „Welche Adresse meinst du?" -- das wäre bei einem
+  einzigen Eintrag keine Frage --, sondern „Die Hausnummer wurde nicht gefunden.
+  Das ist das Nächste:".
+- Die Genauigkeitsangabe hinter der Zeile gab es bisher nur im Zielformular; sie
+  steht jetzt auch im Stift-Formular und unter „Orte prüfen". Dieselbe Auskunft
+  an drei Stellen wegzulassen war ein Versehen, kein Entwurf.
+
+Was das **nicht** ändert: Die Genauigkeit wird weiter nicht gespeichert (siehe
+unten) -- sie gehört in den Moment der Auswahl. Und ein Ortsteil bleibt ein
+legitimes Ziel; die App macht den Unterschied sichtbar, statt ihn zu entscheiden.
+
+Wie weit ein Versatz die Region verschiebt, hängt an Verkehrsmittel und Zeit --
+gemessen für die 405 m von Astruper Straße 28 (Deckung der beiden Flächen):
+Auto 25 Min. 94 %, Auto 10 Min. 76 %, Rad 20 Min. 87 %, zu Fuß 15 Min. **48 %**.
+Beim Auto ist es ein schmaler Saum -- aber einer am **Rand**, also genau dort,
+wo sich entscheidet, ob ein Ort noch in die gemeinsame Region fällt. Die
+Hausnummer selbst sieht ORS nie; es rastet die Koordinate auf den nächsten
+Straßenknoten, und das Rasten rettet nichts: Die beiden Punkte landen auf
+verschiedenen Knoten, 413 m auseinander.
+
 ## Adressen: die Bezeichnung setzt die App, nicht der Provider
 
 *Festgelegt am 14.09.2026 auf Wunsch des Nutzers* („Da steht zum Beispiel immer
@@ -661,6 +780,12 @@ dasselbe. Darum wird die Bezeichnung jetzt aus den Einzelfeldern selbst gesetzt:
   Ausland; Orts- und Straßennamen kommen so oder so örtlich zurück.
 
 ### Die stille Rückfallebene auf den Ortsteil
+
+*Gilt seit dem Anbieterwechsel nur noch für den Rückfall.* Photon beantwortet
+„Burnhörn 32 Ocholt Westerstede" von sich aus mit dem Haus, `searchStructured`
+läuft also im Normalbetrieb nicht mehr. Der Abschnitt bleibt stehen, weil der
+ORS-Adapter stehen bleibt -- und weil er erklärt, wogegen `soleAnswer` gebaut
+ist.
 
 Das war der eigentliche Fehler, und er war keiner der Anzeige. Auf
 **„Burnhörn 32 Ocholt Westerstede"** antwortete Pelias mit genau **einem**
@@ -712,11 +837,12 @@ berichtet nur und ist deshalb 11px und gedämpft.
 
 ### Der Namensraum des Caches trägt die Fassung
 
-`geocoding-v2`, aus demselben Grund wie `isochrones-s0` bei der Glättung: Die
-Schlüssel sind die Eingaben des Nutzers und ändern sich nicht, die abgelegten
-Bezeichnungen schon. Ohne den Wechsel stünde dreißig Tage lang „NI, Germany"
-neben frisch gesetzten deutschen Bezeichnungen, und der Ortsteil-Zentroid, gegen
-den die Nachfrage gebaut ist, käme weiter von der Platte.
+`geocoding-v3`, aus demselben Grund wie `isochrones-s0` bei der Glättung: Die
+Schlüssel sind die Eingaben des Nutzers und ändern sich nicht, die Antworten
+dahinter schon. **v3** ist der Wechsel des Anbieters -- ohne ihn kämen dreißig
+Tage lang genau die Antworten von der Platte, gegen die der Wechsel gebaut ist:
+der Straßenmittelpunkt statt des Hauses. **v2** war der Wechsel der
+Bezeichnungen („NI, Germany") und die strukturierte Nachfrage.
 
 **Bereits gespeicherte Ziele frischen sich nicht auf.** `resolvedLabel` und
 `coordinate` liegen im `localStorage` und sind Eingabe, kein Ergebnis -- sie
@@ -1168,6 +1294,9 @@ Oberfläche anzeigt, und dahinter der Node-Server als Kindprozess. Quelle:
 - Basis-URLs sind `https://api.heigit.org/openrouteservice` (Isochronen) und
   `https://api.heigit.org/pelias/v1` (Geocoding). `api.openrouteservice.org`
   ist abgekündigt (Abschaltung war 24.08.2026) — nicht mehr verwenden.
+- **Der Pelias von ORS ist seit dem 14.09.2026 nur noch der Rückfall** für die
+  Adresssuche; zuerst gefragt wird Photon (`https://photon.komoot.io`, ohne
+  Schlüssel). Begründung und Messungen stehen oben unter „Adresssuche".
 - Der API-Key geht **nur** über den `Authorization`-Header, nie als
   `api_key`-Query-Parameter (sonst landet er in URLs und Logs).
 - Verfuegbare Profile: `driving-car`, `driving-hgv`, `cycling-regular`,

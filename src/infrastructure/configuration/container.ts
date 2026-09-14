@@ -18,7 +18,9 @@ import type { LocationAnalysisStrategy } from '../../domain/ports/analysis-strat
 import type { PoiProvider } from '../../domain/ports/poi-provider.js';
 import type { TravelTimeProvider } from '../../domain/ports/travel-time-provider.js';
 import { OverpassPoiProvider } from '../poi/overpass-poi-provider.js';
+import { FallbackGeocodingProvider } from '../geocoding/fallback-geocoder.js';
 import { OpenRouteServiceGeocoder } from '../geocoding/openrouteservice-geocoder.js';
+import { PhotonGeocoder } from '../geocoding/photon-geocoder.js';
 import { CachingIsochroneProvider } from '../isochrone/caching-isochrone-provider.js';
 import { OpenRouteServiceIsochroneProvider } from '../isochrone/openrouteservice-isochrone-provider.js';
 import { OpenRouteServiceMatrixProvider } from '../travel/openrouteservice-matrix-provider.js';
@@ -36,20 +38,51 @@ export type Container = {
   travelTimes: TravelTimeQuery;
 };
 
-const createGeocoder = (config: AppConfig): GeocodingProvider => {
-  switch (config.geocodingProvider) {
-    case 'openrouteservice':
-      return new OpenRouteServiceGeocoder(
-        config.openRouteServiceApiKey,
-        config.openRouteServiceGeocodingUrl,
-      );
-    default:
-      throw new DomainError(
-        'CONFIGURATION_ERROR',
-        `Unbekannter GEOCODING_PROVIDER: "${config.geocodingProvider}".`,
-        'Unterstützt wird derzeit: openrouteservice',
-      );
+/**
+ * Ein Name, ein Geocoder -- mehr weiss diese Stelle nicht. Einen Anbieter
+ * auszutauschen heisst dadurch: hier eine Zeile, und in der `.env` ein Wort.
+ */
+const GEOCODERS: Record<string, (config: AppConfig) => GeocodingProvider> = {
+  photon: (config) => new PhotonGeocoder(config.photonUrl),
+  openrouteservice: (config) =>
+    new OpenRouteServiceGeocoder(
+      config.openRouteServiceApiKey,
+      config.openRouteServiceGeocodingUrl,
+    ),
+};
+
+const geocoderNamed = (name: string, setting: string, config: AppConfig) => {
+  const create = GEOCODERS[name];
+
+  if (create === undefined) {
+    throw new DomainError(
+      'CONFIGURATION_ERROR',
+      `Unbekannter ${setting}: "${name}".`,
+      `Unterstützt wird: ${Object.keys(GEOCODERS).join(', ')}`,
+    );
   }
+
+  return create(config);
+};
+
+/**
+ * Photon zuerst, ORS als Rueckfall -- beides aus der Konfiguration, damit sich
+ * die Reihenfolge umdrehen oder der Rueckfall abschalten laesst
+ * (`GEOCODING_FALLBACK_PROVIDER=none`), ohne den Code anzufassen.
+ */
+const createGeocoder = (config: AppConfig): GeocodingProvider => {
+  const primary = geocoderNamed(config.geocodingProvider, 'GEOCODING_PROVIDER', config);
+
+  if (config.geocodingFallbackProvider === null) return primary;
+
+  return new FallbackGeocodingProvider(
+    primary,
+    geocoderNamed(
+      config.geocodingFallbackProvider,
+      'GEOCODING_FALLBACK_PROVIDER',
+      config,
+    ),
+  );
 };
 
 /** Nur die Providerwahl -- die Cache-Huellen kommen in createContainer dazu. */
