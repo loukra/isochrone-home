@@ -287,42 +287,53 @@ Daraus folgt:
   Fussgaengerwert **80** bis 1,2 km. Die Liste stuende sonst voll mit Orten,
   zu denen niemand laeuft, und die Angabe "x km ausserhalb" waere fuer die
   Entscheidung wertlos.
-- **Beim Auto haengt er ausserdem an der Fahrzeit -- als gemessene Kurve, nicht
-  als Faktor** (*geaendert am 14.09.2026 auf Entscheidung des Nutzers*, nach
-  einer Schulsuche, deren Punkte bis Bremen-Ost reichten). Vorher war jeder
-  Wert ein geschaetztes Tempo mal Minuten. Gemessen wurde die groesste
-  Luftlinie echter Isochronen (`smoothing: 0`) ueber sieben Startpunkte in
-  Oldenburg **und** Delmenhorst -- Zentrum, Land, Kleinstadt,
-  Autobahnauffahrt, Autobahnkreuz, 99 Messungen:
+- **Der Radius ist eine Kurve je Verkehrsmittel, kein Wert je Minute**
+  (`REACH_CURVES`, *geaendert am 14.09.2026 auf Entscheidung des Nutzers*, nach
+  einer Schulsuche, deren Punkte bis Bremen-Ost reichten). Eine Stuetzstelle
+  ist `[Fahrzeit, km je Minute]`; dass die Kurve bei Rad, E-Bike und zu Fuss
+  flach ist -- eine einzige Stuetzstelle --, ist ein Messergebnis und kein
+  zweiter Mechanismus. Gemessen wurde die groesste Luftlinie echter Isochronen
+  (`smoothing: 0`), 126 Messungen ueber sieben Startpunkte in Oldenburg **und**
+  Delmenhorst: Zentrum, Land, Kleinstadt, Autobahnauffahrt, Autobahnkreuz.
 
-  | Fahrzeit | Auto, groesste Reichweite | je Minute |
-  | ---: | ---: | ---: |
-  | 5 Min. | 4,2 km | 0,84 |
-  | 8 Min. | 8,2 km | 1,03 |
-  | 10 Min. | 11,1 km | 1,11 |
-  | 12 Min. | 15,6 km | 1,30 |
-  | 15 Min. | 20,4 km | 1,36 |
-  | 20 Min. | 27,7 km | 1,39 |
-  | 30 Min. | 49,8 km | 1,66 |
-  | 45 Min. | 81,7 km | 1,82 |
-  | 60 Min. | 110,5 km | 1,84 |
+  | Fahrzeit | Auto gemessen | je Minute | | Fahrzeit | Auto gemessen | je Minute |
+  | ---: | ---: | ---: | --- | ---: | ---: | ---: |
+  | 5 Min. | 4,2 km | 0,84 | | 22 Min. | 32,3 km | 1,47 |
+  | 6 Min. | 5,4 km | 0,90 | | 25 Min. | 35,4 km | 1,42 |
+  | 8 Min. | 8,2 km | 1,03 | | 27 Min. | 43,2 km | 1,60 |
+  | 9 Min. | 9,7 km | 1,07 | | 30 Min. | 49,8 km | 1,66 |
+  | 10 Min. | 11,1 km | 1,11 | | 35 Min. | 60,6 km | 1,73 |
+  | 11 Min. | 13,1 km | 1,19 | | 45 Min. | 81,7 km | 1,82 |
+  | 12 Min. | 15,6 km | 1,30 | | 50 Min. | 91,2 km | 1,82 |
+  | 13 Min. | 17,5 km | 1,35 | | 60 Min. | 110,5 km | 1,84 |
+  | 15 Min. | 20,4 km | 1,36 | | | | |
+  | 18 Min. | 24,2 km | 1,34 | | | | |
+  | 20 Min. | 27,7 km | 1,39 | | | | |
 
   - **Von 0,84 auf 1,84 km/min -- das Doppelte.** Die ersten Minuten gehen fuer
     die Anfahrt zur schnellen Strasse drauf; erst danach zaehlt das Tempo der
-    Autobahn. Ein fester Wert kann das nicht abbilden, er kann nur eines von
-    beiden Enden treffen. Der alte Wert 1,5 km/min suchte bei 5 Minuten fast
-    doppelt so weit wie erreichbar und bei 30 Minuten nur noch neun Zehntel
-    davon -- **beides falsch, aber nur das erste sichtbar**: eine zu lange
-    Liste faellt auf, ein fehlender Ort nicht.
-  - **Rad, E-Bike und zu Fuss sind dagegen wirklich linear** und bleiben
-    deshalb feste Werte (0,5 / 0,4 / 0,1 km/min). Gemessen steht ihre
-    Reichweite je Minute ueber 5 bis 60 Minuten still: E-Bike 0,38 bis 0,35,
-    Rad 0,32 bis 0,29, zu Fuss 0,08 bis 0,09. Die Werte liegen ein Stueck
-    darueber, weil Grosszuegigkeit dort fast nichts kostet -- 30 % von 1,3 km
-    sind 400 m, 30 % beim Auto sind mehrere Kilometer Ring.
-  - **Interpoliert wird linear zwischen den Stuetzstellen.** Weil die Kurve
-    nach oben gekruemmt ist, liegt jede Sehne ueber ihr; ein Zwischenwert ist
-    also nie zu knapp. Die Tabelle traegt rund 10 % Luft.
+    Autobahn. Ein fester Wert kann davon nur ein Ende treffen. Der alte Wert
+    1,5 km/min suchte bei 5 Minuten fast doppelt so weit wie erreichbar und bei
+    30 Minuten nur noch neun Zehntel davon -- **beides falsch, aber nur das
+    erste sichtbar**: Eine zu lange Liste faellt auf, ein fehlender Ort nicht.
+  - **Zwischenzeiten runden auf die naechste Stuetzstelle auf**: 6 Minuten
+    rechnen mit dem Wert von 10, 14 mit dem von 20. Das ist nicht die bequemere
+    Wahl, sondern die belastbarere: Die Reichweite je Minute steigt mit der
+    Fahrzeit, also deckt die spaetere Stuetzstelle jede frueheren Zeit mit ab
+    -- ohne dass irgendetwas dazwischen gemessen sein muesste. **Interpoliert
+    galt das nicht.** Mit Stuetzstellen bei 20, 25 und 30 Minuten lag der
+    Radius bei 22 und 27 Minuten nachgemessen 3 % zu niedrig: Die echte Kurve
+    steigt dort steiler als die Sehne, und ein erreichbarer Ort waere unbemerkt
+    aus der Liste gefallen. Genau der Fehler, gegen den es das Vorfilter-Verbot
+    bei den POIs gibt -- und er wurde nur gefunden, weil nachgemessen wurde.
+  - Eine Stuetzstelle traegt das aufgerundete Maximum **bis zu ihrer
+    Fahrzeit**, nicht den Wert an dieser einen Stelle: Sonst zoege eine dichter
+    gemessene Zwischenzeit (22 Min.: 1,47) die spaetere (25 Min.: 1,42) nach
+    unten. Aufgerundet wird auf die naechsten 0,05 km je Minute, mehr nicht.
+  - **Rad, E-Bike und zu Fuss sind wirklich linear.** Gemessen steht ihre
+    Reichweite je Minute ueber 5 bis 60 Minuten still: E-Bike 0,385 bis 0,346,
+    Rad 0,318 bis 0,283, zu Fuss 0,092 bis 0,083. Sie bekommen eine Kurve mit
+    einer Stuetzstelle -- 0,4 / 0,35 / 0,1.
   - Was der alte Wert kostete, ist nachgerechnet: 346 Schulen der
     Referenzregion, echte Fahrzeitmatrix von fuenf Stuetzstellen in der
     gemeinsamen Region, Bedingung "10 Minuten Auto":
@@ -336,14 +347,14 @@ Daraus folgt:
     | 10-15 km | 92 | 0 | 30 Min. |
 
     258 gefunden, **50 erreichbar** -- und alle 50 innerhalb von **6,1 km**.
-    Dass der Radius trotzdem 12 km betraegt, ist kein Versehen: Von einer
+    Dass der Radius trotzdem 11,5 km betraegt, ist kein Versehen: Von einer
     Autobahnauffahrt aus sind 11,1 km in 10 Minuten gemessen real. Der Radius
     deckt den guenstigsten Punkt der Region ab, nicht den mittleren -- sonst
-    fiele ein erreichbarer Ort unbemerkt heraus, dieselbe Gefahr wie beim
-    Vorfiltern von POIs.
+    fiele ein erreichbarer Ort unbemerkt heraus.
   - Die Gegenrechnung steht in `tests/search-area.test.ts`: Der Radius muss
-    jede gemessene Zahl decken und darf hoechstens ein Viertel darueber liegen.
-    Neue Messungen gehoeren dort hinein, nicht in einen Kommentar.
+    jede der 19 gemessenen Fahrzeiten decken und darf beim Auto hoechstens
+    28 % darueber liegen. Neue Messungen gehoeren dorthin, nicht in einen
+    Kommentar.
 - Dass das Verkehrsmittel wirklich bis zum Provider durchschlaegt, haengt nicht
   am Vertrauen: Derselbe Supermarkt, 10 Minuten, ergab ueber `/api/pois/region`
   165 km² erreichbare Flaeche mit dem Auto, 14,4 km² mit dem Rad und 0,8 km²
