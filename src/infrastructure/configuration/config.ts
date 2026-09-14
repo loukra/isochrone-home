@@ -9,6 +9,13 @@ import { DEFAULT_OVERPASS_URL } from '../poi/overpass-poi-provider.js';
 /** Tokenfreier Raster-Style auf Basis von OpenStreetMap-Tiles. */
 const DEFAULT_MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 
+/**
+ * Derselbe Anbieter, dunkler Stil. Eine helle Karte neben einer dunklen
+ * Seitenleiste ist der hellste Fleck im Bild und blendet genau dort, wo man
+ * hinsieht -- der Dunkelmodus muss die Karte mitnehmen, sonst ist er halb.
+ */
+const DEFAULT_MAP_STYLE_URL_DARK = 'https://tiles.openfreemap.org/styles/dark';
+
 export type AppConfig = {
   port: number;
   analysisStrategy: string;
@@ -19,6 +26,7 @@ export type AppConfig = {
   openRouteServiceGeocodingUrl: string;
   overpassUrl: string;
   mapStyleUrl: string;
+  mapStyleUrlDark: string;
   mapToken: string | null;
   /** Ablageort des Plattencaches; darf jederzeit geloescht werden. */
   cacheDirectory: string;
@@ -97,6 +105,7 @@ export const loadConfig = (): AppConfig => {
     ),
     overpassUrl: readWithDefault('OVERPASS_URL', DEFAULT_OVERPASS_URL),
     mapStyleUrl: readWithDefault('MAP_STYLE_URL', DEFAULT_MAP_STYLE_URL),
+    mapStyleUrlDark: readWithDefault('MAP_STYLE_URL_DARK', DEFAULT_MAP_STYLE_URL_DARK),
     mapToken: readOptional('MAP_TOKEN'),
     cacheDirectory: readWithDefault('CACHE_DIR', '.cache'),
     cacheIsochroneDays: readNumber('CACHE_TTL_ISOCHRONE_DAYS', 7),

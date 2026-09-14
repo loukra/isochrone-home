@@ -19,8 +19,13 @@ import { PoiApplyBar } from './poi/PoiApplyBar.js';
 import { type PoiCondition } from './poi/PoiConditionCard.js';
 import { useTexts } from './i18n/index.js';
 import { LanguageSwitch } from './i18n/LanguageSwitch.js';
+import { ThemeSwitch } from './components/ThemeSwitch.js';
+import { TooltipLayer } from './components/TooltipLayer.js';
+import { useTheme } from './theme.js';
 import { translateError } from './i18n/errors.js';
 import {
+  canSortByRelevance,
+  defaultSortMode,
   groupPois,
   isPoiSelected,
   toggleGroup,
@@ -62,7 +67,9 @@ const newCondition = (category: PoiCategory): PoiCondition => ({
   busy: false,
   error: null,
   open: true,
-  sortMode: 'relevance',
+  // "Große zuerst" nur, wo eine Grundfläche etwas aussagt -- siehe
+  // `canSortByRelevance` in poi/selection.ts.
+  sortMode: defaultSortMode(category),
 });
 
 /** Einmalig beim Start gelesen, damit ein Reload die Ziele nicht verwirft. */
@@ -72,7 +79,15 @@ const restoredSelection = loadPoiSelection();
 export const App = () => {
   const texts = useTexts();
   const [activeTab, setActiveTab] = useState<'analysis' | 'location-check'>('analysis');
-  const [mapStyleUrl, setMapStyleUrl] = useState<string | null>(null);
+  /*
+   * Beide Kartenstile, hell und dunkel. Welcher gilt, entscheidet nicht dieser
+   * Zustand, sondern das Erscheinungsbild -- deshalb liegen sie zusammen und
+   * werden erst beim Rendern auseinandersortiert.
+   */
+  const [mapStyles, setMapStyles] = useState<{ light: string; dark: string } | null>(
+    null,
+  );
+  const { appearance } = useTheme();
   /** Die im Tab "Orte prüfen" gesammelten Adressen; überleben den Reload. */
   const [checkedPlaces, setCheckedPlaces] = useState<CheckedPlace[]>(
     restored?.checkedPlaces ?? [],
@@ -90,12 +105,20 @@ export const App = () => {
 
   const [conditions, setConditions] = useState<PoiCondition[]>(() =>
     restored?.pois !== null && restored?.pois !== undefined
-      ? restored.pois.conditions.map((condition) => ({
+      ? restored.pois.conditions.map((condition, index, all) => ({
           category: condition.category,
           travelMode: condition.travelMode,
           minutes: condition.minutes,
-          open: condition.open,
-          sortMode: condition.sortMode,
+          // Nur die erste offene überlebt: Ein Stand aus der Zeit vor dem
+          // Akkordeon kann mehrere mitbringen.
+          open:
+            condition.open &&
+            all.findIndex((other) => other.open) === index,
+          // Ein Stand von vor dieser Regel kann "Große zuerst" für eine
+          // Kategorie mitbringen, in der es das nicht mehr gibt.
+          sortMode: canSortByRelevance(condition.category)
+            ? condition.sortMode
+            : 'distance',
           // Die Treffer kommen gleich vom Backend, nicht aus dem Browser.
           pois: [],
           busy: false,
@@ -162,10 +185,10 @@ export const App = () => {
   useEffect(() => {
     fetchMapConfig()
       .then((config) => {
-        setMapStyleUrl(config.mapStyleUrl);
+        setMapStyles({ light: config.mapStyleUrl, dark: config.mapStyleUrlDark });
         setMaxMinutes(config.maxTravelTimeMinutes);
       })
-      .catch(() => setMapStyleUrl(null));
+      .catch(() => setMapStyles(null));
   }, []);
 
   /** Jede Zieländerung entwertet ein vorhandenes Analyse-Ergebnis. */
@@ -440,6 +463,31 @@ export const App = () => {
   const intersection =
     analysis.kind === 'done' && !analysis.stale ? analysis.result.intersection : null;
 
+  /**
+   * Aufklappen ist ein Akkordeon: Eine Bedingung zu öffnen schliesst die
+   * anderen.
+   *
+   * *Geaendert am 14.09.2026 auf Wunsch des Nutzers.* Vorher konnten alle
+   * gleichzeitig offen stehen, und bei drei Bedingungen mit je fünfundzwanzig
+   * Treffern wuchs die Seitenleiste auf ein paar tausend Pixel: Wer die
+   * Bahnhöfe angehakt hatte und dann zum Fitnessstudio wollte, scrollte an
+   * einer Liste vorbei, mit der er fertig war. Offen ist jetzt immer das, was
+   * man gerade bearbeitet.
+   */
+  const toggleConditionOpen = useCallback((category: PoiCategory) => {
+    setConditions((current) => {
+      const target = current.find((condition) => condition.category === category);
+      // Ein zweiter Klick auf die offene Bedingung schliesst sie wieder --
+      // sonst gäbe es keinen Weg, alle Listen loszuwerden.
+      const opening = target?.open !== true;
+
+      return current.map((condition) => ({
+        ...condition,
+        open: opening && condition.category === category,
+      }));
+    });
+  }, []);
+
   /** Punktuelle Aenderung genau einer Bedingung. */
   const patchCondition = useCallback(
     (category: PoiCategory, patch: Partial<PoiCondition>) => {
@@ -506,7 +554,11 @@ export const App = () => {
       if (vorhanden) return;
 
       const angelegt = newCondition(category);
-      setConditions((current) => [...current, angelegt]);
+      // Die neue ist die, um die es gerade geht: Sie klappt auf, die übrigen zu.
+      setConditions((current) => [
+        ...current.map((condition) => ({ ...condition, open: false })),
+        angelegt,
+      ]);
 
       // Ohne gemeinsame Region gibt es nichts zu durchsuchen -- dann bleibt es
       // beim Knopf, bis analysiert wurde.
@@ -717,22 +769,32 @@ export const App = () => {
    * oben steht, worauf man wirklich wartet.
    */
   /**
-   * Der Zustand der Analyse als *eine* Zeile. Frueher stand hier je Fall ein
-   * eigenes Absatz-Element; waehrend gerechnet wurde, traf keiner zu und die
-   * Seitenleiste sprang.
+   * Ein Hinweis zur Analyse -- **nur**, wenn der Bildschirm es nicht ohnehin
+   * zeigt. Meist also `null`.
+   *
+   * *Geaendert am 14.09.2026 auf Wunsch des Nutzers.* Vorher stand hier immer
+   * eine Zeile, und vier ihrer sechs Faelle waren doppelt gemoppelt:
+   * "Gemeinsame Region wird berechnet…" steht wortgleich in der Statusleiste,
+   * "Fuege dein erstes Ziel hinzu" steht ueber dem Formular, das dann schon
+   * offen danebensteht, und "Gemeinsame Region gefunden." meldete einen Erfolg,
+   * der als gruene Flaeche auf der Karte liegt. Eine Meldung, die bestaetigt,
+   * was man sieht, ist keine Auskunft, sondern Rauschen -- und sie stumpft die
+   * beiden Faelle ab, in denen wirklich etwas zu sagen ist.
+   *
+   * Uebrig bleiben genau die: Der Aufruf ist gescheitert, oder es gibt keine
+   * gemeinsame Region. In beiden Faellen ist die Karte leer, und ohne Text
+   * wuesste niemand, warum.
    */
-  const analysisLine: { text: string; tone: 'hint' | 'error' | 'success' } =
+  const analysisNotice: { text: string; tone: 'error' } | null =
     readyTargets.length === 0
-      ? { text: texts.analysis.addFirstTarget, tone: 'hint' }
+      ? null
       : analysis.kind === 'error'
         ? { text: analysis.message, tone: 'error' }
-        : analysis.kind !== 'done'
-          ? { text: texts.analysis.computing, tone: 'hint' }
-          : analysis.stale
-            ? { text: texts.analysis.targetsChanged, tone: 'hint' }
-            : analysis.result.intersection === null
-              ? { text: texts.analysis.none, tone: 'error' }
-              : { text: texts.analysis.found, tone: 'success' };
+        : analysis.kind !== 'done' || analysis.stale
+          ? null
+          : analysis.result.intersection === null
+            ? { text: texts.analysis.none, tone: 'error' }
+            : null;
 
   const activities = [
     ...targets
@@ -858,7 +920,15 @@ export const App = () => {
         <header>
           <h1>{texts.app.title}</h1>
           <p className="subtitle">{texts.app.subtitle}</p>
-          <LanguageSwitch />
+          {/*
+            Sprache und Erscheinungsbild stehen nebeneinander oben rechts:
+            beides Einstellungen, die man genau einmal anfasst, und beide
+            zeigen nur ihr Zeichen.
+          */}
+          <div className="sidebar__switches">
+            <ThemeSwitch />
+            <LanguageSwitch />
+          </div>
         </header>
 
         <nav className="sidebar-tabs" aria-label={texts.app.tablistLabel} role="tablist">
@@ -927,15 +997,19 @@ export const App = () => {
                   {texts.target.add}
                 </button>
               )}
-            </section>
 
-            <section className="analysis">
               {/*
-                Genau eine Zeile, immer -- nie keine. Ein Abschnitt, der
-                zwischendurch leer wird, zieht alles darunter nach oben und
-                schiebt es einen Wimpernschlag spaeter wieder zurueck.
+                Steht nur da, wenn die Karte die Antwort nicht zeigen kann --
+                bei einem Fehler oder wenn es keine gemeinsame Region gibt.
+                Dann ist es auch keine Zeile im Fliesstext mehr, sondern ein
+                Kasten: Es ist die Nachricht, die den ganzen Rest der
+                Seitenleiste erklaert.
               */}
-              <p className={`analysis__line ${analysisLine.tone}`}>{analysisLine.text}</p>
+              {analysisNotice !== null && (
+                <p className={`notice notice--${analysisNotice.tone}`}>
+                  {analysisNotice.text}
+                </p>
+              )}
             </section>
 
             <PoiPanel
@@ -947,11 +1021,7 @@ export const App = () => {
               blocking={blocking}
               onAdd={addCondition}
               onRemove={removeCondition}
-              onToggleOpen={(category) => {
-                const current = conditions.find((item) => item.category === category);
-                if (current !== undefined)
-                  patchCondition(category, { open: !current.open });
-              }}
+              onToggleOpen={toggleConditionOpen}
               onMinutesChange={changeConditionMinutes}
               onTravelModeChange={changeConditionTravelMode}
               onSearch={(category) => void runPoiSearch(category)}
@@ -1011,14 +1081,14 @@ export const App = () => {
       </aside>
 
       <main className="map-area">
-        {mapStyleUrl === null ? (
+        {mapStyles === null ? (
           <div className="map-placeholder">
             <p>{texts.map.loadFailed}</p>
             <p className="hint">{texts.map.loadFailedHint}</p>
           </div>
         ) : (
           <MapView
-            styleUrl={mapStyleUrl}
+            styleUrl={appearance === 'dark' ? mapStyles.dark : mapStyles.light}
             targets={targets}
             intersection={intersection}
             poiRegion={poiRegion}
@@ -1040,6 +1110,9 @@ export const App = () => {
           />
         )}
       </main>
+
+      {/* Eine Schicht für alle Sprechblasen -- siehe TooltipLayer.tsx. */}
+      <TooltipLayer />
     </div>
   );
 };

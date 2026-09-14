@@ -25,12 +25,21 @@ export const de = {
     addresses: 'Adressen prüfen',
   },
 
+  /**
+   * Erscheinungsbild. "Wie das System" ist bewusst keine dritte Farbe, sondern
+   * die Ansage, nicht wählen zu wollen -- der Text muss das sagen, sonst liest
+   * es sich wie ein weiterer Modus neben Hell und Dunkel.
+   */
+  appearance: {
+    label: 'Erscheinungsbild',
+    system: 'Wie das System',
+    light: 'Hell',
+    dark: 'Dunkel',
+  },
+
   analysis: {
-    addFirstTarget: 'Füge dein erstes Ziel hinzu.',
     computing: 'Gemeinsame Region wird berechnet…',
-    targetsChanged: 'Die Ziele haben sich geändert — die Region wird neu berechnet.',
     none: 'Es gibt keinen Bereich, aus dem alle Ziele in deiner Zeit erreichbar sind.',
-    found: 'Gemeinsame Region gefunden.',
     checkingPlaces: 'Erreichbarkeit der gewählten Orte wird geprüft…',
     targetBusy: (name: string) => `Erreichbarer Bereich für ${name} wird berechnet…`,
     categoryBusy: (plural: string) => `${plural} werden gesucht…`,
@@ -59,7 +68,6 @@ export const de = {
     hideTitle: 'Auf der Karte ausblenden (zählt weiter mit)',
     showTitle: 'Wieder einblenden',
     removeLabel: (name: string) => `${name} entfernen`,
-    hiddenSuffix: ' · ausgeblendet',
     // Bewusst nicht "Isochrone": Das Wort steht sonst nirgends in der
     // Oberfläche, und wer sie nur vorgelesen bekommt, hörte es ständig.
     computing: (travelMode: string) => `Erreichbarer Bereich wird berechnet (${travelMode})…`,

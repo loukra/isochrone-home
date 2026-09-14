@@ -19,12 +19,16 @@ export const en: Texts = {
     addresses: 'Check addresses',
   },
 
+  appearance: {
+    label: 'Appearance',
+    system: 'Match system',
+    light: 'Light',
+    dark: 'Dark',
+  },
+
   analysis: {
-    addFirstTarget: 'Add your first destination.',
     computing: 'Calculating the shared region…',
-    targetsChanged: 'The destinations changed — recalculating the region.',
     none: 'There is no area from which every destination is within your time.',
-    found: 'Shared region found.',
     checkingPlaces: 'Checking how well the selected places can be reached…',
     targetBusy: (name) => `Calculating the reachable area for ${name}…`,
     categoryBusy: (plural) => `Searching for ${plural}…`,
@@ -53,7 +57,6 @@ export const en: Texts = {
     hideTitle: 'Hide on the map (still counts)',
     showTitle: 'Show again',
     removeLabel: (name) => `Remove ${name}`,
-    hiddenSuffix: ' · hidden',
     computing: (travelMode) => `Calculating the reachable area (${travelMode})…`,
     add: '+ Add destination',
     retry: 'Try again',

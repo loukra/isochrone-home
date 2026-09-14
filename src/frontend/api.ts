@@ -134,6 +134,8 @@ export const fetchTravelTimes = (
 
 export type AppSettings = {
   mapStyleUrl: string;
+  /** Für den Dunkelmodus -- siehe config.ts. */
+  mapStyleUrlDark: string;
   maxTravelTimeMinutes: number;
 };
 

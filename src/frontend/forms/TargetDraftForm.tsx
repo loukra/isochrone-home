@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { TRAVEL_MODES, type GeocodingCandidate, type TravelMode } from '../types.js';
 import { useTexts } from '../i18n/index.js';
+import { Select, type SelectOption } from '../components/Select.js';
+import { NumberField } from '../components/NumberField.js';
 
 export type DraftValues = {
   name: string;
@@ -35,6 +37,12 @@ export const TargetDraftForm = ({
   onCancel,
 }: TargetDraftFormProps) => {
   const texts = useTexts();
+
+  // Im Entwurf ist Platz: hier steht überall der volle Name, keine Kurzform.
+  const modeOptions: readonly SelectOption<TravelMode>[] = TRAVEL_MODES.map((mode) => ({
+    value: mode,
+    label: texts.travelModes[mode],
+  }));
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [minutes, setMinutes] = useState('30');
@@ -87,32 +95,30 @@ export const TargetDraftForm = ({
         />
       </label>
 
-      <label>
-        {texts.target.travelModeField}
-        <select
+      <span className="field">
+        <span className="field__label">{texts.target.travelModeField}</span>
+        <Select
+          className="select--block"
           value={travelMode}
-          onChange={(event) => setTravelMode(event.target.value as TravelMode)}
-          disabled={busy}
-        >
-          {TRAVEL_MODES.map((mode) => (
-            <option key={mode} value={mode}>
-              {texts.travelModes[mode]}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label>
-        {texts.target.minutesField(maxMinutes)}
-        <input
-          type="number"
-          min={1}
-          max={maxMinutes}
-          value={minutes}
-          onChange={(event) => setMinutes(event.target.value)}
+          options={modeOptions}
+          onChange={setTravelMode}
+          label={texts.target.travelModeField}
           disabled={busy}
         />
-      </label>
+      </span>
+
+      <span className="field">
+        <span className="field__label">{texts.target.minutesField(maxMinutes)}</span>
+        <NumberField
+          className="numfield--block"
+          value={minutes}
+          onChange={setMinutes}
+          min={1}
+          max={maxMinutes}
+          label={texts.target.minutesField(maxMinutes)}
+          disabled={busy}
+        />
+      </span>
 
       {candidates.length > 0 && (
         <div className="candidates">
@@ -134,7 +140,7 @@ export const TargetDraftForm = ({
       {error !== null && <p className="error">{error}</p>}
 
       <div className="card__actions">
-        <button type="submit" disabled={!isValid || busy} title={texts.target.submitHint}>
+        <button type="submit" disabled={!isValid || busy} data-tip={texts.target.submitHint}>
           {busy ? texts.target.submitting : texts.target.submit}
         </button>
         <button type="button" className="ghost" onClick={onCancel} disabled={busy}>

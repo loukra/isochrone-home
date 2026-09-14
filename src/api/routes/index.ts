@@ -23,6 +23,7 @@ export const createApiRouter = (container: Container): Router => {
     // Nur öffentliche Werte -- niemals API-Keys.
     response.json({
       mapStyleUrl: container.config.mapStyleUrl,
+      mapStyleUrlDark: container.config.mapStyleUrlDark,
       analysisStrategy: container.strategy.id,
       maxTravelTimeMinutes: container.isochrones.maxTravelTimeMinutes,
     });

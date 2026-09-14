@@ -19,6 +19,7 @@ const CONFIG: AppConfig = {
   openRouteServiceGeocodingUrl: 'https://api.heigit.org/pelias/v1',
   overpassUrl: 'https://overpass.test/api/interpreter',
   mapStyleUrl: 'https://example.test/style.json',
+  mapStyleUrlDark: 'https://example.test/style-dark.json',
   mapToken: null,
   // Wird je Test durch ein frisches Verzeichnis ersetzt.
   cacheDirectory: '',
@@ -122,6 +123,7 @@ describe('GET /api/config', () => {
     expect(response.status).toBe(200);
     expect(body).toEqual({
       mapStyleUrl: CONFIG.mapStyleUrl,
+      mapStyleUrlDark: CONFIG.mapStyleUrlDark,
       analysisStrategy: 'isochrone-intersection',
       maxTravelTimeMinutes: 60,
     });

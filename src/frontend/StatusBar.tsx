@@ -48,7 +48,7 @@ export const StatusBar = ({ activities }: StatusBarProps) => {
       role="status"
       aria-live="polite"
       // Beim Überfahren steht alles da, auch was in der Zeile keinen Platz hat.
-      title={activities.join('\n')}
+      data-tip={activities.join('\n')}
     >
       <span className="status__spinner" aria-hidden="true" />
       <span className="status__text">

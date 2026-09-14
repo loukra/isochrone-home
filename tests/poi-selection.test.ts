@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canSortByRelevance,
+  defaultSortMode,
   groupKeyOf,
   groupPois,
   groupSelectionOf,
@@ -11,7 +13,7 @@ import {
   toggleGroup,
   toggleMember,
 } from '../src/frontend/poi/selection.js';
-import type { FoundPoi } from '../src/frontend/types.js';
+import { POI_CATEGORIES, type FoundPoi } from '../src/frontend/types.js';
 
 const poi = (over: Partial<FoundPoi> = {}): FoundPoi => ({
   id: 'node/1',
@@ -292,5 +294,41 @@ describe('Auswahl von Gruppe und Filiale', () => {
     for (const branch of branches) keys = toggleMember(group(), branch, keys);
 
     expect(groupSelectionOf(group(), keys)).toBe('all');
+  });
+});
+
+/**
+ * "Große zuerst" ist nur dort eine Reihenfolge, wo die Grundfläche etwas
+ * aussagt. `rankOf` baut ganz auf Fläche auf; bei einem Bahnhof entscheidet die
+ * aber nur darüber, ob in OSM zufällig jemand ein Empfangsgebäude eingezeichnet
+ * hat -- ein Haltepunkt mit getaggtem Häuschen stand damit über dem
+ * Hauptbahnhof ohne.
+ */
+describe('canSortByRelevance / defaultSortMode', () => {
+  it('erlaubt Flächensortierung, wo die Fläche etwas aussagt', () => {
+    for (const category of ['gym', 'supermarket'] as const) {
+      expect(canSortByRelevance(category)).toBe(true);
+      expect(defaultSortMode(category)).toBe('relevance');
+    }
+  });
+
+  it('verweigert sie bei ortsgebundenen Zielen', () => {
+    for (const category of [
+      'station',
+      'kindergarten',
+      'school',
+      'doctor',
+      'pool',
+    ] as const) {
+      expect(canSortByRelevance(category)).toBe(false);
+      expect(defaultSortMode(category)).toBe('distance');
+    }
+  });
+
+  it('deckt jede Kategorie ab -- eine neue faellt nicht stillschweigend durch', () => {
+    for (const category of POI_CATEGORIES) {
+      expect(typeof canSortByRelevance(category)).toBe('boolean');
+      expect(['relevance', 'distance']).toContain(defaultSortMode(category));
+    }
   });
 });

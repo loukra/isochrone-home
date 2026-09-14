@@ -1,5 +1,6 @@
 import { PoiConditionCard, type PoiCondition } from './PoiConditionCard.js';
 import { useTexts } from '../i18n/index.js';
+import { Select } from '../components/Select.js';
 import { POI_CATEGORIES } from '../types.js';
 import type { PoiGroup, PoiSortMode } from './selection.js';
 import type { FoundPoi, PoiCategory, TravelMode } from '../types.js';
@@ -84,20 +85,22 @@ export const PoiPanel = ({
 
       {available.length > 0 && (
         <div className="poi-controls">
-          <select
-            value=""
-            onChange={(event) => {
-              if (event.target.value !== '') onAdd(event.target.value as PoiCategory);
-            }}
-            aria-label={texts.poi.addCondition}
-          >
-            <option value="">{texts.poi.addConditionOption}</option>
-            {available.map((category) => (
-              <option key={category} value={category}>
-                {texts.categories[category]}
-              </option>
-            ))}
-          </select>
+          {/*
+            Kein Zustand, sondern eine Aktion: Der Wert bleibt `null`, im Knopf
+            steht dauerhaft die Aufforderung, und das Anklicken einer Kategorie
+            legt die Bedingung an.
+          */}
+          <Select
+            className="select--block"
+            value={null}
+            options={available.map((category) => ({
+              value: category,
+              label: texts.categories[category],
+            }))}
+            onChange={onAdd}
+            label={texts.poi.addCondition}
+            placeholder={texts.poi.addConditionOption}
+          />
         </div>
       )}
 

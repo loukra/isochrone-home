@@ -5,10 +5,12 @@ import {
   largestAreaOf,
   poiKeyOf,
   sortGroups,
+  canSortByRelevance,
   type PoiGroup,
   type PoiSortMode,
 } from './selection.js';
 import { CATEGORY_COLORS } from './icons.js';
+import { regionDistance } from './distance.js';
 import {
   TRAVEL_MODES,
   type FoundPoi,
@@ -16,6 +18,9 @@ import {
   type TravelMode,
 } from '../types.js';
 import { useTexts } from '../i18n/index.js';
+import { Select, type SelectOption } from '../components/Select.js';
+import { NumberField } from '../components/NumberField.js';
+import { CaretIcon, CloseIcon } from '../components/icons.js';
 
 export type PoiCondition = {
   category: PoiCategory;
@@ -73,6 +78,28 @@ export const PoiConditionCard = ({
   onFocusMember,
 }: PoiConditionCardProps) => {
   const texts = useTexts();
+
+  // Kurzform im Knopf, voller Name im Menü -- wie in der Zielkarte: Die Zeile
+  // trägt daneben noch Suchradius und den Knopf "Orte suchen".
+  const modeOptions: readonly SelectOption<TravelMode>[] = TRAVEL_MODES.map((mode) => ({
+    value: mode,
+    label: texts.travelModes[mode],
+    shortLabel: texts.travelModesShort[mode],
+  }));
+
+  /*
+   * "Große zuerst" steht nur dort, wo die Grundfläche etwas aussagt. Bei einem
+   * Bahnhof sortierte sie danach, ob in OSM jemand ein Empfangsgebäude
+   * eingezeichnet hat -- ein Haltepunkt mit getaggtem Häuschen stand damit über
+   * dem Hauptbahnhof ohne. Ohne die Wahl entfällt auch das Menü: Ein Menü mit
+   * einem Eintrag verspricht eine Entscheidung, die es nicht gibt.
+   */
+  const sortable = canSortByRelevance(condition.category);
+  const sortOptions: readonly SelectOption<PoiSortMode>[] = [
+    { value: 'relevance', label: texts.poi.sortByRelevance },
+    { value: 'distance', label: texts.poi.sortByDistance },
+  ];
+
   const groups = sortGroups(groupPois(condition.pois), condition.sortMode);
   const selectedCount = groups.filter(
     (group) => groupSelectionOf(group, selectedKeys) !== 'none',
@@ -109,14 +136,17 @@ export const PoiConditionCard = ({
           onClick={onToggleOpen}
           aria-expanded={condition.open}
         >
-          <span className="poi-cond__caret">{condition.open ? '▼' : '►'}</span>
+          <span className="poi-cond__caret">
+            <CaretIcon open={condition.open} />
+          </span>
           <span
             className="dot"
             style={{ background: CATEGORY_COLORS[condition.category] }}
           />
           <span className="poi-cond__name">{texts.categories[condition.category]}</span>
           <span className="poi-cond__summary">
-            {condition.minutes} {texts.poi.radiusUnit} {texts.travelModesShort[condition.travelMode]}
+            {condition.minutes} {texts.poi.radiusUnit}{' '}
+            {texts.travelModesShort[condition.travelMode]}
             {selectedCount > 0 ? texts.poi.selectedCount(selectedCount) : ''}
             {condition.busy
               ? texts.poi.searchingSuffix
@@ -131,43 +161,40 @@ export const PoiConditionCard = ({
           onClick={onRemove}
           aria-label={texts.poi.removeLabel(texts.categories[condition.category])}
         >
-          ×
+          <CloseIcon />
         </button>
       </div>
 
       {condition.open && (
         <div className="poi-cond__body">
           <div className="poi-controls">
-            <input
-              type="number"
+            <NumberField
+              className="numfield--radius"
+              value={String(condition.minutes)}
+              // Ein leeres Feld ergäbe NaN und damit einen Suchradius von
+              // "keine Ahnung" -- dann lieber die alte Zahl stehen lassen.
+              onChange={(raw) => {
+                const parsed = Number.parseInt(raw, 10);
+                if (Number.isInteger(parsed)) onMinutesChange(parsed);
+              }}
               min={1}
               max={maxMinutes}
-              value={condition.minutes}
-              onChange={(event) =>
-                onMinutesChange(Number.parseInt(event.target.value, 10))
-              }
+              label={texts.poi.radiusLabel(texts.categories[condition.category])}
               disabled={condition.busy}
-              aria-label={texts.poi.radiusLabel(texts.categories[condition.category])}
             />
             <span>{texts.poi.radiusUnit}</span>
-            <select
-              className="poi-cond__mode"
+            <Select
+              className="poi-cond__mode select--compact"
               value={condition.travelMode}
-              onChange={(event) =>
-                onTravelModeChange(event.target.value as TravelMode)
-              }
-              disabled={condition.busy}
-              aria-label={texts.poi.travelModeLabel(texts.categories[condition.category])}
+              options={modeOptions}
+              onChange={onTravelModeChange}
+              label={texts.poi.travelModeLabel(texts.categories[condition.category])}
               title={texts.travelModes[condition.travelMode]}
-            >
-              {TRAVEL_MODES.map((mode) => (
-                <option key={mode} value={mode}>
-                  {texts.travelModesShort[mode]}
-                </option>
-              ))}
-            </select>
+              disabled={condition.busy}
+            />
             <button
               type="button"
+              className="ghost"
               onClick={onSearch}
               disabled={condition.busy || !canSearch}
             >
@@ -177,26 +204,26 @@ export const PoiConditionCard = ({
 
           {condition.error !== null && <p className="error">{condition.error}</p>}
 
-          {blocking && (
-            <p className="error">{texts.poi.blocking}</p>
-          )}
+          {blocking && <p className="error">{texts.poi.blocking}</p>}
 
           {condition.pois.length > 0 && (
             <>
-              <div className={`poi-controls${stale}`} aria-busy={condition.busy}>
+              <div
+                className={`poi-controls poi-controls--meta${stale}`}
+                aria-busy={condition.busy}
+              >
                 <span className="hint">
                   {texts.poi.foundCount(condition.pois.length, groups.length)}
                 </span>
-                <select
-                  value={condition.sortMode}
-                  onChange={(event) =>
-                    onSortModeChange(event.target.value as PoiSortMode)
-                  }
-                  aria-label={texts.poi.sortLabel}
-                >
-                  <option value="relevance">{texts.poi.sortByRelevance}</option>
-                  <option value="distance">{texts.poi.sortByDistance}</option>
-                </select>
+                {sortable && (
+                  <Select
+                    className="poi-cond__sort select--quiet"
+                    value={condition.sortMode}
+                    options={sortOptions}
+                    onChange={onSortModeChange}
+                    label={texts.poi.sortLabel}
+                  />
+                )}
               </div>
 
               <ul className={`poi-list${stale}`} aria-busy={condition.busy}>
@@ -211,6 +238,11 @@ export const PoiConditionCard = ({
                   // Zeile auch deren Fläche zeigen, sonst steht sie
                   // unbegründet oben.
                   const area = largestAreaOf(group);
+                  // `null` heisst "gilt als in der Region" -- siehe distance.ts.
+                  const nearestDistance =
+                    nearest === undefined
+                      ? null
+                      : regionDistance(nearest.distanceToRegionKm);
                   const many = group.members.length > 1;
                   const isOpen = expanded.has(group.key);
                   // OSM kennt für manche Orte keinen Namen. Der Platzhalter
@@ -236,7 +268,7 @@ export const PoiConditionCard = ({
                                 : texts.poi.expandBranches(label)
                             }
                           >
-                            {isOpen ? '▼' : '►'}
+                            <CaretIcon open={isOpen} size={11} />
                           </button>
                         ) : (
                           // Platzhalter, damit alle Namen auf einer Linie stehen.
@@ -268,9 +300,9 @@ export const PoiConditionCard = ({
                             )}
                           </span>
                           <span className="poi-row__meta">
-                            {nearest === undefined || nearest.distanceToRegionKm === 0
+                            {nearestDistance === null
                               ? texts.poi.insideRegion
-                              : texts.poi.outsideRegion(nearest.distanceToRegionKm.toFixed(1))}
+                              : texts.poi.outsideRegion(nearestDistance)}
                             {nearest?.sport != null ? ` · ${nearest.sport}` : ''}
                             {area !== null ? texts.poi.area(Math.round(area), many) : ''}
                           </span>
@@ -279,45 +311,52 @@ export const PoiConditionCard = ({
 
                       {many && isOpen && (
                         <ul className="poi-sublist">
-                          {group.members.map((member) => (
-                            <li
-                              key={member.id}
-                              className={
-                                focusedPoiIds.has(member.id)
-                                  ? 'poi-row poi-row--sub poi-row--focused'
-                                  : 'poi-row poi-row--sub'
-                              }
-                            >
-                              <input
-                                type="checkbox"
-                                checked={
-                                  state === 'all' || selectedKeys.has(poiKeyOf(member))
+                          {group.members.map((member) => {
+                            const distance = regionDistance(member.distanceToRegionKm);
+
+                            return (
+                              <li
+                                key={member.id}
+                                className={
+                                  focusedPoiIds.has(member.id)
+                                    ? 'poi-row poi-row--sub poi-row--focused'
+                                    : 'poi-row poi-row--sub'
                                 }
-                                onChange={() => onToggleMember(group, member)}
-                                aria-label={texts.poi.memberLabel(
-                                  member.name ?? texts.poi.unnamed,
-                                  member.distanceToRegionKm.toFixed(1),
-                                )}
-                              />
-                              <button
-                                type="button"
-                                className="poi-row__label"
-                                onClick={() => onFocusMember(member)}
                               >
-                                <span className="poi-row__name">
-                                  {member.name ?? texts.poi.unnamed}
-                                </span>
-                                <span className="poi-row__meta">
-                                  {member.distanceToRegionKm === 0
-                                    ? texts.poi.insideRegion
-                                    : texts.poi.outsideRegion(member.distanceToRegionKm.toFixed(1))}
-                                  {member.areaSquareMeters !== null
-                                    ? texts.poi.area(Math.round(member.areaSquareMeters), false)
-                                    : ''}
-                                </span>
-                              </button>
-                            </li>
-                          ))}
+                                <input
+                                  type="checkbox"
+                                  checked={
+                                    state === 'all' || selectedKeys.has(poiKeyOf(member))
+                                  }
+                                  onChange={() => onToggleMember(group, member)}
+                                  aria-label={texts.poi.memberLabel(
+                                    member.name ?? texts.poi.unnamed,
+                                    member.distanceToRegionKm.toFixed(1),
+                                  )}
+                                />
+                                <button
+                                  type="button"
+                                  className="poi-row__label"
+                                  onClick={() => onFocusMember(member)}
+                                >
+                                  <span className="poi-row__name">
+                                    {member.name ?? texts.poi.unnamed}
+                                  </span>
+                                  <span className="poi-row__meta">
+                                    {distance === null
+                                      ? texts.poi.insideRegion
+                                      : texts.poi.outsideRegion(distance)}
+                                    {member.areaSquareMeters !== null
+                                      ? texts.poi.area(
+                                          Math.round(member.areaSquareMeters),
+                                          false,
+                                        )
+                                      : ''}
+                                  </span>
+                                </button>
+                              </li>
+                            );
+                          })}
                         </ul>
                       )}
                     </li>
@@ -325,8 +364,8 @@ export const PoiConditionCard = ({
                 })}
               </ul>
 
-              {condition.sortMode === 'relevance' && (
-                <p className={`hint${stale}`}>{texts.poi.sortHint}</p>
+              {sortable && condition.sortMode === 'relevance' && (
+                <p className={`poi-sort-hint${stale}`}>{texts.poi.sortHint}</p>
               )}
             </>
           )}
