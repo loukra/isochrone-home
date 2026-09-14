@@ -15,6 +15,8 @@ export const de = {
     title: 'Wohnzone',
     subtitle: 'Sieh, wo du wohnen kannst, damit alles in deiner Zeit erreichbar bleibt.',
     tablistLabel: 'Bereiche',
+    /** Nur auf schmalen Schirmen sichtbar -- der Griff des Bedienblattes. */
+    sheetHandle: 'Bedienfeld höher oder niedriger ziehen',
     languageLabel: 'Sprache',
     /** Für Zahlenformate -- im Deutschen 2,3 km, im Englischen 2.3 km. */
     locale: 'de-DE',
@@ -143,6 +145,9 @@ export const de = {
     duplicate: (label: string) => `„${label}" steht bereits in der Liste.`,
     notFound: (label: string) => `Die Adresse „${label}" konnte nicht gefunden werden.`,
     removeLabel: (label: string) => `${label} entfernen`,
+    showOnMap: 'Auf der Karte zeigen',
+    expandDetails: (label: string) => `Einzelheiten zu ${label} aufklappen`,
+    collapseDetails: (label: string) => `Einzelheiten zu ${label} zuklappen`,
     removeTitle: 'Adresse entfernen',
     noRoute: 'Der Kartendienst kennt dorthin keine Route.',
     noRouteShort: 'keine Route',
@@ -180,7 +185,7 @@ export const de = {
 
   map: {
     markerLabel: 'Geprüfte Adresse',
-    markerPopup: (label: string) => `Geprüfte Adresse: ${label}`,
+    markerDetails: 'Fahrzeiten und Einzelheiten stehen links in der Kachel.',
     insideRegion: 'in der Region',
     outsideRegion: (km: string) => `${km} km außerhalb`,
     floorArea: (squareMeters: number) => `${squareMeters} m² Grundfläche`,

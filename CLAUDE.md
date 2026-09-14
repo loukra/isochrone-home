@@ -331,6 +331,28 @@ Daraus folgt:
   einem Ort); ein Klick auf eine **einzelne** Zeile oder auf einen Kartenpunkt
   oeffnet sie. Darum fuehrt die Karte eine Menge `focusedPoiIds` und daneben
   ein einzelnes `popupPoiId`.
+- **Ein Klick in der Liste faehrt auch hin** (*ergaenzt am 14.09.2026 auf Wunsch
+  des Nutzers*). Die Gegenrichtung gab es schon: Ein Klick auf einen Punkt hebt
+  links die Zeile hervor und scrollt sie ins Bild. Umgekehrt passierte nichts --
+  die Zeile wurde gruen, und der zugehoerige Punkt lag irgendwo unter achtzig
+  gleich aussehenden, haeufig ausserhalb des Ausschnitts. Hervorheben, was man
+  nicht sieht, ist keine Antwort.
+  - Der Auftrag an die Karte ist ein **Ereignis, kein Zustand** (`MapFocus`:
+    Punkte plus laufende Nummer). Ohne die Nummer spraenge ein zweiter Klick auf
+    dieselbe Zeile nirgendwohin, weil sich am Zustand nichts geaendert haette.
+  - **Zentriert wird, gezoomt nicht** (*praezisiert am 14.09.2026 auf Wunsch des
+    Nutzers*; vorher `Math.max(map.getZoom(), 14)`). Auch hineinzuzoomen war
+    eine zweite, ungefragte Antwort: Wer die Uebersicht ueber die ganze Region
+    eingestellt hat, will den Ort *in* dieser Uebersicht sehen -- nach dem
+    Sprung auf Zoom 14 stand er stattdessen vor einem Strassenzug und musste
+    sich die Uebersicht zurueckholen. Der Ausschnitt gehoert dem Nutzer, der
+    Zoom erst recht.
+  - Die Ausnahme ist die **Kettenzeile**: Sie meint alle Filialen, eine davon
+    anzusteuern waere geraten, und mehrere Punkte zu zeigen geht ohne Zoom
+    nicht -- also `fitBounds`. Gemessen: "Clever fit" mit zwei Filialen passt
+    beide ins Bild.
+  - Beim *Ab*waehlen bleibt der Ausschnitt stehen: "nicht mehr hervorheben"
+    heisst nicht "zeig mir woanders hin".
 - Eine geaenderte Auswahl entwertet die verengte Region sofort (Layer weg,
   Knopf wieder aktiv) — dieselbe Regel wie beim veralteten
   Analyse-Ergebnis.
@@ -460,6 +482,33 @@ Daraus folgt:
   - Auf der Karte traegt **jeder** geprueste Ort seinen eigenen Marker. Den
     Ausschnitt verschiebt nur ein *neu* hinzugekommener, und auch der nur, wenn
     er ausserhalb liegt -- sonst spraenge die Karte bei jedem Aufklappen.
+  - **Das Haus beantwortet die Frage, wegen der man es anklickt** (*geaendert am
+    14.09.2026 auf Wunsch des Nutzers*). In der Info-Box stand vorher
+    "Gepruefte Adresse: Musterstrasse 1" -- der Name, den man gerade angeklickt
+    hat, und sonst nichts. Jetzt stehen dort beide Urteile als Satz
+    ("Alle Ziele erreichbar" / "Gewaehlte Orte nicht erreichbar"), in denselben
+    drei Toenen wie die Haken in der Kachel.
+  - **Und die Kachel schlaegt sich auf**: Seitenleiste auf "Adressen pruefen",
+    die Kachel offen, hervorgehoben und ins Bild gescrollt. Auf der Karte ist
+    kein Platz fuer die Fahrzeit zu jedem Ziel; in der Kachel steht sie schon.
+    Dass damit gemessen wird, ist dieselbe Trennlinie wie sonst -- das
+    Aufklappen *ist* die Frage danach, und ein Klick auf das Haus ist derselbe
+    Klick mit der Maus woanders. Die Hervorhebung gehoert zur Box und geht mit
+    ihr wieder weg.
+  - **Name und Pfeil sind zwei Knoepfe** (*getrennt am 14.09.2026 auf Wunsch des
+    Nutzers*). Zusammengelegt tat ein Klick auf die Kachel beides: hinfahren
+    *und* aufklappen. Wer nur nachsehen wollte, wo der Ort liegt, bekam die
+    Fahrzeitmessung dazu (Providerkontingent, ungefragt) -- und wer die Zahlen
+    zuklappte, verlor dafuer seinen Ausschnitt. Jetzt faehrt der **Name** die
+    Karte hin und ruehrt die Kachel nicht an, der **Pfeil** klappt auf und
+    ruehrt die Karte nicht an. Dieselbe Aufteilung wie bei der Kettenzeile in
+    Schritt 3 (`poi-row__expand`), und wie dort traegt der Pfeil nur ein
+    `aria-label`, keinen Tooltip: Am linken Rand der Seitenleiste haengt die
+    Blase sonst halb aus dem Fenster.
+  - Die Urteile liegen deshalb in `App`, nicht mehr in `LocationCheckPanel`:
+    Kachel und Info-Box muessen dasselbe sagen, und zweimal zu pruefen hiesse
+    zwei Antworten auf dieselbe Frage, die auseinanderlaufen koennen. Die
+    Zuordnung "Zustand -> Satz und Ton" steht einmal in `verdict.ts`.
 - Die aufgeklappte Kachel nennt **die gemessene Fahrzeit und Strecke zu jedem Ziel**
   (`/api/locations/travel-times`, ORS-Matrix). "Drin oder draussen" allein sagt
   nicht, *wie knapp* es ist, und bei einem Ort ausserhalb nicht, welches Ziel
@@ -589,6 +638,92 @@ ginge über Overpass (`landuse=residential`, Ortslagen), wäre aber ein
 fehlendes Polygon löschte ein reales Dorf unsichtbar aus der Region, dieselbe
 Gefahr wie beim Vorfiltern von POIs. Falls das je kommt, dann **additiv**:
 Ortslagen als eigener Layer über der Region, die Region selbst unangetastet.
+
+## Schmaler Schirm: die Karte traegt, die Bedienung liegt darauf
+
+*Eingefuehrt am 14.09.2026 auf Wunsch des Nutzers* („sieht aufm Handy nicht so
+geil aus"). Gilt unter 800 px Fensterbreite -- Telefon und Tablett im
+Hochformat; darueber aendert sich **nichts**.
+
+Der Grund ist nicht die Optik, sondern die Frage der App: Zeit aendern, Flaeche
+ansehen. Nebeneinander ist das ein Blick. Vorher waren die beiden untereinander
+gestapelt, und gemessen bei 375 x 812 mit *leerem* Formular hiess das:
+
+| | |
+| --- | --- |
+| Seitenleiste | 874 px |
+| Fenster | 812 px |
+| Karte begann bei | y = 874, also 62 px **unterhalb** der Faltkante |
+
+Beim Oeffnen war von der Karte nichts zu sehen, und mit drei Zielen und einer
+Trefferliste lagen ein paar tausend Pixel dazwischen. Dazu kam: `height: auto`
+nahm der Seitenleiste ihre eigene Bildlaufleiste, und damit klebte das Dock
+nicht mehr unten, sondern stand mitten im Dokument -- genau der Zustand, gegen
+den es eingefuehrt wurde.
+
+Jetzt liegt die Karte fest im Hintergrund ueber den ganzen Schirm, und die
+Bedienung liegt als ziehbares Blatt darueber (`sheet.ts`, `.sheet-handle`).
+
+- **Kein zweiter Komponentenbaum.** Die Aufteilung steht im Stylesheet, der
+  Griff ist ein Knopf, den der Desktop auf `display: none` setzt. Zwei Baeume
+  haetten `MapView` beim Wechsel aus- und wieder eingehaengt -- also Style,
+  Quellen, Layer und die gerasterten Kategoriesymbole neu gebaut, und zwar bei
+  **jeder Drehung des Geraets**. Beim Hell/Dunkel-Wechsel ist derselbe Neubau
+  als Einzelfall vertretbar, beim Drehen nicht. Zweitens waere jede kuenftige
+  Regel ein zweites Mal zu schreiben, ohne dass ein Compiler das Vergessen
+  bemerkt -- dieselbe Gefahr wie bei `POI_CATEGORIES` an zwei Stellen.
+- **Drei Rastpunkte**: eingeklappt, 60 % und 92 % der Fensterhoehe. Vorgabe ist
+  die Mitte -- nur dort sind Liste **und** Karte zugleich zu sehen. Ziehen
+  rastet auf den naechsten ein, ein Tipp auf den Griff schaltet weiter.
+- **Eingeklappt ist gemessen, nicht gesetzt** (*korrigiert am 14.09.2026 auf
+  Hinweis des Nutzers*: „ueberlappt es komisch mit dem Knopf"). Die Hoehe ist
+  genau das, was fest am Blatt haengt: Griff plus Dock (`pinnedHeight` in
+  `sheet.ts`, nachgemessen per `ResizeObserver`). Ein fester Anteil -- vorher
+  25 % -- war mal zu gross und mal zu klein, und zu klein hiess: Griff und Dock
+  kleben beide, der eine oben, das andere unten, und bei wenig Hoehe treffen
+  sie sich in der Mitte. Gemessen statt geraten, weil das Dock atmet: eine
+  Fehlermeldung oder eine laufende Suche macht es eine Zeile hoeher (gemessen
+  98 px leer, 169 px mit zwei Zusatzzeilen -- das Blatt wuchs mit, von 122 auf
+  193 px).
+- **Weiter ziehen als eingeklappt geht nicht.** Es gaebe darunter keine
+  Raststellung, und waehrend des Zuges laege der Griff auf dem Knopf.
+- **Das Blatt faehrt nie von allein.** Es waere naheliegend, es nach einem
+  bestaetigten Ziel einzuklappen, damit man die neue Flaeche sieht -- dieselbe
+  ungefragte zweite Antwort wie ein Sprung des Kartenausschnitts. Und wer als
+  naechstes ein zweites Ziel anlegt, muesste es jedes Mal zurueckziehen. Wie
+  hoch es steht, ist eine Entscheidung, keine Folge.
+- **Die Seitenleiste bleibt, was sie ist**: ein Scrollbehaelter mit klebendem
+  Dock. Nur ihre Aussenmasse aendern sich. Dadurch gilt die Dockregel auch beim
+  kleinsten Rastpunkt weiter -- der einzige Knopf der App steht dort ueber dem
+  unteren Rand, nicht am Ende einer Liste.
+- **Angeheftet ist genau eines: das Dock.** Die Bereichswahl klebte
+  zwischenzeitlich unter dem Griff, damit man auch vom eingeklappten Blatt aus
+  umschalten kann -- und legte sich dabei ueber den Knopf: zwei klebende
+  Leisten, eine von oben, eine von unten. Angeheftet gehoert das, was man
+  braucht, wenn sonst nichts zu sehen ist, und das ist der einzige Knopf der
+  App. Die Reiter scrollen mit und verschwinden hinter dem Dock; dass das ohne
+  Zutun stimmt, liegt daran, dass das Dock deckend und das einzige
+  positionierte Element am Ende der Liste ist.
+- **Die Herkunftsangabe der Karte steigt mit dem Blatt**
+  (`.maplibregl-ctrl-bottom-right { bottom: var(--sheet) }`). Sie sitzt unten
+  rechts und laege sonst darunter -- und sie gehoert sichtbar auf die Karte.
+- **`touch-action: none` am Griff.** Ohne das nimmt der Browser den senkrechten
+  Wisch als Bildlauf, und der Griff sieht nie ein `pointermove`.
+  `overscroll-behavior: contain` an der Seitenleiste haelt entsprechend das
+  Weiterziehen der Seite (und das Neuladen per Wisch) auf.
+- **Bedienzeilen werden hoeher** (`--control-h` je Kontext: 24/28/34 -> 32/36/40),
+  Ankreuzfelder 20 px, die Pfeilchen bekommen 28 px Trefferbreite. Auf dem
+  Schreibtisch ist die Zeile auf Dichte gerechnet, hier auf den Finger.
+- **`100dvh` statt `100vh`** an `.layout`. iOS Safari rechnet die ein- und
+  ausfahrende Adressleiste bei `vh` nicht heraus, die Karte waere unten
+  abgeschnitten. Wo es keine solche Leiste gibt, ist `dvh` per Definition
+  dasselbe wie `vh` -- auf dem Schreibtisch aendert sich dadurch kein Pixel.
+- **Der Medienblock steht am Ende des Stylesheets**, nicht bei `.layout`. Das
+  ist keine Ordnungsfrage: Beim ersten Versuch stand er oben, und die spaeteren
+  Regeln fuer `.sidebar`, `.map-area` und `--control-h` ueberschrieben ihn bei
+  gleicher Spezifitaet. Sichtbar war das kaum -- die Karte lag zufaellig am
+  richtigen Platz --, messbar sofort: `padding-top: 20px` statt 0, der Griff
+  `display: none`, und die Herkunftsangabe 64 px **oberhalb** des Fensters.
 
 ## Aussehen: „Kartenwerk"
 

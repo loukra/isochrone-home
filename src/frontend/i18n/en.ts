@@ -10,6 +10,7 @@ export const en: Texts = {
     title: 'Living Zone',
     subtitle: 'See where you could live with everything still within your time.',
     tablistLabel: 'Sections',
+    sheetHandle: 'Drag the control panel up or down',
     languageLabel: 'Language',
     locale: 'en-GB',
   },
@@ -127,6 +128,9 @@ export const en: Texts = {
     duplicate: (label) => `“${label}” is already in the list.`,
     notFound: (label) => `The address “${label}” could not be found.`,
     removeLabel: (label) => `Remove ${label}`,
+    showOnMap: 'Show on the map',
+    expandDetails: (label) => `Show details for ${label}`,
+    collapseDetails: (label) => `Hide details for ${label}`,
     removeTitle: 'Remove address',
     noRoute: 'The map service knows no route to there.',
     noRouteShort: 'no route',
@@ -162,7 +166,7 @@ export const en: Texts = {
 
   map: {
     markerLabel: 'Checked address',
-    markerPopup: (label) => `Checked address: ${label}`,
+    markerDetails: 'Travel times and details are in the card on the left.',
     insideRegion: 'inside the region',
     outsideRegion: (km) => `${km} km outside`,
     floorArea: (squareMeters) => `${squareMeters} m² floor area`,
