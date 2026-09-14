@@ -1057,6 +1057,15 @@ button.link {
   align-items: center;
   justify-content: center;
   color: var(--muted);
+  /*
+   * Ganz an den rechten Rand, wie die Sortierung eine Zeile tiefer. Links
+   * stehen die drei Felder, die zusammen *eine* Angabe ergeben ("11 Minuten mit
+   * dem Auto"); der Knopf loest sie ein und gehoert nicht in diese Gruppe. Seit
+   * er nur noch 36 statt 93 px breit ist, blieb hinter ihm ohnehin Luft --
+   * dieselbe Kante wie darunter ist ruhiger als ein Knopf, der irgendwo in der
+   * Mitte endet.
+   */
+  margin-left: auto;
 }
 
 .poi-cond__search--pending:not(:disabled) {
