@@ -26,7 +26,6 @@ export const en: Texts = {
     none: 'There is no area from which every destination is within your time.',
     found: 'Shared region found.',
     checkingPlaces: 'Checking how well the selected places can be reached…',
-    layerName: 'Shared region',
     targetBusy: (name) => `Calculating the reachable area for ${name}…`,
     categoryBusy: (plural) => `Searching for ${plural}…`,
   },
@@ -56,6 +55,7 @@ export const en: Texts = {
     removeLabel: (name) => `Remove ${name}`,
     hiddenSuffix: ' · hidden',
     computing: (travelMode) => `Calculating the reachable area (${travelMode})…`,
+    add: '+ Add destination',
     retry: 'Try again',
     addressNotFound: (address) => `The address “${address}” could not be found.`,
   },
@@ -70,6 +70,12 @@ export const en: Texts = {
     radiusUnit: 'min',
     travelModeLabel: (category) => `Mode of travel for ${category}`,
     search: 'Find places',
+    blocking: 'This condition alone leaves nothing of the shared region.',
+    foundCount: (found, entries) => `${found} found, ${entries} entries`,
+    expandBranches: (label) => `Show branches of ${label}`,
+    collapseBranches: (label) => `Hide branches of ${label}`,
+    sortHint:
+      'At the top: large floor area, then chains, then unknown. Nothing is hidden — OSM only knows the size of some places.',
     searching: 'Searching…',
     searchingSuffix: ' · searching…',
     notSearched: ' · not searched',
@@ -78,6 +84,8 @@ export const en: Texts = {
     sortByRelevance: 'Largest first',
     sortByDistance: 'Nearest first',
     insideRegion: 'inside the region',
+    unnamed: 'Unnamed',
+    memberLabel: (name, km) => `${name} (${km} km)`,
     outsideRegion: (km) => `${km} km outside`,
     area: (squareMeters, approximate) =>
       ` · ${approximate ? 'up to ' : ''}${squareMeters} m²`,
@@ -101,6 +109,13 @@ export const en: Texts = {
 
   address: {
     heading: 'Check addresses',
+    intro:
+      'Collect addresses and see at a glance which ones meet the main criteria (light) and which also reach your chosen places (dark).',
+    queryField: 'Place or address',
+    emptyList:
+      'No address checked yet. Every address you add stays in the list and is re-assessed whenever destinations or selection change.',
+    travelTimesHint:
+      'Measured on the fastest route, without traffic. Right at the limit the isochrone can differ slightly.',
     placeholder: 'e.g. Musterstraße 1, Oldenburg',
     add: 'Add address',
     adding: 'Searching…',
@@ -110,7 +125,6 @@ export const en: Texts = {
     notFound: (label) => `The address “${label}” could not be found.`,
     removeLabel: (label) => `Remove ${label}`,
     removeTitle: 'Remove address',
-    checkFailed: 'This address could not be checked right now.',
     noRoute: 'The map service knows no route to there.',
     noRouteShort: 'no route',
     limit: (minutes) => `max. ${minutes} min`,
@@ -131,11 +145,16 @@ export const en: Texts = {
     placesUnreachable: 'The selected places cannot be reached from here.',
     placesMissing: 'First tick some places under “What do I need nearby?”.',
 
-    statusColumn: 'Position relative to the region',
     travelTimesBusy: 'Calculating travel times…',
     travelTimesEmpty: 'No travel times yet.',
     underOneMinute: 'under 1 min',
     minutes: (n) => `${n} min`,
+  },
+
+  status: {
+    more: (n) => ` +${n} more`,
+    seconds: (n) => `${n}s`,
+    slow: 'The service is responding slowly right now — it keeps going.',
   },
 
   map: {

@@ -924,7 +924,7 @@ export const App = () => {
                 />
               ) : (
                 <button type="button" className="add" onClick={() => setDraftOpen(true)}>
-                  + Ziel hinzufügen
+                  {texts.target.add}
                 </button>
               )}
             </section>
@@ -1013,8 +1013,8 @@ export const App = () => {
       <main className="map-area">
         {mapStyleUrl === null ? (
           <div className="map-placeholder">
-            <p>Karte kann nicht geladen werden.</p>
-            <p className="hint">Läuft das Backend? (npm run dev)</p>
+            <p>{texts.map.loadFailed}</p>
+            <p className="hint">{texts.map.loadFailedHint}</p>
           </div>
         ) : (
           <MapView

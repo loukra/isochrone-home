@@ -608,7 +608,7 @@ export const MapView = ({
     box.className = 'poi-popup';
 
     const title = document.createElement('strong');
-    title.textContent = poi.name;
+    title.textContent = poi.name ?? texts.poi.unnamed;
     box.append(title);
 
     const facts: string[] = [];

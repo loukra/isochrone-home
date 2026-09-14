@@ -10,7 +10,6 @@ import {
   sortGroups,
   toggleGroup,
   toggleMember,
-  UNNAMED_LABEL,
 } from '../src/frontend/poi/selection.js';
 import type { FoundPoi } from '../src/frontend/types.js';
 
@@ -35,7 +34,7 @@ describe('groupKeyOf', () => {
   });
 
   it('bindet namenlose Orte an die OSM-ID', () => {
-    expect(groupKeyOf(poi({ id: 'way/7', brand: null, name: UNNAMED_LABEL }))).toBe(
+    expect(groupKeyOf(poi({ id: 'way/7', brand: null, name: null }))).toBe(
       'poi:way/7',
     );
   });
@@ -92,7 +91,7 @@ describe('groupKeyOf', () => {
   });
 
   it('ignoriert eine leere Marke', () => {
-    expect(groupKeyOf(poi({ id: 'node/3', brand: '   ', name: UNNAMED_LABEL }))).toBe(
+    expect(groupKeyOf(poi({ id: 'node/3', brand: '   ', name: null }))).toBe(
       'poi:node/3',
     );
   });
@@ -132,8 +131,8 @@ describe('groupPois', () => {
 
   it('lässt namenlose Orte getrennt', () => {
     const groups = groupPois([
-      poi({ id: 'node/1', name: UNNAMED_LABEL }),
-      poi({ id: 'node/2', name: UNNAMED_LABEL }),
+      poi({ id: 'node/1', name: null }),
+      poi({ id: 'node/2', name: null }),
     ]);
 
     expect(groups).toHaveLength(2);

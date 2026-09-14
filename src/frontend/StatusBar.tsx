@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTexts } from './i18n/index.js';
 
 type StatusBarProps = {
   /** Was gerade läuft, in der Reihenfolge des Ablaufs. Leer = Ruhe. */
@@ -17,6 +18,7 @@ const SLOW_AFTER_SECONDS = 8;
  * es sieht, und unerträglich, wenn man rät.
  */
 export const StatusBar = ({ activities }: StatusBarProps) => {
+  const texts = useTexts();
   const busy = activities.length > 0;
   const [seconds, setSeconds] = useState(0);
 
@@ -52,17 +54,14 @@ export const StatusBar = ({ activities }: StatusBarProps) => {
       <span className="status__text">
         {current}
         {rest.length > 0 && (
-          <span className="status__more">
-            {' '}
-            +{rest.length} {rest.length === 1 ? 'weiteres' : 'weitere'}
-          </span>
+          <span className="status__more">{texts.status.more(rest.length)}</span>
         )}
       </span>
-      {seconds > 2 && <span className="status__time">{seconds}s</span>}
+      {seconds > 2 && (
+        <span className="status__time">{texts.status.seconds(seconds)}</span>
+      )}
       {slow && (
-        <span className="status__slow">
-          Der Dienst antwortet gerade langsam — es läuft weiter.
-        </span>
+        <span className="status__slow">{texts.status.slow}</span>
       )}
     </div>
   );

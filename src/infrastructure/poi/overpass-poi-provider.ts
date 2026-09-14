@@ -186,7 +186,7 @@ export class OverpassPoiProvider implements PoiProvider {
       pois.push({
         id: `${element.type}/${element.id}`,
         category,
-        name: tags['name'] ?? 'Ohne Namen',
+        name: tags['name'] ?? null,
         coordinate: { latitude, longitude },
         brand: tags['brand'] ?? tags['operator'] ?? null,
         website: tags['website'] ?? tags['contact:website'] ?? null,

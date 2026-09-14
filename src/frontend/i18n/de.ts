@@ -32,7 +32,6 @@ export const de = {
     none: 'Es gibt keinen Bereich, aus dem alle Ziele in deiner Zeit erreichbar sind.',
     found: 'Gemeinsame Region gefunden.',
     checkingPlaces: 'Erreichbarkeit der gewählten Orte wird geprüft…',
-    layerName: 'Gemeinsame Region',
     targetBusy: (name: string) => `Erreichbarer Bereich für ${name} wird berechnet…`,
     categoryBusy: (plural: string) => `${plural} werden gesucht…`,
   },
@@ -64,6 +63,7 @@ export const de = {
     // Bewusst nicht "Isochrone": Das Wort steht sonst nirgends in der
     // Oberfläche, und wer sie nur vorgelesen bekommt, hörte es ständig.
     computing: (travelMode: string) => `Erreichbarer Bereich wird berechnet (${travelMode})…`,
+    add: '+ Ziel hinzufügen',
     retry: 'Erneut versuchen',
     addressNotFound: (address: string) => `Die Adresse „${address}" konnte nicht gefunden werden.`,
   },
@@ -80,6 +80,12 @@ export const de = {
     radiusUnit: 'Min.',
     travelModeLabel: (category: string) => `Verkehrsmittel ${category}`,
     search: 'Orte suchen',
+    blocking: 'Diese Bedingung allein lässt nichts von der gemeinsamen Region übrig.',
+    foundCount: (found: number, entries: number) => `${found} gefunden, ${entries} Einträge`,
+    expandBranches: (label: string) => `Filialen von ${label} ausklappen`,
+    collapseBranches: (label: string) => `Filialen von ${label} einklappen`,
+    sortHint:
+      'Oben: belegt große Fläche, dann Ketten, dann Unbekanntes. Nichts wird ausgeblendet — OSM kennt die Größe nur für einen Teil.',
     searching: 'Wird gesucht…',
     searchingSuffix: ' · sucht…',
     notSearched: ' · nicht gesucht',
@@ -88,6 +94,10 @@ export const de = {
     sortByRelevance: 'Große zuerst',
     sortByDistance: 'Nächste zuerst',
     insideRegion: 'in der Region',
+    // OSM führt für diesen Ort kein name-Tag. Steht in der Liste anstelle des
+    // Namens -- der Ort selbst ist deshalb nicht weniger brauchbar.
+    unnamed: 'Ohne Namen',
+    memberLabel: (name: string, km: string) => `${name} (${km} km)`,
     outsideRegion: (km: string) => `${km} km außerhalb`,
     area: (squareMeters: number, approximate: boolean) =>
       ` · ${approximate ? 'bis ' : ''}${squareMeters} m²`,
@@ -110,6 +120,13 @@ export const de = {
 
   address: {
     heading: 'Adressen prüfen',
+    intro:
+      'Sammle Adressen und sieh auf einen Blick, welche die Hauptkriterien (hell) und welche zusätzlich die gewählten Orte (dunkel) erfüllen.',
+    queryField: 'Ort oder Adresse',
+    emptyList:
+      'Noch kein Ort geprüft. Jeder hinzugefügte Ort bleibt in der Liste und wird neu bewertet, sobald sich Ziele oder Auswahl ändern.',
+    travelTimesHint:
+      'Gemessen auf der schnellsten Route, ohne Verkehrslage. Direkt an der Grenze kann die Isochrone minimal abweichen.',
     placeholder: 'z. B. Musterstraße 1, Oldenburg',
     add: 'Adresse hinzufügen',
     adding: 'Wird gesucht…',
@@ -119,7 +136,6 @@ export const de = {
     notFound: (label: string) => `Die Adresse „${label}" konnte nicht gefunden werden.`,
     removeLabel: (label: string) => `${label} entfernen`,
     removeTitle: 'Adresse entfernen',
-    checkFailed: 'Die Adresse konnte gerade nicht geprüft werden.',
     noRoute: 'Der Kartendienst kennt dorthin keine Route.',
     noRouteShort: 'keine Route',
     limit: (minutes: number) => `max. ${minutes} Min`,
@@ -140,11 +156,18 @@ export const de = {
     placesUnreachable: 'Die gewählten Orte sind von hier nicht erreichbar.',
     placesMissing: 'Hak zuerst unter „Was brauche ich in der Nähe?" Orte an.',
 
-    statusColumn: 'Lage zur Region',
     travelTimesBusy: 'Fahrzeiten werden berechnet…',
     travelTimesEmpty: 'Noch keine Fahrzeiten.',
     underOneMinute: 'unter 1 Min',
     minutes: (n: number) => `${n} Min`,
+  },
+
+  status: {
+    // Mehrzahl ist hier nicht bloß ein angehängtes "s": Im Deutschen wechselt
+    // das ganze Wort, im Englischen der Bezug ("1 more" gegen "2 more").
+    more: (n: number) => ` +${n} ${n === 1 ? 'weiteres' : 'weitere'}`,
+    seconds: (n: number) => `${n}s`,
+    slow: 'Der Dienst antwortet gerade langsam — es läuft weiter.',
   },
 
   map: {

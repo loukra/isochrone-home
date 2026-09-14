@@ -66,7 +66,8 @@ export type TravelMode = (typeof TRAVEL_MODES)[number];
 export type FoundPoi = {
   id: string;
   category: PoiCategory;
-  name: string;
+  /** `null`, wenn OSM keinen Namen führt -- die Oberfläche setzt den Text ein. */
+  name: string | null;
   coordinate: Coordinate;
   brand: string | null;
   website: string | null;

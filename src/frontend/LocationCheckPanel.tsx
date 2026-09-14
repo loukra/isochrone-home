@@ -280,7 +280,7 @@ const CheckedPlaceCard = ({
           </p>
 
           {/*
-            Die Haken oben sagen nur {texts.address.statusColumn}. Erst die Fahrzeit sagt
+            Die Haken oben sagen nur "drin oder draußen". Erst die Fahrzeit sagt
             *wie knapp* -- und bei einem Ort außerhalb, welches Ziel daran schuld
             ist. Die Orte aus Schritt 3 (Studios, Bahnhöfe) bleiben bewusst
             draußen: Bei achtzig Treffern wäre das eine Tabelle statt einer
@@ -313,10 +313,7 @@ const CheckedPlaceCard = ({
                 </ul>
               )}
 
-              <p className="hint">
-                Gemessen auf der schnellsten Route, ohne Verkehrslage. Direkt an der
-                Grenze kann die Isochrone minimal abweichen.
-              </p>
+              <p className="hint">{texts.address.travelTimesHint}</p>
             </>
           )}
         </div>
@@ -459,13 +456,10 @@ export const LocationCheckPanel = ({
   return (
     <section className="location-check" aria-labelledby="location-check-title">
       <h2 id="location-check-title">{texts.address.heading}</h2>
-      <p className="hint">
-        Sammle Adressen und sieh auf einen Blick, welche die Hauptkriterien (hell) und
-        welche zusätzlich die gewählten Orte (dunkel) erfüllen.
-      </p>
+      <p className="hint">{texts.address.intro}</p>
 
       <label>
-        Ort oder Adresse
+        {texts.address.queryField}
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -504,10 +498,7 @@ export const LocationCheckPanel = ({
       )}
 
       {places.length === 0 ? (
-        <p className="hint">
-          Noch kein Ort geprüft. Jeder hinzugefügte Ort bleibt in der Liste und wird neu
-          bewertet, sobald sich Ziele oder Auswahl ändern.
-        </p>
+        <p className="hint">{texts.address.emptyList}</p>
       ) : (
         <ul className="place-cards">
           {places.map((place) => (

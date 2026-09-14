@@ -147,7 +147,7 @@ export const PoiConditionCard = ({
                 onMinutesChange(Number.parseInt(event.target.value, 10))
               }
               disabled={condition.busy}
-              aria-label={`Fahrzeit ${texts.categories[condition.category]}`}
+              aria-label={texts.poi.radiusLabel(texts.categories[condition.category])}
             />
             <span>{texts.poi.radiusUnit}</span>
             <select
@@ -157,7 +157,7 @@ export const PoiConditionCard = ({
                 onTravelModeChange(event.target.value as TravelMode)
               }
               disabled={condition.busy}
-              aria-label={`Verkehrsmittel ${texts.categories[condition.category]}`}
+              aria-label={texts.poi.travelModeLabel(texts.categories[condition.category])}
               title={texts.travelModes[condition.travelMode]}
             >
               {TRAVEL_MODES.map((mode) => (
@@ -178,16 +178,14 @@ export const PoiConditionCard = ({
           {condition.error !== null && <p className="error">{condition.error}</p>}
 
           {blocking && (
-            <p className="error">
-              Diese Bedingung allein lässt nichts von der gemeinsamen Region übrig.
-            </p>
+            <p className="error">{texts.poi.blocking}</p>
           )}
 
           {condition.pois.length > 0 && (
             <>
               <div className={`poi-controls${stale}`} aria-busy={condition.busy}>
                 <span className="hint">
-                  {condition.pois.length} gefunden, {groups.length} Einträge
+                  {texts.poi.foundCount(condition.pois.length, groups.length)}
                 </span>
                 <select
                   value={condition.sortMode}
@@ -215,6 +213,10 @@ export const PoiConditionCard = ({
                   const area = largestAreaOf(group);
                   const many = group.members.length > 1;
                   const isOpen = expanded.has(group.key);
+                  // OSM kennt für manche Orte keinen Namen. Der Platzhalter
+                  // gehört in die Oberfläche, nicht in die Daten -- sonst
+                  // stünde ein deutsches Wort auch im Englischen.
+                  const label = group.label ?? texts.poi.unnamed;
 
                   return (
                     <li key={group.key}>
@@ -228,9 +230,11 @@ export const PoiConditionCard = ({
                             className="poi-row__expand"
                             onClick={() => toggleExpanded(group.key)}
                             aria-expanded={isOpen}
-                            aria-label={`Filialen von ${group.label} ${
-                              isOpen ? 'einklappen' : 'ausklappen'
-                            }`}
+                            aria-label={
+                              isOpen
+                                ? texts.poi.collapseBranches(label)
+                                : texts.poi.expandBranches(label)
+                            }
                           >
                             {isOpen ? '▼' : '►'}
                           </button>
@@ -248,7 +252,7 @@ export const PoiConditionCard = ({
                             if (node !== null) node.indeterminate = state === 'some';
                           }}
                           onChange={() => onToggleGroup(group)}
-                          aria-label={group.label}
+                          aria-label={label}
                         />
                         <button
                           type="button"
@@ -256,7 +260,7 @@ export const PoiConditionCard = ({
                           onClick={() => onFocusGroup(group)}
                         >
                           <span className="poi-row__name">
-                            {group.label}
+                            {label}
                             {many && (
                               <span className="poi-row__count">
                                 {group.members.length}×
@@ -268,9 +272,7 @@ export const PoiConditionCard = ({
                               ? texts.poi.insideRegion
                               : texts.poi.outsideRegion(nearest.distanceToRegionKm.toFixed(1))}
                             {nearest?.sport != null ? ` · ${nearest.sport}` : ''}
-                            {area !== null
-                              ? ` · ${many ? 'bis ' : ''}${Math.round(area)} m²`
-                              : ''}
+                            {area !== null ? texts.poi.area(Math.round(area), many) : ''}
                           </span>
                         </button>
                       </div>
@@ -292,20 +294,25 @@ export const PoiConditionCard = ({
                                   state === 'all' || selectedKeys.has(poiKeyOf(member))
                                 }
                                 onChange={() => onToggleMember(group, member)}
-                                aria-label={`${member.name} (${member.distanceToRegionKm.toFixed(1)} km)`}
+                                aria-label={texts.poi.memberLabel(
+                                  member.name ?? texts.poi.unnamed,
+                                  member.distanceToRegionKm.toFixed(1),
+                                )}
                               />
                               <button
                                 type="button"
                                 className="poi-row__label"
                                 onClick={() => onFocusMember(member)}
                               >
-                                <span className="poi-row__name">{member.name}</span>
+                                <span className="poi-row__name">
+                                  {member.name ?? texts.poi.unnamed}
+                                </span>
                                 <span className="poi-row__meta">
                                   {member.distanceToRegionKm === 0
                                     ? texts.poi.insideRegion
                                     : texts.poi.outsideRegion(member.distanceToRegionKm.toFixed(1))}
                                   {member.areaSquareMeters !== null
-                                    ? ` · ${Math.round(member.areaSquareMeters)} m²`
+                                    ? texts.poi.area(Math.round(member.areaSquareMeters), false)
                                     : ''}
                                 </span>
                               </button>
@@ -319,10 +326,7 @@ export const PoiConditionCard = ({
               </ul>
 
               {condition.sortMode === 'relevance' && (
-                <p className={`hint${stale}`}>
-                  Oben: belegt große Fläche, dann Ketten, dann Unbekanntes. Nichts wird
-                  ausgeblendet — OSM kennt die Größe nur für einen Teil.
-                </p>
+                <p className={`hint${stale}`}>{texts.poi.sortHint}</p>
               )}
             </>
           )}
