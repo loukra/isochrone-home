@@ -4,26 +4,29 @@ import type { BoundingBox } from '../src/domain/models/geo.js';
 
 describe('reachRadiusKm', () => {
   it('wächst linear mit der Fahrzeit', () => {
-    expect(reachRadiusKm(10, 'driving')).toBe(15);
-    expect(reachRadiusKm(20, 'driving')).toBe(30);
+    expect(reachRadiusKm(10, 'driving')).toBe(10);
+    expect(reachRadiusKm(20, 'driving')).toBe(20);
   });
 
-  it('ist großzügig genug für Autobahnfahrt', () => {
-    // 10 Minuten bei 90 km/h sind 15 km Luftlinie -- mehr geht im Auto nicht.
-    expect(reachRadiusKm(10, 'driving')).toBeGreaterThanOrEqual(15);
+  it('deckt beim Auto die gemessene Reichweite der Ortsmitte ab', () => {
+    // Gemessen (Referenzregion, smoothing 0): 10 Minuten reichen aus einer
+    // Ortsmitte 5,8-6,7 km weit, von einer Autobahnauffahrt aus 10,9 km. Der
+    // Radius deckt den Regelfall ab, den Autobahn-Bestfall bewusst nicht mehr.
+    expect(reachRadiusKm(10, 'driving')).toBeGreaterThanOrEqual(6.7);
+    expect(reachRadiusKm(10, 'driving')).toBeLessThan(15);
   });
 
-  it('ist je Verkehrsmittel großzügig, aber nicht großzügiger', () => {
-    // Untere Schranke: Was der Kartendienst für das Profil rechnet (Rad ~18,
-    // E-Bike ~20, zu Fuß ~5 km/h), muss der Radius sicher abdecken.
-    // Obere Schranke: Das Doppelte davon waere kein Puffer mehr, sondern eine
-    // Liste voller Orte, die diese Bedingung nie erfuellen koennen.
-    expect(reachRadiusKm(60, 'cycling')).toBeGreaterThanOrEqual(18);
-    expect(reachRadiusKm(60, 'cycling')).toBeLessThanOrEqual(36);
-    expect(reachRadiusKm(60, 'ebike')).toBeGreaterThanOrEqual(20);
-    expect(reachRadiusKm(60, 'ebike')).toBeLessThanOrEqual(40);
-    expect(reachRadiusKm(60, 'walking')).toBeGreaterThanOrEqual(5);
-    expect(reachRadiusKm(60, 'walking')).toBeLessThanOrEqual(10);
+  it('deckt je Verkehrsmittel die gemessene Reichweite ab, aber nicht mehr', () => {
+    // Untere Schranke: die gemessene maximale Luftlinie (E-Bike 0,35 km/min,
+    // Rad 0,29, zu Fuß 0,085) -- sie darf der Radius nie unterschreiten.
+    // Obere Schranke: ein Viertel darüber wäre kein Puffer mehr, sondern eine
+    // Liste voller Orte, die die Bedingung nie erfüllen können.
+    expect(reachRadiusKm(60, 'ebike')).toBeGreaterThanOrEqual(21);
+    expect(reachRadiusKm(60, 'ebike')).toBeLessThanOrEqual(26);
+    expect(reachRadiusKm(60, 'cycling')).toBeGreaterThanOrEqual(17.4);
+    expect(reachRadiusKm(60, 'cycling')).toBeLessThanOrEqual(22);
+    expect(reachRadiusKm(60, 'walking')).toBeGreaterThanOrEqual(5.1);
+    expect(reachRadiusKm(60, 'walking')).toBeLessThanOrEqual(6.4);
   });
 
   it('ordnet die Verkehrsmittel nach Reichweite', () => {

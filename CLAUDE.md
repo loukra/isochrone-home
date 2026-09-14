@@ -280,15 +280,60 @@ Daraus folgt:
   Bestaetigung. Voreingestellt bleibt `driving`: die weiteste Reichweite und
   damit die Annahme, die am wenigsten still etwas ausschliesst.
 - **Der Suchradius haengt am Verkehrsmittel, nicht nur an der Zeit**
-  (`KM_PER_MINUTE` in `domain/services/search-area.ts`: Auto 1,5 km/min,
-  E-Bike 0,5, Rad 0,4, zu Fuss 0,12 -- jeweils rund die Haelfte ueber dem
-  Tempo, mit dem ORS fuer das Profil rechnet). Ein gemeinsamer Wert waere hier
-  nicht bloss unsauber, sondern unbrauchbar: Gemessen in der Referenzregion
-  (Oldenburg/Delmenhorst, je 25 Min. Auto) findet "10 Minuten" beim Supermarkt
+  (`KM_PER_MINUTE` in `domain/services/search-area.ts`: Auto 1,0 km/min,
+  E-Bike 0,35, Rad 0,3, zu Fuss 0,09). Ein gemeinsamer Wert waere hier nicht
+  bloss unsauber, sondern unbrauchbar: Gemessen in der Referenzregion
+  (Oldenburg/Delmenhorst, je 25 Min. Auto) fand "10 Minuten" beim Supermarkt
   mit 1,5 km/min **401** Treffer bis 14,9 km ausserhalb, mit dem Fussgaenger-
   wert **80** bis 1,2 km. Die Liste stuende sonst voll mit Orten, zu denen
   niemand laeuft, und die Angabe "x km ausserhalb" waere fuer die Entscheidung
-  wertlos. Nach oben gilt weiter: lieber zu viel finden als unbemerkt zu wenig.
+  wertlos.
+- **Die Werte sind an echten Isochronen gemessen, nicht aus einem Tempo
+  abgeleitet** (*geaendert am 14.09.2026 auf Entscheidung des Nutzers*:
+  "1 km pro min ist besser als 1,5 km pro min bei auto"). Anlass war eine
+  Schulsuche, deren Punkte bis Bremen-Ost reichten. Vorher standen dort Auto
+  1,5 / E-Bike 0,5 / Rad 0,4 / zu Fuss 0,12 -- "rund die Haelfte ueber dem
+  Tempo, mit dem ORS fuer das Profil rechnet", also geschaetzt. Gemessen
+  (groesster Abstand vom Startpunkt zum Rand der Isochrone, `smoothing: 0`):
+
+  | Verkehrsmittel | 10 Min. | 25 Min. | 45 Min. |
+  | --- | ---: | ---: | ---: |
+  | Auto, Ortsmitte | 5,8-6,7 km | 31,2 km | -- |
+  | Auto, an der Autobahnauffahrt | 10,9 km | 35,4 km | -- |
+  | E-Bike | 3,5 km | 8,7 km | -- |
+  | Rad | 2,9 km | -- | 12,7 km |
+  | zu Fuss | 0,77 km | 2,1 km | 3,8 km |
+
+  - **Rad, E-Bike und zu Fuss sind linear, das Auto ist es nicht.** Bei den
+    drei langsamen Verkehrsmitteln steht bei 10 Minuten dieselbe Zahl je
+    Minute wie bei 45. Beim Auto steigt sie: 0,84 km/min bei 5 Minuten, 1,09
+    bei 10, 1,36 bei 15, 1,42 bei 25 -- die ersten Minuten gehen fuer die
+    Anfahrt zur schnellen Strasse drauf. Ein einziger Wert kann also nur
+    entweder die kurzen oder die langen Zeiten treffen.
+  - **Getroffen wird jetzt der Regelfall, nicht der Bestfall.** 1,5 km/min war
+    die Reichweite einer Autobahnfahrt, angewandt in *alle* Richtungen von
+    *jedem* Punkt der Region. Was das kostet, ist gemessen: 346 Schulen der
+    Referenzregion, echte Fahrzeitmatrix von fuenf Stuetzstellen in der
+    gemeinsamen Region, Bedingung "10 Minuten Auto":
+
+    | Luftlinie zur Region | Schulen | davon in <= 10 Min. | Median-Fahrzeit |
+    | --- | ---: | ---: | ---: |
+    | 0-3 km | 43 | 43 (100 %) | 6 Min. |
+    | 3-5 km | 20 | 5 (25 %) | 11 Min. |
+    | 5-8 km | 33 | 2 (6 %) | 19 Min. |
+    | 8-10 km | 70 | 0 | 25 Min. |
+    | 10-15 km | 92 | 0 | 30 Min. |
+
+    258 gefunden, **50 erreichbar** -- und alle 50 innerhalb von **6,1 km**.
+    Vier Fuenftel der Liste waren nachweislich unerfuellbar.
+  - **Der Preis steht ausdruecklich da**: Der Radius deckt den
+    Autobahn-Bestfall nicht mehr ab. Ein Ort 12 km draussen, an derselben
+    Auffahrt wie die Region, waere in 10 Minuten erreichbar und wird nicht
+    mehr gefunden; bei langen Zeiten faellt das staerker aus (25 Min.: 25 km
+    Radius gegen 35,4 km gemessene Reichweite). Das ist die Gegenseite zu
+    "lieber zu viel finden als unbemerkt zu wenig", und sie wurde bewusst in
+    Kauf genommen. Anders als beim Vorfiltern von POIs ist sie aber eine Zahl,
+    die hier steht und die man drehen kann -- kein stiller Ausschluss.
 - Dass das Verkehrsmittel wirklich bis zum Provider durchschlaegt, haengt nicht
   am Vertrauen: Derselbe Supermarkt, 10 Minuten, ergab ueber `/api/pois/region`
   165 km² erreichbare Flaeche mit dem Auto, 14,4 km² mit dem Rad und 0,8 km²
