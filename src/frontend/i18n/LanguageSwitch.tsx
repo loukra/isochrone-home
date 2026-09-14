@@ -1,11 +1,6 @@
-import {
-  LANGUAGES,
-  LANGUAGE_FLAGS,
-  LANGUAGE_NAMES,
-  useLanguage,
-  useTexts,
-  type Language,
-} from './index.js';
+import { Select, type SelectOption } from '../components/Select.js';
+import { LANGUAGE_ICONS } from '../components/flags.js';
+import { LANGUAGES, LANGUAGE_NAMES, useLanguage, useTexts, type Language } from './index.js';
 
 /**
  * Der Sprachumschalter, oben rechts in der Kopfzeile.
@@ -15,24 +10,31 @@ import {
  * jeder Auswahl und im Tooltip, und der Knopf selbst nennt neben "Sprache"
  * auch die gerade eingestellte. Ohne das sagte ein Vorleseprogramm
  * "Flagge Deutschland" -- ein Land, keine Sprache.
+ *
+ * Die Flagge ist seit dem Kartenwerk-Umbau gezeichnet, kein Emoji mehr. Damit
+ * entfällt der Rückfall, den Windows bisher zeigte -- dort stand statt der
+ * Flagge "DE" bzw. "GB", weil das System für Flaggen-Emoji bewusst keine
+ * Glyphen mitliefert.
  */
 export const LanguageSwitch = () => {
   const texts = useTexts();
   const { language, setLanguage } = useLanguage();
 
+  const options: readonly SelectOption<Language>[] = LANGUAGES.map((code) => ({
+    value: code,
+    label: LANGUAGE_NAMES[code],
+    icon: LANGUAGE_ICONS[code],
+  }));
+
   return (
-    <select
-      className="language-switch"
+    <Select
+      className="select--quiet"
+      trigger="icon"
       value={language}
-      onChange={(event) => setLanguage(event.target.value as Language)}
-      aria-label={`${texts.app.languageLabel}: ${LANGUAGE_NAMES[language]}`}
+      options={options}
+      onChange={setLanguage}
+      label={texts.app.languageLabel}
       title={LANGUAGE_NAMES[language]}
-    >
-      {LANGUAGES.map((code) => (
-        <option key={code} value={code} aria-label={LANGUAGE_NAMES[code]}>
-          {LANGUAGE_FLAGS[code]}
-        </option>
-      ))}
-    </select>
+    />
   );
 };

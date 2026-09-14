@@ -1,18 +1,164 @@
+/*
+ * „Kartenwerk“: Die Seitenleiste ist das Messinstrument neben der Karte, nicht
+ * eine weitere bunte App. Daraus folgt jeder Wert hier -- papiergrüne
+ * Neutraltöne statt kühlem Grau, Kartentinten-Grün als einziger Akzent, enge
+ * 4px-Radien und Haarlinien statt Kacheln mit Schlagschatten.
+ *
+ * Alle Farben, Radien und Schriften stehen ausschliesslich hier. Keine Regel
+ * weiter unten schreibt einen Farbwert hin: Sonst hätte der Dunkelmodus genau
+ * die Stellen übersehen, die niemand geprüft hat.
+ */
 :root {
-  --bg: #f6f7f9;
-  --panel: #ffffff;
-  --border: #dfe3e8;
-  --text: #16191d;
-  --muted: #6b7280;
-  --accent: #2563eb;
-  --danger: #b91c1c;
-  --success: #15803d;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
+  color-scheme: light;
+
+  /* Flächen, von aussen nach innen. */
+  --bg: #eaeeea;
+  --panel: #fbfcfa;
+  /* Eingesenkt: Reiterleiste, Statuszeile, Trefferzeilen im Aufklapp. */
+  --sunk: #f0f3ee;
+  --raised: #ffffff;
+
+  /* Linien. Die starke Variante nur, wo etwas wirklich abgegrenzt gehört. */
+  --border: #d3d9d0;
+  --border-strong: #bcc4b8;
+
+  --text: #1a211b;
+  --muted: #667062;
+
+  /* Bedeutung. `accent-ink` ist die Schrift *auf* der Akzentfläche. */
+  --accent: #16554a;
+  --accent-ink: #f6faf6;
+  --accent-soft: #dceae4;
+  --danger: #9a3412;
+  --danger-border: #d8a88c;
+  --danger-soft: #f8e9de;
+  --success: #2f6f3c;
+  /* Der geprüfte Wohnort: kein Ziel und kein POI, also eine eigene Farbe. */
+  --checked: #5b21b6;
+  /*
+   * Schrift auf einer *Kartenfarbe* (der Haken im grünen Abzeichen). Die
+   * Kartenfarben stehen in colors.ts und bedeuten dort etwas -- sie drehen
+   * sich im Dunkelmodus nicht mit, also darf diese Schrift es auch nicht.
+   */
+  --map-ink: #ffffff;
+
+  /*
+   * Siehe die Regel für `.maplibregl-ctrl-icon`: MapLibres Bedienzeichen sind
+   * Hintergrundbilder mit eingebauter Strichfarbe. Umfärben geht dort nicht,
+   * umkehren schon.
+   */
+  --icon-invert: none;
+
+  /*
+   * Der Haken im Ankreuzfeld. Als Maske, nicht als Bild: So bestimmt weiter
+   * `--accent-ink` die Farbe, und der Dunkelmodus muss nichts nachziehen.
+   */
+  --check-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.4 8.6l3.1 3.1 6.1-6.6' fill='none' stroke='%23000' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+  --radius: 4px;
+  --radius-sm: 3px;
+  --radius-lg: 5px;
+
+  /*
+   * Das Innenpolster einer Karte. Die Trefferliste rechnet es wieder heraus,
+   * um bis an die Kanten zu laufen -- deshalb steht es als Token da und nicht
+   * dreimal als Zahl.
+   */
+  --pad: 10px;
+
+  /*
+   * Die Höhe aller Bedienelemente, die nebeneinander in einer Zeile stehen.
+   * Sie wird vererbt: Ein Behälter setzt sie einmal, und Auswahlfeld,
+   * Zahlenfeld und Knopf darin sind dadurch gleich hoch. Vorher rechnete jedes
+   * seine Höhe aus Schriftgrösse und Polster selbst aus -- in der Bedienzeile
+   * der Bedingungskarte standen so 26,5, 23 und 33 Pixel nebeneinander.
+   */
+  --control-h: 30px;
+  --shadow: 0 1px 0 rgb(26 33 27 / 8%);
+  /* Nur für Dinge, die wirklich über der Seite schweben: Menüs, Info-Boxen. */
+  --shadow-pop:
+    0 8px 22px -10px rgb(26 33 27 / 34%), 0 2px 6px -3px rgb(26 33 27 / 26%);
+
+  /*
+   * Zahlen laufen in Plex Mono: Minuten, Entfernungen und Flächen stehen damit
+   * in Spalten untereinander, statt bei jeder Ziffernänderung die Breite zu
+   * wechseln. Der Fliesstext bleibt bei Plex Sans.
+   */
+  --font:
+    'IBM Plex Sans Variable', 'IBM Plex Sans', 'Segoe UI', Roboto, sans-serif;
+  --font-num: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+
+  font-family: var(--font);
   color: var(--text);
+}
+
+/*
+ * Dunkelmodus. Die Rollen bleiben dieselben, nur die Werte drehen sich um --
+ * deshalb steht hier ausschliesslich der Tokenblock und keine einzige
+ * Komponentenregel. Zwei Wege führen herein: die Einstellung des Systems und
+ * die ausdrückliche Wahl im Kopf der Seitenleiste. Die Wahl gewinnt in beide
+ * Richtungen, dieselbe Regel wie bei Sprache und Kartenausschnitt.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --bg: #121714;
+    --panel: #1a201c;
+    --sunk: #151b17;
+    --raised: #222a24;
+
+    --border: #2b332d;
+    --border-strong: #3b453e;
+
+    --text: #e4ebe4;
+    --muted: #8c9a8c;
+
+    /* Aufgehellt: Das tiefe Grün des Tages hat auf dunklem Grund zu wenig
+       Kontrast, um als Akzent noch zu tragen. */
+    --accent: #6cc3a6;
+    --accent-ink: #0d1411;
+    --accent-soft: #1d2b25;
+    --danger: #f0a07a;
+    --danger-border: #7a4630;
+    --danger-soft: #2a1a12;
+    --success: #6cc3a6;
+    --checked: #b69cf0;
+
+    --icon-invert: invert(1);
+    --shadow: 0 1px 0 rgb(0 0 0 / 40%);
+    --shadow-pop:
+      0 8px 22px -8px rgb(0 0 0 / 70%), 0 2px 6px -3px rgb(0 0 0 / 50%);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #121714;
+  --panel: #1a201c;
+  --sunk: #151b17;
+  --raised: #222a24;
+
+  --border: #2b332d;
+  --border-strong: #3b453e;
+
+  --text: #e4ebe4;
+  --muted: #8c9a8c;
+
+  --accent: #6cc3a6;
+  --accent-ink: #0d1411;
+  --accent-soft: #1d2b25;
+  --danger: #f0a07a;
+  --danger-border: #7a4630;
+  --danger-soft: #2a1a12;
+  --success: #6cc3a6;
+  --checked: #b69cf0;
+
+  --icon-invert: invert(1);
+  --shadow: 0 1px 0 rgb(0 0 0 / 40%);
+  --shadow-pop:
+    0 8px 22px -8px rgb(0 0 0 / 70%), 0 2px 6px -3px rgb(0 0 0 / 50%);
 }
 
 * {
@@ -55,8 +201,8 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 4px;
   padding: 4px;
-  border-radius: 9px;
-  background: #eef2f7;
+  border-radius: var(--radius-lg);
+  background: var(--sunk);
 }
 
 button.sidebar-tab {
@@ -71,7 +217,7 @@ button.sidebar-tab {
 button.sidebar-tab--active {
   background: var(--panel);
   color: var(--text);
-  box-shadow: 0 1px 2px rgb(15 23 42 / 12%);
+  box-shadow: var(--shadow);
 }
 
 h1 {
@@ -95,7 +241,7 @@ h1 {
 
 .card {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -151,11 +297,19 @@ h1 {
   margin-left: auto;
   background: none;
   border: none;
-  font-size: 20px;
-  line-height: 1;
+  line-height: 0;
   color: var(--muted);
   cursor: pointer;
-  padding: 0 4px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+/* Löschen ist nicht umkehrbar -- beim Überfahren sagt die Farbe das. */
+.remove:hover {
+  color: var(--danger);
 }
 
 .card__address {
@@ -177,8 +331,8 @@ input {
   font-size: 14px;
   padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 7px;
-  background: #fff;
+  border-radius: var(--radius);
+  background: var(--raised);
   color: var(--text);
 }
 
@@ -204,26 +358,9 @@ input:focus-visible {
   white-space: nowrap;
 }
 
+/* Nur noch Platzierung -- das Aussehen kommt von `.select__trigger`. */
 .card__mode {
-  font: inherit;
-  font-size: 11.5px;
-  padding: 3px 4px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: #fff;
-  color: var(--text);
   margin-left: auto;
-  flex: none;
-}
-
-.card--draft select {
-  font: inherit;
-  font-size: 14px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: #fff;
-  color: var(--text);
 }
 
 /* Fahrzeit steht in der Kopfzeile neben dem Namen -- das spart eine Zeile
@@ -261,10 +398,9 @@ input:focus-visible {
   margin-left: 0;
 }
 
-.card__minutes input {
-  width: 44px;
-  font-size: 12.5px;
-  padding: 4px 5px;
+/* Eng genug für "120", mehr lässt die Kopfzeile nicht zu. */
+.numfield--narrow {
+  width: 54px;
 }
 
 /* Der Haken hält seinen Platz auch, wenn es nichts zu übernehmen gibt.
@@ -283,7 +419,7 @@ input:focus-visible {
   width: 24px;
   height: 24px;
   padding: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 
 .card__apply--idle {
@@ -295,9 +431,10 @@ input:focus-visible {
   font-size: 11.5px;
 }
 
-.card__minutes button {
+/* Gemeint ist der Haken zum Übernehmen -- nicht jeder Knopf in der Zeile. */
+.card__minutes .card__apply {
   font-size: 12px;
-  padding: 5px 9px;
+  padding-inline: 0;
 }
 
 .card__actions {
@@ -309,10 +446,10 @@ button {
   font: inherit;
   font-size: 14px;
   padding: 8px 12px;
-  border-radius: 7px;
+  border-radius: var(--radius);
   border: 1px solid var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   cursor: pointer;
 }
 
@@ -364,7 +501,7 @@ button.link {
 }
 
 .candidate {
-  background: #f1f5f9;
+  background: var(--sunk);
   color: var(--text);
   border: 1px solid var(--border);
   text-align: left;
@@ -372,24 +509,27 @@ button.link {
   padding: 7px 9px;
 }
 
-.analysis {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-
 /*
- * Platz fuer zwei Zeilen, auch wenn nur eine dasteht. Die Meldungen sind
- * unterschiedlich lang ("Gemeinsame Region gefunden." gegen "Fuer diese
- * Anforderungen wurde keine ... gefunden."); ohne reservierte Hoehe rutscht
- * beim Wechsel alles darunter um eine Zeile.
+ * Ein Hinweis, der den Rest der Seitenleiste erklärt: Der Aufruf ist
+ * gescheitert, oder es gibt keine gemeinsame Region. Er steht *in* der
+ * Zielliste, weil er deren Ergebnis ist.
+ *
+ * Er hält **keinen** Platz frei. Die Vorgängerzeile tat das (zwei Zeilen
+ * Mindesthöhe), weil sie immer dastand und nur ihren Text wechselte -- sie
+ * meldete auch Erfolg und "wird gerechnet". Beides sagt der Bildschirm schon:
+ * die grüne Fläche auf der Karte und die Statusleiste unten. Was übrig ist,
+ * erscheint selten und dann als echte Nachricht; dauerhaft zwei Zeilen Luft
+ * dafür freizuhalten hiesse, den Normalfall für den Ausnahmefall zu opfern.
  */
-.analysis__line {
+.notice {
   margin: 0;
-  min-height: 2.8em;
+  padding: 8px 10px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 12.5px;
+  line-height: 1.45;
 }
 
 /* --- Orte prüfen --------------------------------------------------------- */
@@ -420,7 +560,7 @@ button.link {
 
 .location-check__result {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px;
 }
 
@@ -442,8 +582,8 @@ button.link {
 
 .place-card {
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fff;
+  border-radius: var(--radius);
+  background: var(--raised);
   overflow: hidden;
 }
 
@@ -499,12 +639,12 @@ button.link {
 }
 
 .check-badge--yes {
-  color: #fff;
+  color: var(--map-ink);
 }
 
 .check-badge--no {
   color: var(--danger);
-  border-color: #fca5a5;
+  border-color: var(--danger-border);
 }
 
 /* Noch nicht entscheidbar: sichtbar vorhanden, aber ohne Aussage. */
@@ -634,10 +774,10 @@ button.link {
   place-items: center;
   width: 34px;
   height: 34px;
-  border: 2px solid #5b21b6;
+  border: 2px solid var(--checked);
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 6px rgb(15 23 42 / 30%);
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
@@ -665,19 +805,24 @@ button.link {
   font-size: 13px;
 }
 
-.poi-controls select {
-  font: inherit;
-  font-size: 14px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: #fff;
-  color: var(--text);
+/* Die zweite Zeile im Rumpf berichtet nur ("25 gefunden") und stellt die
+   Sortierung ein -- beides leiser als die Suchzeile darüber. */
+.poi-controls--meta {
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.poi-controls--meta .hint {
+  font-size: inherit;
+}
+
+.poi-controls .select--block {
   flex: 1;
 }
 
-.poi-controls input {
-  width: 66px;
+.numfield--radius {
+  width: 72px;
 }
 
 .poi-conds {
@@ -691,13 +836,19 @@ button.link {
 
 .poi-cond {
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fff;
+  border-radius: var(--radius);
+  background: var(--panel);
   overflow: hidden;
 }
 
+/* Aufgeklappt bekommt die Kopfzeile die eingesenkte Fläche: Sie ist dann eine
+   Überschrift über einem Inhalt, keine Zeile für sich. */
+.poi-cond__head:has(+ .poi-cond__body) {
+  background: var(--sunk);
+}
+
 .poi-cond--blocking {
-  border-color: #fca5a5;
+  border-color: var(--danger-border);
 }
 
 .poi-cond__head {
@@ -718,14 +869,18 @@ button.link {
   cursor: pointer;
 }
 
-/* Bewusst die vollen Dreiecke U+25BC/U+25BA statt der "small"-Varianten
-   U+25BE/U+25B8 -- die bleiben in jeder Schriftgroesse winzig. */
+/*
+ * Gezeichnet statt gesetzt. Vorher standen hier die vollen Dreiecke
+ * U+25BC/U+25BA -- die "small"-Varianten U+25BE/U+25B8 bleiben in jeder
+ * Schriftgroesse winzig, und wie gross die vollen ausfallen, entschied die
+ * Schrift des Systems. Jetzt entscheidet es die App.
+ */
 .poi-cond__caret {
   color: var(--muted);
-  font-size: 11px;
-  line-height: 1;
-  width: 13px;
+  width: 14px;
   flex: none;
+  display: flex;
+  align-items: center;
 }
 
 .poi-cond__toggle .dot {
@@ -746,22 +901,23 @@ button.link {
 .poi-cond__remove {
   background: none;
   border: none;
-  padding: 0 11px;
+  padding: 0 10px;
   color: var(--muted);
-  font-size: 17px;
-  line-height: 1;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex: none;
 }
 
 .poi-cond__remove:hover {
-  color: var(--text);
+  color: var(--danger);
 }
 
 .poi-cond__body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 0 10px 10px;
+  padding: 0 var(--pad) var(--pad);
   border-top: 1px solid var(--border);
 }
 
@@ -773,10 +929,8 @@ button.link {
   padding-top: 0;
 }
 
-.poi-cond__body select {
-  flex: none;
-  font-size: 12px;
-  padding: 5px 7px;
+/* Die Sortierung sitzt am rechten Rand ihrer Zeile. */
+.poi-cond__sort {
   margin-left: auto;
 }
 
@@ -790,9 +944,15 @@ button.link {
   margin-left: 0;
 }
 
-.poi-cond__body button {
+/*
+ * Gemeint ist der Suchknopf in der Bedienzeile. Vorher stand hier
+ * `.poi-cond__body button` -- das traf auch die Trefferzeilen, deren eigenes
+ * `padding: 0` mit nur einer Klasse dagegen nicht ankam. Jede Zeile trug
+ * dadurch 7px zusätzliche Höhe und 11px Einzug, den niemand gesetzt hatte.
+ */
+.poi-cond__body .poi-controls > button {
   font-size: 13px;
-  padding: 7px 11px;
+  padding-inline: 11px;
 }
 
 /*
@@ -810,19 +970,28 @@ button.link {
 
 .poi-list {
   list-style: none;
-  margin: 0;
+  /* Bis an die Kanten der Kachel -- das Polster des Rumpfes wird hier wieder
+     herausgerechnet. Ein umrandeter Kasten in einem umrandeten Kasten liess
+     die halbe Zeile am unteren Rand wie abgeschnitten aussehen; ohne Rahmen
+     liest sie sich als "da kommt noch mehr". */
+  margin: 2px calc(var(--pad) * -1) calc(var(--pad) * -1);
   padding: 0;
   max-height: 260px;
   overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border-top: 1px solid var(--border);
+}
+
+/* Steht der Hinweis zur Sortierung darunter, endet die Liste wieder innen. */
+.poi-list:not(:last-child) {
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border);
 }
 
 .poi-row {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 7px 9px;
+  padding: 6px var(--pad);
   border-bottom: 1px solid var(--border);
 }
 
@@ -831,7 +1000,7 @@ button.link {
 }
 
 .poi-row--focused {
-  background: #eef2ff;
+  background: var(--accent-soft);
 }
 
 .poi-row input[type='checkbox'] {
@@ -908,12 +1077,12 @@ button.link {
   padding: 0;
   margin-top: 2px;
   width: 13px;
+  height: 16px;
   flex: none;
-  text-align: left;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.4;
   cursor: pointer;
+  display: flex;
+  align-items: center;
 }
 
 .poi-row__expand--empty {
@@ -928,7 +1097,7 @@ button.link {
   list-style: none;
   margin: 0;
   padding: 0;
-  background: #fafafa;
+  background: var(--sunk);
   border-bottom: 1px solid var(--border);
 }
 
@@ -1001,8 +1170,8 @@ button.link {
   flex-wrap: wrap;
   padding: 9px 11px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #f1f5f9;
+  border-radius: var(--radius);
+  background: var(--sunk);
   font-size: 12px;
   color: var(--text);
 }
@@ -1070,37 +1239,607 @@ button.link {
   }
 }
 
-/* Sprachumschalter: oben rechts in der Kopfzeile, absichtlich klein und
-   unauffaellig -- man braucht ihn genau einmal. */
+/*
+ * Sprache und Erscheinungsbild: oben rechts in der Kopfzeile, absichtlich
+ * klein -- man braucht sie genau einmal. Beide zeigen nur ihr Zeichen, den
+ * Namen tragen sie im zugänglichen Namen und im Tooltip.
+ */
 .sidebar header {
   position: relative;
 }
 
-.language-switch {
+.sidebar__switches {
   position: absolute;
   top: 0;
   right: 0;
-  width: auto;
-  padding: 2px 4px;
-  /* Groesser als die 12px der uebrigen Kopfzeile: Eine Flagge auf 12px ist ein
-     Farbfleck, aus dem sich Schwarz-Rot-Gold nicht mehr herauslesen laesst. */
-  font-size: 16px;
-  line-height: 1;
-  /* Ausdrueckliche Emoji-Schriften, sonst greift die Textschrift zuerst und
-     zeigt die beiden Regionalbuchstaben statt der Flagge. */
-  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji',
-    'Twemoji Mozilla', sans-serif;
-  /* Wirkt nicht auf die Flagge -- Emoji bringen ihre Farben mit -- wohl aber
-     auf den Windows-Rueckfall "DE"/"GB", der dort als Text ankommt. */
-  color: var(--muted, #6b7280);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* --- Auswahlfeld ---------------------------------------------------------
+ * Siehe components/Select.tsx: Das aufgeklappte Menü eines nativen `<select>`
+ * gehört dem Betriebssystem -- andere Schrift, andere Farben, anderer
+ * Dunkelmodus. Hier gehört es der Seite.
+ */
+
+.select {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  min-width: 0;
+}
+
+/* Über die ganze Breite, wo das Feld für sich allein in einer Zeile steht. */
+.select--block {
+  display: flex;
+  width: 100%;
+}
+
+.select .select__trigger {
+  font: inherit;
+  font-family: var(--font);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+  padding: 7px 6px 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.select .select__trigger:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.select .select__trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Aufgeklappt bleibt sichtbar, *welches* Feld gerade offen ist. */
+.select .select__trigger[aria-expanded='true'] {
+  border-color: var(--accent);
+}
+
+.select__value {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.select__icon {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.select__caret {
+  display: flex;
+  align-items: center;
+  flex: none;
+  color: var(--muted);
+}
+
+/* Eng: in Zeilen, die sich den Platz mit Namen, Zeit und Knöpfen teilen. */
+.select--compact .select__trigger {
+  font-size: 11.5px;
+  padding: 3px 3px 3px 7px;
+  gap: 3px;
+}
+
+/*
+ * Ohne Rahmen: die beiden Schalter oben rechts. Sie sollen dasein, wenn man
+ * sie sucht, und sonst nicht mitreden -- ein Kasten um jeden von ihnen wäre in
+ * einer Kopfzeile mit Titel und Untertitel der lauteste Punkt.
+ */
+.select--quiet .select__trigger {
+  border-color: transparent;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
+  color: var(--muted);
+  padding: 3px 2px 3px 4px;
+  gap: 2px;
+}
+
+.select--quiet .select__trigger:hover:not(:disabled),
+.select--quiet .select__trigger[aria-expanded='true'] {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+/*
+ * Das Menü hängt an `document.body` und liegt deshalb fest im Fenster, nicht
+ * in der scrollenden Seitenleiste -- sonst schnitte deren Kante es ab.
+ */
+.select__menu {
+  position: fixed;
+  z-index: 60;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+}
+
+.select__option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Betont wird die Zeile unter dem Zeiger *oder* unter den Pfeiltasten -- eine
+   Hervorhebung für beide Wege, damit sie nie doppelt erscheint. */
+.select__option[data-active='true'] {
+  background: var(--accent-soft);
+}
+
+.select__option[aria-selected='true'] {
+  font-weight: 600;
+}
+
+.select__option-label {
+  flex: 1;
+}
+
+.select__check {
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
+  color: var(--accent);
+}
+
+/* --- Zahlenfeld ----------------------------------------------------------
+ * Die Pfeilchen am Rand stellt sonst das System. Sie sind abgeschaltet und
+ * durch zwei eigene Knöpfe ersetzt -- siehe components/NumberField.tsx.
+ */
+
+.numfield {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  overflow: hidden;
+  flex: none;
+}
+
+.numfield--block {
+  display: flex;
+  width: 100%;
+}
+
+.numfield:focus-within {
+  border-color: var(--accent);
+}
+
+.numfield .numfield__input {
+  font: inherit;
+  /* Ziffern in Plex Mono: "9" und "25" sind dann gleich breit, und das Feld
+     hört auf zu zucken, während man tippt. */
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 2px 4px 7px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--text);
+}
+
+.numfield__input:focus-visible {
+  outline: none;
+}
+
+/* Die nativen Pfeilchen abschalten -- beide Schreibweisen, sonst bleibt je
+   nach Browser eine Hälfte stehen. */
+.numfield__input::-webkit-outer-spin-button,
+.numfield__input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.numfield__input {
+  appearance: textfield;
+}
+
+.numfield__steps {
+  display: flex;
+  flex-direction: column;
+  width: 17px;
+  flex: none;
+  border-left: 1px solid var(--border);
+}
+
+.numfield .numfield__step {
+  flex: 1;
+  /* Setzt sich selbst zurück, statt sich auf die Selektoren ringsum zu
+     verlassen: Das Pfeilchen ist 9px breit, jedes geerbte Polster sprengt
+     seine Spalte. */
+  width: 100%;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: var(--sunk);
+  color: var(--muted);
+  cursor: pointer;
+  line-height: 0;
+}
+
+.numfield .numfield__step + .numfield__step {
+  border-top: 1px solid var(--border);
+}
+
+.numfield .numfield__step:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.numfield .numfield__step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* --- Ankreuzfelder -------------------------------------------------------
+ * `accent-color` färbt nur das Häkchen; Form, Rahmen und Grösse blieben Sache
+ * des Systems, und im Dunkelmodus auch die Fläche. Also selbst gezeichnet --
+ * die Teilauswahl (`:indeterminate`) eingeschlossen, die bei den Ketten den
+ * Unterschied zwischen "alle Filialen" und "einige" trägt.
+ */
+
+.poi-row input[type='checkbox'],
+.poi-popup__pick input[type='checkbox'] {
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
   cursor: pointer;
 }
 
-.language-switch:hover,
-.language-switch:focus-visible {
-  border-color: var(--line, #e5e7eb);
-  color: inherit;
+.poi-row input[type='checkbox'] {
+  margin: 3px 0 0;
+}
+
+.poi-popup__pick input[type='checkbox'] {
+  margin: 0;
+}
+
+.poi-row input[type='checkbox']:checked,
+.poi-row input[type='checkbox']:indeterminate,
+.poi-popup__pick input[type='checkbox']:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Der Haken als gedrehte Ecke -- kein Bild, also auch keine Farbe, die der
+   Dunkelmodus übersehen könnte. */
+.poi-row input[type='checkbox']:checked::after,
+.poi-popup__pick input[type='checkbox']:checked::after {
+  content: '';
+  width: 4px;
+  height: 8px;
+  margin-top: -2px;
+  border: solid var(--accent-ink);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Teilauswahl: ein Strich, weder an noch aus. */
+.poi-row input[type='checkbox']:indeterminate::after {
+  content: '';
+  width: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent-ink);
+}
+
+/* --- Beschriftetes Feld --------------------------------------------------
+ * Für Felder, die kein `<input>` mehr sind: Ein `<label>` um einen Knopf
+ * herum verspricht eine Verbindung, die der Browser dort nicht herstellt.
+ * Benannt wird stattdessen das Feld selbst.
+ */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field__label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* --- Bildlaufleisten -----------------------------------------------------
+ * Die Leiste am Rand der Trefferliste ist sonst die des Systems: auf dem Mac
+ * schwebend und grau, unter Windows breit und kantig.
+ */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+  background-clip: content-box;
+}
+
+/* --- Karte im Dunkeln ----------------------------------------------------
+ * MapLibre bringt eigene Bedienelemente mit: weisser Kasten, dunkle Zeichen.
+ * Auf einer dunklen Karte ist das der hellste Fleck im Bild.
+ */
+
+.maplibregl-ctrl-group {
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--border);
+}
+
+.maplibregl-ctrl-group button:hover {
+  background: var(--sunk);
+}
+
+/*
+ * Die Zeichen sind Hintergrundbilder mit fest eingebauter Strichfarbe -- auch
+ * unseres für "alles einpassen". Umfärben geht dort nicht, umkehren schon;
+ * der Wert dafür steht als Token im Themenblock, damit diese Regel nur einmal
+ * dasteht.
+ */
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: var(--icon-invert);
+}
+
+.maplibregl-popup-content {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+
+.maplibregl-popup-close-button {
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.maplibregl-popup-close-button:hover {
+  background: var(--sunk);
+  color: var(--text);
+}
+
+/* Das Zipfelchen am Sprechblasenrand ist ein gefärbter Rahmen, kein Bild. */
+.maplibregl-popup-anchor-top .maplibregl-popup-tip {
+  border-bottom-color: var(--panel);
+}
+
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: var(--panel);
+}
+
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--panel);
+}
+
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--panel);
+}
+
+/* --- Sprechblase ---------------------------------------------------------
+ * Ersetzt die des Betriebssystems, siehe components/TooltipLayer.tsx. Sie
+ * liegt fest im Fenster und wird über ihrem Element zentriert; `translate`
+ * verschiebt sie um die eigene halbe Breite und ganze Höhe.
+ */
+
+.tooltip {
+  position: fixed;
+  z-index: 80;
+  translate: -50% -100%;
+  max-width: 260px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow-pop);
+  font-size: 11.5px;
+  line-height: 1.4;
+  /* Die Statusleiste reicht ihren ganzen Stapel zeilenweise herein. */
+  white-space: pre-line;
+  /* Sie darf nie im Weg sein: Sie erklärt, was darunter liegt. */
+  pointer-events: none;
+}
+
+.tooltip--below {
+  translate: -50% 0;
+}
+
+/* Der Aufklapp-Pfeil wird gedreht statt ausgetauscht -- so sind beide Zustände
+   garantiert gleich gross. Wer Bewegung abgestellt hat, bekommt den Sprung. */
+.caret-icon {
+  transition: rotate 120ms ease;
+}
+
+.caret-icon[data-open='true'] {
+  rotate: 90deg;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret-icon {
+    transition: none;
+  }
+}
+
+/*
+ * Der Satz unter der Liste erklärt die Reihenfolge. Er ist eine Fussnote und
+ * hatte vorher dieselbe Schriftgrösse wie der Fliesstext der Seitenleiste --
+ * damit war die leiseste Aussage der Kachel die lauteste Fläche darin.
+ */
+.poi-sort-hint {
+  margin: 0;
+  padding-top: 2px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* --- Eine Höhe je Bedienzeile --------------------------------------------
+ * Alles, was nebeneinander in einer Zeile steht, ist gleich hoch. Die Höhe
+ * kommt aus `--control-h` und wird vererbt: Der Behälter setzt sie einmal,
+ * statt sie an jedem Element einzeln nachzuhalten.
+ */
+
+/*
+ * Nur die *direkten* Kinder der Zeile. Ohne `>` traf die Regel auch die
+ * Pfeilchen tief im Zahlenfeld: Sie erbten das waagerechte Polster des
+ * Suchknopfes, wurden dadurch 22px breit in einer 17px schmalen Spalte und
+ * wurden rechts abgeschnitten -- auf dem Schirm sah das aus wie ein
+ * Schrägstrich statt zweier Pfeile.
+ */
+.select .select__trigger,
+.numfield,
+.poi-controls > button,
+.card__actions > button,
+.card__minutes .card__apply {
+  height: var(--control-h);
+  /* Die Höhe steht fest -- senkrechtes Polster verschöbe sie nur wieder. */
+  padding-block: 0;
+}
+
+/* Die Kopfzeile der Zielkarte ist die engste Zeile der App: Name,
+   Verkehrsmittel, Zeit, Haken, Auge und × in einer Reihe. */
+.card__head {
+  --control-h: 24px;
+}
+
+/* Die Bedienzeile der Bedingungskarte: Radius, Verkehrsmittel, Suchknopf. */
+.poi-cond__body .poi-controls {
+  --control-h: 28px;
+}
+
+/* Im Entwurfsformular steht jedes Feld für sich in einer eigenen Zeile --
+   dort darf es die gewohnte Formularhöhe haben. */
+.card--draft {
+  --control-h: 34px;
+}
+
+/* Die Zeile mit „+ Bedingung hinzufügen" ist ebenfalls ein Formularfeld. */
+.pois > .poi-controls {
+  --control-h: 34px;
+}
+
+/* --- Ankreuzfeld, zweiter Anlauf -----------------------------------------
+ * Vorher: 15px, eckig, gefüllt, und der Haken war eine gedrehte Ecke aus zwei
+ * Rahmenlinien -- daher die harten Enden und die ungleichen Strichstärken.
+ * Jetzt ein echter Haken mit runden Enden, als Maske eingefärbt, und einen
+ * Tick kleiner: Er stand vorher höher als die Zeile, neben der er sitzt.
+ */
+
+.poi-row input[type='checkbox'],
+.poi-popup__pick input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  /*
+   * Ohne das bleibt das Polster der allgemeinen `input`-Regel stehen (8px
+   * oben und unten) -- und bei `box-sizing: border-box` kann eine Box nicht
+   * kleiner werden als ihr eigenes Polster. Das Kästchen war dadurch 18x22
+   * statt 14x14, obwohl die Höhe danebenstand.
+   */
+  padding: 0;
+  border-color: var(--border-strong);
+}
+
+.poi-row input[type='checkbox'] {
+  /* Auf die Mitte der ersten Zeile, nicht auf die Oberkante des Blocks --
+     unter dem Namen steht noch die Entfernung. */
+  margin: 2px 0 0;
+}
+
+.poi-row input[type='checkbox']:hover:not(:checked):not(:indeterminate),
+.poi-popup__pick input[type='checkbox']:hover:not(:checked) {
+  border-color: var(--accent);
+}
+
+.poi-row input[type='checkbox']:checked::after,
+.poi-popup__pick input[type='checkbox']:checked::after {
+  content: '';
+  width: 11px;
+  height: 11px;
+  margin: 0;
+  border: none;
+  transform: none;
+  background: var(--accent-ink);
+  -webkit-mask: var(--check-mask) center / contain no-repeat;
+  mask: var(--check-mask) center / contain no-repeat;
+}
+
+.poi-row input[type='checkbox']:indeterminate::after {
+  width: 7px;
+  height: 1.5px;
+}
+
+/* --- Fokusring -----------------------------------------------------------
+ * Ein Ring, überall derselbe. Ohne eigene Regel zeichnet ihn der Browser --
+ * in der getesteten Umgebung orange (`rgb(229 151 0)`), auf anderen Systemen
+ * blau oder schwarz-weiss, und im Dunkelmodus passt keine dieser Farben. Für
+ * Textfelder gab es die Regel schon, für Knöpfe und Auswahlfelder nicht: also
+ * für alles, was den Fokus annimmt.
+ *
+ * `:where()` hält die Spezifität bei null -- eine Komponente, die ihren Ring
+ * anders braucht (das Zahlenfeld zeigt ihn am Rahmen statt am Feld), setzt
+ * sich weiter ohne Kunstgriff darüber.
+ *
+ * Versatz 1px statt 2: Die Bedingungskarte schneidet ab (`overflow: hidden`),
+ * und ein weiter aussen liegender Ring wäre an ihrer Kante halbiert.
+ */
+:where(button, a, summary, [tabindex], [role='combobox'], [role='option']):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: var(--radius-sm);
 }

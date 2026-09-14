@@ -28,21 +28,6 @@ export const LANGUAGE_NAMES: Record<Language, string> = {
 };
 
 /**
- * Die Flagge je Sprache. Sie ist eine **Abkürzung, keine Aussage**: Deutsch
- * wird in vier Ländern gesprochen, Englisch in weit mehr, und keine Flagge
- * deckt das ab. Gewählt ist jeweils das Land, aus dem die Schreibweise des
- * Katalogs stammt -- `en` ist auf `en-GB` eingestellt, deshalb 🇬🇧.
- *
- * Windows liefert für Flaggen bewusst keine Glyphen: Dort stehen statt der
- * Flagge die zwei Buchstaben "DE" bzw. "GB". Das bleibt lesbar, sieht aber
- * anders aus als auf dem Mac.
- */
-export const LANGUAGE_FLAGS: Record<Language, string> = {
-  de: '🇩🇪',
-  en: '🇬🇧',
-};
-
-/**
  * Eigener Schlüssel, und bewusst weiter mit dem alten Präfix: Ein Schlüssel ist
  * die Adresse, unter der etwas liegt, kein Name. Ihn mit der Umbenennung der App
  * zu ändern hieße, die gespeicherten Stände aller Nutzer stillzulegen.

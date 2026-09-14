@@ -12,6 +12,7 @@ import {
 } from './types.js';
 import { useTexts, type Texts } from './i18n/index.js';
 import { translateError } from './i18n/errors.js';
+import { CaretIcon, CloseIcon } from './components/icons.js';
 
 type Props = {
   intersection: AreaFeature | null;
@@ -50,7 +51,7 @@ const CheckBadge = ({
   <span
     className={`check-badge check-badge--${state === null ? 'unknown' : state ? 'yes' : 'no'}`}
     style={state === true ? { background: color, borderColor: color } : undefined}
-    title={title}
+    data-tip={title}
     role="img"
     aria-label={title}
   >
@@ -114,7 +115,7 @@ const TravelRow = ({
       {minutes === null ? (
         <span
           className="travel-list__value hint"
-          title={texts.address.noRoute}
+          data-tip={texts.address.noRoute}
         >
           {texts.address.noRouteShort}
         </span>
@@ -216,7 +217,9 @@ const CheckedPlaceCard = ({
           onClick={onToggleOpen}
           aria-expanded={place.open}
         >
-          <span className="poi-cond__caret">{place.open ? '▼' : '►'}</span>
+          <span className="poi-cond__caret">
+            <CaretIcon open={place.open} />
+          </span>
           <span className="place-card__label">{place.label}</span>
         </button>
 
@@ -248,9 +251,9 @@ const CheckedPlaceCard = ({
           className="poi-cond__remove"
           onClick={onRemove}
           aria-label={texts.address.removeLabel(place.label)}
-          title={texts.address.removeTitle}
+          data-tip={texts.address.removeTitle}
         >
-          ×
+          <CloseIcon />
         </button>
       </div>
 

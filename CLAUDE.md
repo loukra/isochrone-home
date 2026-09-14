@@ -56,6 +56,30 @@ zu sehen. Eine Signatur aus Zielen, Zeiten und Verkehrsmitteln verhindert, dass
 bei jedem Rendern erneut gerechnet wird; schlaegt der Aufruf fehl, wird sie
 freigegeben, damit es nicht dauerhaft haengen bleibt.
 
+**Der Erfolgsfall sagt nichts** (*geaendert am 14.09.2026 auf Wunsch des
+Nutzers*). Wo frueher immer eine Zeile stand, steht jetzt meistens gar nichts:
+
+| Fall | vorher | jetzt |
+| --- | --- | --- |
+| Kein Ziel | "Fuege dein erstes Ziel hinzu." | nichts -- das Formular steht schon offen da |
+| Rechnet | "Gemeinsame Region wird berechnet…" | nichts -- **wortgleich** in der Statusleiste |
+| Veraltet | "Die Ziele haben sich geaendert…" | nichts -- die Statusleiste zeigt das Neurechnen |
+| Gefunden | "Gemeinsame Region gefunden." | nichts -- sie liegt gruen auf der Karte |
+| Leer | "Es gibt keinen Bereich…" | Hinweiskasten |
+| Fehler | Meldung | Hinweiskasten |
+
+Der Leitsatz dahinter: **Eine Meldung, die bestaetigt, was man ohnehin sieht,
+ist keine Auskunft, sondern Rauschen** -- und sie stumpft die beiden Faelle ab,
+in denen wirklich etwas zu sagen ist. Uebrig bleiben genau die: Dann ist die
+Karte leer, und ohne Text wuesste niemand, warum. Der Hinweis steht deshalb
+auch nicht mehr als Satz im Fliesstext, sondern als getoenter Kasten
+(`.notice`) unter den Zielen -- er erklaert den ganzen Rest der Seitenleiste.
+
+Davor war es ein eigener, oben und unten von Trennlinien eingerahmter
+Abschnitt zwischen den Zielen und "Was brauche ich in der Naehe?" -- ein
+einzelner Satz, der mitten in der Seitenleiste schwebte und zu keinem der
+beiden Nachbarn gehoerte.
+
 Freigegeben wird sie **auch, sobald eine Zieländerung das Ergebnis entwertet**
 (`markAnalysisStale`). "Veraltet" heisst "muss neu gerechnet werden", und die
 Signatur zaehlt nur die *fertigen* Ziele: Ein Ziel zu loeschen, dessen
@@ -87,6 +111,15 @@ ueber Fluesse hinweg und um Umwege herum luegt.
 
 Mehrere Bedingungen (Fitnessstudio *und* Supermarkt *und* Bahnhof) stehen als
 aufklappbare Karten untereinander, jede mit eigener Fahrzeit und eigener Liste.
+**Offen ist immer nur eine** (*geaendert am 14.09.2026 auf Wunsch des
+Nutzers*): Eine zu oeffnen schliesst die anderen, ein zweiter Klick auf die
+offene schliesst auch sie. Vorher konnten alle gleichzeitig offen stehen, und
+bei drei Bedingungen mit je fuenfundzwanzig Treffern wuchs die Seitenleiste auf
+ein paar tausend Pixel -- wer die Bahnhoefe angehakt hatte und zum
+Fitnessstudio wollte, scrollte an einer Liste vorbei, mit der er fertig war.
+Eine neu angelegte Bedingung klappt auf, die uebrigen zu: Sie ist die, um die
+es gerade geht. Ein gespeicherter Stand aus der Zeit davor kann mehrere offene
+mitbringen -- beim Laden ueberlebt die erste.
 Es gibt **einen** gemeinsamen Knopf dafuer; er schickt alle Bedingungen
 in einem Request. Bedingungen ohne Auswahl sind inaktiv und kosten nichts.
 Die Antwort liefert je Bedingung `satisfiable` — ob sie *allein* etwas von der
@@ -108,15 +141,29 @@ Daraus folgt:
   entfaellt ein zweiter Geocoding-Call.
 - **Die POI-Punkte liegen immer ganz oben.** MapLibre haengt jeden neuen Layer
   ueber alles Bestehende; eine spaeter erzeugte Flaeche (Schnittmenge, neues
-  Ziel) deckt die Punkte sonst zu -- bei `fill-opacity: 0.5` verschwinden sie
-  komplett. `raisePoiLayers` stellt die Regel nach jeder Layer-Aenderung wieder
-  her, statt jede Flaeche einzeln einzusortieren.
+  Ziel) deckt die Punkte sonst zu. `raisePoiLayers` stellt die Regel nach jeder
+  Layer-Aenderung wieder her, statt jede Flaeche einzeln einzusortieren.
+- **Die Deckkraft der Flaechen steht beieinander in `colors.ts`, nicht verstreut
+  in `MapView`** (*geaendert am 14.09.2026 auf Wunsch des Nutzers*: "teilweise
+  erkennt man das drunterliegende nicht so gut"). Der Grund ist nicht Ordnung,
+  sondern dass die drei Werte sich **multiplizieren** -- einzeln sah jeder
+  vernuenftig aus. Bei drei Zielen mit Schnittmenge und verengter Region kamen
+  vorher 0,82³ x 0,50 x 0,55 nur **12 %** des Kartenbildes durch: Ortsnamen und
+  Strassennummern waren unter dem Gruen nicht mehr zu lesen, und genau daran
+  entscheidet sich, ob eine Gegend taugt. Jetzt 0,18 / 0,25 / 0,30, also 29 %.
+  Traeger der Form ist ohnehin der 3px-Umriss, nicht die Fuellung -- die sagt
+  nur "hier drin" und darf deshalb leise sein.
 - **Sichtbarkeit je Ziel (Auge) ist reine Darstellung.** Ein ausgeblendetes
   Ziel zaehlt voll in Schnittmenge und Ortssuche weiter; nur seine beiden
   MapLibre-Layer gehen auf `visibility: none`. Quelle und Marker bleiben
   liegen, damit das Wiedereinblenden ohne Nachladen auskommt. Waere es anders,
   wuerde der Schalter unbemerkt das Ergebnis verschieben -- dieselbe Gefahr wie
   beim Vorfiltern von POIs.
+  - Hinter der Adresse stand dafuer einmal "· ausgeblendet"
+    (*entfernt am 14.09.2026 auf Wunsch des Nutzers*). Das durchgestrichene
+    Auge daneben sagt dasselbe, und der Zusatz brach die Zeile um: Ob die
+    Zielkarte zwei oder drei Zeilen hoch war, haing damit an der Laenge der
+    Adresse.
 - **Der Kartenausschnitt gehoert dem Nutzer.** Eingepasst wird genau einmal
   automatisch -- beim allerersten Ziel, sonst bliebe die Deutschlanduebersicht
   stehen und die erste Isochrone waere ein Fleck. Danach nie wieder von allein:
@@ -179,6 +226,12 @@ Daraus folgt:
 - POI-Bedingungen sind **Vereinigungen, nicht Schnitte**: Es genuegt, dass *ein*
   gewaehlter Ort erreichbar ist. Erst die Vereinigung wird mit der Familienregion
   geschnitten — O(N+M) statt jede Paarung einzeln zu pruefen.
+- **Ueber "drin oder draussen" entscheidet die angezeigte Zahl, nicht die
+  rohe** (`poi/distance.ts`) -- dieselbe Regel wie beim Rotwerden der
+  Fahrzeiten. Vorher wurde auf `distanceToRegionKm === 0` geprueft und danach
+  auf eine Nachkommastelle gerundet: Ein Bahnhof vierzig Meter ausserhalb stand
+  als "0,0 km außerhalb" in der Liste -- ein Widerspruch in genau der Zeile, in
+  der der Nutzer entscheidet, ob er den Ort anhakt.
 - POIs **nie** automatisch vorfiltern. Ein faelschlich ausgeschlossenes grosses
   Studio verkleinert die Region **unsichtbar**; die Hand-Auswahl ist der sichere
   Weg. Die Auswahl wird orts**un**abhaengig persistiert
@@ -329,9 +382,12 @@ Daraus folgt:
   - Die Zahlen gehoeren in diesem Moment noch zum alten Radius -- deshalb
     gesperrt statt nur blass. Sichtbar veraltet ist ehrlich, anklickbar
     veraltet waere eine Falle.
-  - Der Analyse-Abschnitt zeigt aus demselben Grund **immer genau eine Zeile**
-    (`analysisLine`), auch waehrend gerechnet wird, und haelt ueber
-    `min-height` Platz fuer zwei -- die Meldungen sind unterschiedlich lang.
+  - Der Analyse-Hinweis (`analysisNotice`) haelt dagegen **keinen** Platz
+    frei. Die Vorgaengerzeile tat das (zwei Zeilen `min-height`), weil sie
+    immer dastand und nur ihren Text wechselte. Seit sie im Erfolgs- und im
+    Rechenfall schweigt, erscheint sie selten -- dauerhaft zwei Zeilen Luft
+    dafuer freizuhalten hiesse, den Normalfall fuer den Ausnahmefall zu
+    opfern. Wenn sie auftaucht, hat sich ohnehin gerade etwas geaendert.
   - Die Statusleiste selbst darf wachsen: Sie klebt ganz unten, ueber ihr
     verschiebt sich dadurch nichts.
 - Solange die Analyse **veraltet** ist (Ziel geaendert, noch nicht analysiert),
@@ -424,12 +480,228 @@ Daraus folgt:
   Filiale), dann Ketten, dann Unbekanntes, zuletzt belegt kleine Flaechen
   (< 300 m²). Das ist eine **Reihenfolge, kein Filter** — nichts verschwindet.
   Umschaltbar auf "Naechste zuerst".
+- **"Grosse zuerst" gibt es nur, wo die Flaeche etwas aussagt**
+  (`canSortByRelevance`, *ergaenzt am 14.09.2026 auf Wunsch des Nutzers*).
+  `rankOf` baut ganz auf Grundflaeche und Kettenzugehoerigkeit auf. Bei einem
+  Supermarkt traegt das -- 3200 m² sind ein Vollsortimenter, 200 m² ein Kiosk.
+  Bei einem Bahnhof entscheidet die Flaeche dagegen nur darueber, ob in OSM
+  zufaellig jemand ein Empfangsgebaeude eingezeichnet hat: Ein Haltepunkt mit
+  getaggtem Haeuschen stand damit ueber dem Hauptbahnhof ohne. Das ist keine
+  Reihenfolge, sondern eine Auskunft ueber den Fleiss der Kartierer.
+  - Wo es die Wahl nicht gibt, **entfaellt auch das Menue** -- ein Menue mit
+    einem Eintrag verspricht eine Entscheidung, die es nicht gibt -- und der
+    erklaerende Satz darunter gleich mit; er beschreibt die Flaechenrangfolge.
+    Voreingestellt ist dort "Naechste zuerst".
+  - Die Menge deckt sich heute mit `CHAIN_CATEGORIES`, meint aber etwas
+    anderes: dort geht es um die Austauschbarkeit einer Filiale, hier darum, ob
+    ein Quadratmeterwert eine Aussage traegt. Ein Schwimmbad ist keine Kette und
+    bleibt trotzdem draussen -- OSM misst dort das Becken, und das trifft auch
+    Gartenpools.
+  - Ein gespeicherter Stand von vor dieser Regel kann "Grosse zuerst" fuer eine
+    Kategorie mitbringen, in der es das nicht mehr gibt; beim Laden wird das auf
+    "Naechste zuerst" zurueckgesetzt.
 
 Damit ist der Widerspruch der Spec aufgeloest: §10 (Live-Darstellung) gilt fuer
 die **einzelnen Isochronen**, §2/§17/§20 (Button) gilt fuer die **Schnittmenge**.
 
 Hinweis: Die Spec hat zweimal `# 11`. Gemeint sind API (§11) und
 Fehlerbehandlung (§12).
+
+## Glättung der Isochronen
+
+*Festgelegt am 14.09.2026.* Anlass war der Einwand, die Fläche zeige Autobahnen
+als bewohnbares Land.
+
+Der Einwand trifft, und zwar schärfer als gedacht: Gerechnet wird Erreichbarkeit
+auf dem Straßennetz, geliefert wird eine **Hülle** um die erreichbaren Knoten.
+Entlang einer Autobahn liegen diese Knoten in einer langen Kette, und die Hülle
+schiebt sich seitlich über Land, das real nur über die nächste Abfahrt zu
+erreichen ist. Die Fläche behauptet dort also nicht bloß Bewohnbarkeit, sondern
+**Erreichbarkeit**.
+
+Wie weit sich die Hülle vom Netz lösen darf, ist bei ORS `smoothing` (0–100).
+Gemessen an einem Ziel (Oldenburg, 25 Min. Auto):
+
+| Stellung | Fläche | Stützpunkte |
+| --- | --- | --- |
+| Feld weggelassen | 1151 km² | 1613 |
+| 0 | 1112 km² | 2482 |
+| 50 | 1850 km² | 53 |
+| 100 | 2414 km² | 22 |
+
+Daraus folgt: **fest auf 0** (`SMOOTHING` im ORS-Adapter). Alles darüber ist
+unbrauchbar -- bei 100 ist die Isochrone ein konvexer Klumpen mit 22 Ecken und
+mehr als der doppelten Fläche, und die Ortssuche zieht mit (86 statt 81
+Bahnhöfe „in der Region"). 0 ist die einzige Stellung, die nur behauptet, was
+gerechnet wurde: lieber sichtbar zackig als unsichtbar zu großzügig, dieselbe
+Regel wie beim Verzicht auf das Vorfiltern von POIs.
+
+- **Das Feld wegzulassen ist nicht dasselbe wie 0.** ORS wählt dann seine eigene
+  Vorgabe, und die liegt gemessen zwischen 0 und 50. Deshalb steht die Null
+  ausdrücklich im Rumpf, statt sich auf die Vorgabe zu verlassen.
+- **Der Namensraum des Caches trägt die Glättung** (`isochrones-s0`). Ohne das
+  blieben die Schlüssel aus lat, lon, Verkehrsmittel und Minuten gleich, zeigten
+  aber auf Flächen, die noch mit der Vorgabe gerechnet wurden -- eine Woche lang
+  läge eine Mischung aus altem und neuem Umriss in derselben Schnittmenge.
+- Es gab dafür kurzzeitig einen Schalter in der Kopfzeile. Er ist wieder
+  entfernt: Die Messung oben ist das Ergebnis, das er liefern sollte, und eine
+  Einstellung, deren richtiger Wert feststeht, ist keine Einstellung. Was bleibt,
+  ist die Zahl im Adapter und diese Tabelle.
+
+Was die Glättung **nicht** kann: die Region auf bewohntes Land beschränken. Das
+ginge über Overpass (`landuse=residential`, Ortslagen), wäre aber ein
+**Filter** -- und OSM-Landnutzung ist im ländlichen Raum lückenhaft. Ein
+fehlendes Polygon löschte ein reales Dorf unsichtbar aus der Region, dieselbe
+Gefahr wie beim Vorfiltern von POIs. Falls das je kommt, dann **additiv**:
+Ortslagen als eigener Layer über der Region, die Region selbst unangetastet.
+
+## Aussehen: „Kartenwerk"
+
+*Eingeführt am 14.09.2026 auf Wunsch des Nutzers.* Vorher: Systemschrift,
+Bootstrap-Blau, ein Radius für alles, sechs native `<select>`.
+
+Leitsatz: **Die Seitenleiste ist das Messinstrument neben der Karte, nicht eine
+weitere bunte App.** Daraus folgt der Rest -- papiergrüne Neutraltöne statt
+kühlem Grau, Kartentinten-Grün (`#16554a`) als einziger Akzent, 4px-Radien und
+Haarlinien statt Kacheln mit Schlagschatten. Zahlen laufen in IBM Plex Mono:
+Minuten, Entfernungen und Flächen stehen dann in Spalten untereinander, statt
+bei jeder Ziffernänderung die Breite zu wechseln.
+
+### Nichts vom Betriebssystem
+
+Das war die eigentliche Vorgabe, und sie reicht weiter als die Comboboxen. Ein
+Widget, das der Rechner zeichnet, hat eine andere Schrift, andere Farben, eine
+eigene Verzögerung und einen eigenen Dunkelmodus -- **genau daran** war die
+Oberfläche als unfertig zu erkennen, noch bevor jemand die Farben bewertete.
+Ersetzt sind darum:
+
+| Vorher | Jetzt |
+| --- | --- |
+| 6× `<select>` | `components/Select.tsx` (ARIA "Select-Only Combobox") |
+| `input type=number` mit System-Pfeilchen | `components/NumberField.tsx` |
+| `input type=checkbox` | `appearance: none` plus gezeichneter Haken/Strich |
+| `×`, `▼`, `►` als Glyphen | `components/icons.tsx` |
+| 🇩🇪 / 🇬🇧 als Emoji | `components/flags.tsx` (gezeichnet) |
+| `title=` (System-Tooltip) | `data-tip=` plus `components/TooltipLayer.tsx` |
+| `system-ui` | IBM Plex Sans/Mono, per npm mitgeliefert |
+| System-Scrollbalken | `::-webkit-scrollbar` / `scrollbar-color` |
+
+Daraus folgt:
+
+- **Die Schriften kommen über npm, nicht über Google Fonts.** Die Mac-App
+  startet auch ohne Netz, und ein Schriftabruf bei jedem Start spräche eine
+  fremde Adresse an. Die `unicode-range`-Angaben der Pakete sorgen dafür, dass
+  nur der lateinische Schnitt geladen wird.
+- **Das Menü der Combobox hängt an `document.body`**, nicht an seinem Feld: Die
+  Seitenleiste scrollt, und ihre Kante schnitte es sonst ab. Weil es dann nicht
+  mitscrollt, schliesst es beim Scrollen -- ehrlicher, als es neben seinem Feld
+  stehen zu lassen.
+- **Die Pfeile am Zahlenfeld stehen immer da**, nicht erst beim Überfahren --
+  derselbe Grund wie beim Haken zum Übernehmen: Ein Feld, das unter dem Zeiger
+  die Breite wechselt, schiebt in der Kopfzeile alles daneben zur Seite.
+- **Der Sprachumschalter zeigt weiter Flaggen**, aber gezeichnete. Damit
+  entfällt der Windows-Rückfall „DE"/„GB" -- Windows liefert für Flaggen-Emoji
+  bewusst keine Glyphen. Der Einwand von damals bleibt trotzdem richtig und
+  steht oben: Eine Flagge ist ein Land, keine Sprache; der Name trägt weiter
+  den zugänglichen Namen.
+- **Der Tooltip ist *eine* Schicht am Dokument**, kein Wrapper je Element. Sie
+  greift dadurch auch für Knöpfe, die nicht aus React kommen -- etwa
+  MapLibres „Alles einpassen". Solange eine Blase steht, verweist ihr Element
+  über `aria-describedby` darauf; sonst ginge beim Umstieg von `title` genau
+  die Zusatzangabe verloren, für die es den Tooltip gibt.
+
+### Dunkelmodus
+
+Drei Stellungen, nicht zwei: „wie das System", hell, dunkel. „Wie das System"
+ist keine dritte Farbe, sondern die Ansage, nicht wählen zu wollen -- es folgt
+dem Rechner, wenn der abends umschaltet. Gespeichert wird deshalb die **Wahl**,
+nicht das Ergebnis; sonst fröre der erste Besuch die gerade geltende
+Einstellung für immer ein. Die Wahl gewinnt in beide Richtungen, dieselbe Regel
+wie bei Sprache und Kartenausschnitt.
+
+- **Die Basiskarte schaltet mit** (`MAP_STYLE_URL_DARK`, Vorgabe
+  `openfreemap.org/styles/dark`). Eine helle Karte neben einer dunklen
+  Seitenleiste ist der hellste Fleck im Bild und blendet genau dort, wo man
+  hinsieht. MapView baut die Karte beim Stilwechsel ohnehin neu auf, und der
+  Ausschnitt kommt aus `loadViewport()` zurück -- es kostet nichts.
+- **Die Kartenfarben drehen sich nicht mit.** Ziel-, Region- und
+  Kategoriefarben stehen in `colors.ts` und bedeuten dort etwas. Darum bleibt
+  auch `--map-ink` (der Haken im farbigen Abzeichen) in beiden Themen weiss.
+- MapLibres Bedienzeichen sind Hintergrundbilder mit eingebauter Strichfarbe.
+  Umfärben geht nicht, umkehren schon -- `--icon-invert` steht als Token im
+  Themenblock, damit die Regel nur einmal dasteht.
+
+### Die Bedingungskarte
+
+*Überarbeitet am 14.09.2026 auf Wunsch des Nutzers* („sieht irgendwie doof
+aus"). Der Grund war nicht die Farbe, sondern die Schachtelung und die
+Gewichtung:
+
+- **Ein Kasten, nicht drei.** Die Trefferliste hatte einen eigenen Rahmen
+  innerhalb des Kartenrahmens innerhalb der Seitenleiste. Jetzt läuft sie über
+  die ganze Breite der Karte (negative Ränder gegen das Polster des Rumpfes),
+  getrennt nur durch Haarlinien. Nebeneffekt: Die halb abgeschnittene Zeile am
+  unteren Rand sah im umrandeten Kasten wie ein Fehler aus; ohne Rahmen liest
+  sie sich als „da kommt noch mehr", und genau das stimmt.
+- **Die aufgeklappte Kopfzeile sitzt auf `--sunk`.** Sie ist dann eine
+  Überschrift über einem Inhalt und keine Zeile für sich.
+- **„Orte suchen" ist ein stiller Knopf** (`.ghost`). Gesucht wird von allein;
+  er ist der Rückfall für den Fall, dass Overpass hakt. Als gefüllter Knopf war
+  er die lauteste Fläche der Karte und stand damit in Konkurrenz zum einzigen
+  echten Knopf der App unten im Dock -- der Trennlinie nach Preis, die den
+  ganzen Bedienablauf traegt.
+- **Zählzeile und Sortierung sind leiser als die Suchzeile darüber.** Die eine
+  berichtet („25 gefunden"), die andere stellt ein. Die Sortierung ist dabei
+  eine Ansichtsoption und trägt darum keinen Rahmen (`select--quiet`), wie die
+  Schalter in der Kopfzeile.
+- **Der Satz zur Reihenfolge ist eine Fussnote** (11px). Vorher hatte die
+  leiseste Aussage der Karte dieselbe Schriftgrösse wie der Fliesstext und war
+  damit die grösste Textfläche darin.
+
+### Regeln fürs Stylesheet
+
+- **Alle Farben, Radien und Schriften stehen im Tokenblock ganz oben.** Keine
+  Regel weiter unten schreibt einen Farbwert hin. Vorher standen neun `#fff`,
+  zwei `#fca5a5` und vier verschiedene Radien verstreut in der Datei -- der
+  Dunkelmodus hätte genau die Stellen übersehen, die niemand prüft.
+- **Eine Bedienzeile, eine Höhe** (`--control-h`, vererbt). Der Behälter setzt
+  sie einmal, Auswahlfeld, Zahlenfeld und Knopf darin richten sich danach.
+  Vorher rechnete jedes seine Höhe aus Schriftgrösse und Polster selbst aus --
+  in der Bedienzeile der Bedingungskarte standen 26,5, 23 und 33 Pixel
+  nebeneinander. Gemessen, nicht geschätzt: Solche Zeilen gehören im Browser
+  nachgemessen, weil sie einzeln jeweils richtig aussehen.
+- **`>` statt Nachfahren, wo die Zeile gemeint ist und nicht ihr Inhalt.**
+  `.poi-cond__body .poi-controls button` sollte den Suchknopf treffen und traf
+  auch die Pfeilchen tief im Zahlenfeld: Sie erbten dessen `padding-inline:
+  11px`, wurden dadurch 22px breit in einer 17px schmalen Spalte und wurden von
+  `overflow: hidden` rechts abgeschnitten -- auf dem Schirm ein Schraegstrich
+  statt zweier Pfeile. Mit `>` trifft die Regel nur die direkten Kinder der
+  Zeile. Zusaetzlich setzt sich das Pfeilchen selbst zurueck (`padding: 0`),
+  statt sich auf die Selektoren ringsum zu verlassen.
+- **Kein Selektor `.bereich element`, wo genau ein Element gemeint ist.**
+  `.poi-cond__body button` meinte den Suchknopf, traf aber jeden Knopf im
+  Rumpf -- auch die Trefferzeilen, deren eigenes `padding: 0` mit nur einer
+  Klasse dagegen nicht ankam (0,1,0 gegen 0,1,1). Jede Zeile trug dadurch 7px
+  Höhe und 11px Einzug, die niemand gesetzt hatte, und die Liste war 14px je
+  Zeile zu hoch. Die Regel heisst jetzt `.poi-cond__body .poi-controls button`,
+  also das, was gemeint war. Dieselbe Falle bei `.card__minutes button`.
+  Wo eine Komponente doch gegenhalten muss, trägt sie zwei Klassen
+  (`.select .select__trigger`, `.numfield .numfield__step`).
+- **`box-sizing: border-box` macht eine Box nie kleiner als ihr Polster.** Das
+  Ankreuzfeld stand auf `width/height: 14px`, erbte aber `padding: 8px 10px`
+  von der allgemeinen `input`-Regel -- und war damit 18x22 gross, obwohl die
+  Höhe danebenstand. Wer `appearance: none` setzt, muss auch das Polster
+  zurücksetzen.
+- **Fehlt ein Token, verschwindet die ganze Deklaration.** `var(--pad)` war an
+  drei Stellen benutzt und nirgends definiert; CSS lässt ungültige Werte still
+  fallen. Das Ergebnis sah nicht kaputt aus, sondern nur unverändert -- die
+  Trefferliste lief eben *nicht* bis an die Kanten. Ein Abgleich lohnt:
+  `grep -o 'var(--[a-z-]*' styles.css` gegen die Definitionen.
+- **Der Fokusring gehört der App.** Ohne eigene Regel zeichnet ihn der Browser
+  -- in der Testumgebung orange, anderswo blau, im Dunkelmodus in jedem Fall
+  falsch. Für Textfelder gab es die Regel schon, für Knöpfe und Auswahlfelder
+  nicht. Jetzt für alles, was den Fokus annimmt, über `:where()` mit
+  Spezifität null.
 
 ## Texte und Sprachen
 

@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { TRAVEL_MODES, type Target, type TravelMode } from '../types.js';
 import { useTexts } from '../i18n/index.js';
+import { Select, type SelectOption } from '../components/Select.js';
+import { NumberField } from '../components/NumberField.js';
+import { CheckIcon, CloseIcon, EyeIcon } from '../components/icons.js';
 
 type TargetCardProps = {
   target: Target;
@@ -11,36 +14,6 @@ type TargetCardProps = {
   onToggleVisible: (id: string) => void;
   onRetry: (id: string) => void;
 };
-
-/** Auge auf/zu. Inline statt Emoji -- die rendern je nach System anders. */
-const EyeIcon = ({ open }: { open: boolean }) => (
-  <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
-    <path
-      d="M10 4.2c3.6 0 6.6 2.3 8 5.8-1.4 3.5-4.4 5.8-8 5.8S3.4 13.5 2 10c1.4-3.5 4.4-5.8 8-5.8Z"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-    />
-    <circle cx="10" cy="10" r="2.6" fill="currentColor" />
-    {!open && (
-      <path d="M3.6 3.6 16.4 16.4" stroke="currentColor" strokeWidth="1.8" />
-    )}
-  </svg>
-);
-
-/** Haken zum Übernehmen. Ebenfalls inline, aus demselben Grund wie das Auge. */
-const CheckIcon = () => (
-  <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
-    <path
-      d="m3.5 10.5 4 4 9-9.5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 
 /** Ein bereits bestätigtes Ziel. Änderungen werden ebenfalls bestätigt. */
 export const TargetCard = ({
@@ -60,28 +33,32 @@ export const TargetCard = ({
   const valid = Number.isInteger(parsed) && parsed > 0 && parsed <= maxMinutes;
   const pending = changed && valid;
 
+  const modeOptions: readonly SelectOption<TravelMode>[] = TRAVEL_MODES.map((mode) => ({
+    value: mode,
+    label: texts.travelModes[mode],
+    shortLabel: texts.travelModesShort[mode],
+  }));
+
   return (
     <div className="card">
       <div className="card__head">
         <span className="dot" style={{ background: target.color }} />
         <strong>{target.name}</strong>
 
-        <select
-          className="card__mode"
+        {/*
+          Kurzform im Knopf ("Rad"), voller Name im Menü ("Fahrrad"): In der
+          Kopfzeile stehen daneben noch Name, Zeit, Auge und ×, im Menü ist
+          Platz. Der zugängliche Name nennt ohnehin die lange Fassung.
+        */}
+        <Select
+          className="card__mode select--compact"
           value={target.travelMode}
-          onChange={(event) =>
-            onChangeTravelMode(target.id, event.target.value as TravelMode)
-          }
-          disabled={target.status === 'loading'}
-          aria-label={texts.target.travelModeLabel(target.name)}
+          options={modeOptions}
+          onChange={(mode) => onChangeTravelMode(target.id, mode)}
+          label={texts.target.travelModeLabel(target.name)}
           title={texts.travelModes[target.travelMode]}
-        >
-          {TRAVEL_MODES.map((mode) => (
-            <option key={mode} value={mode}>
-              {texts.travelModesShort[mode]}
-            </option>
-          ))}
-        </select>
+          disabled={target.status === 'loading'}
+        />
 
         <form
           className="card__minutes"
@@ -91,25 +68,25 @@ export const TargetCard = ({
             onChangeMinutes(target.id, parsed);
           }}
         >
-          <input
-            type="number"
+          <NumberField
+            className="numfield--narrow"
+            value={minutes}
+            onChange={setMinutes}
             min={1}
             max={maxMinutes}
-            value={minutes}
-            onChange={(event) => setMinutes(event.target.value)}
+            label={texts.target.minutesLabel(target.name)}
             disabled={target.status === 'loading'}
-            aria-label={texts.target.minutesLabel(target.name)}
           />
           <span>{texts.target.minutesUnit}</span>
           {/* Immer da, nur unsichtbar, wenn es nichts zu übernehmen gibt: Ein
               erst beim Tippen erscheinender Knopf schöbe die ganze Kopfzeile
-              nach links -- unter dem Zeiger weg, der eben noch auf dem Pfeil
+              nach links -- unter dem Zeiger weg, der gerade auf dem Pfeil
               des Zahlenfeldes stand, und auf den Knopf darunter. */}
           <button
             type="submit"
             className={pending ? 'card__apply' : 'card__apply card__apply--idle'}
             disabled={!pending || target.status === 'loading'}
-            title={texts.target.applyTitle}
+            data-tip={texts.target.applyTitle}
             aria-label={texts.target.applyLabel(target.name)}
           >
             <CheckIcon />
@@ -126,7 +103,7 @@ export const TargetCard = ({
               ? texts.target.hideLabel(target.name)
               : texts.target.showLabel(target.name)
           }
-          title={target.visible ? texts.target.hideTitle : texts.target.showTitle}
+          data-tip={target.visible ? texts.target.hideTitle : texts.target.showTitle}
         >
           <EyeIcon open={target.visible} />
         </button>
@@ -137,14 +114,16 @@ export const TargetCard = ({
           onClick={() => onRemove(target.id)}
           aria-label={texts.target.removeLabel(target.name)}
         >
-          ×
+          <CloseIcon />
         </button>
       </div>
 
-      <p className="card__address">
-        {target.resolvedLabel ?? target.address}
-        {!target.visible && <span className="card__hidden">{texts.target.hiddenSuffix}</span>}
-      </p>
+      {/*
+        Kein "· ausgeblendet" mehr hinter der Adresse: Das durchgestrichene
+        Auge daneben sagt dasselbe, und der Zusatz brach die Zeile bei langen
+        Adressen um -- die Karte wurde dadurch je nach Adresse höher.
+      */}
+      <p className="card__address">{target.resolvedLabel ?? target.address}</p>
 
       {target.status === 'loading' && (
         <p className="hint">

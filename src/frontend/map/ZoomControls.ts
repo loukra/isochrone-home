@@ -40,7 +40,7 @@ export class ZoomControls implements maplibregl.IControl {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'maplibregl-ctrl-fit';
-    button.title = this.label;
+    button.dataset.tip = this.label;
     button.setAttribute('aria-label', this.label);
     // Leerer Span mit MapLibres eigener Icon-Klasse: Das Zeichen kommt als
     // background-image aus dem Stylesheet, genau wie bei „+“, „−“ und Kompass.

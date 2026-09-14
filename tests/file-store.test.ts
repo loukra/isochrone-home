@@ -81,8 +81,14 @@ describe('FileStore', () => {
 
   it('wirft nicht, wenn das Verzeichnis nicht beschreibbar ist', async () => {
     // Eine Datei dort, wo ein Verzeichnis liegen müsste: mkdir schlägt fehl.
+    // Der Name kommt aus dem Namensraum, nicht als Zeichenkette: Er trägt die
+    // Glättung mit (siehe namespaces.ts) und ändert sich mit ihr.
     await mkdir(directory, { recursive: true });
-    await writeFile(join(directory, 'isochrones'), 'kein Verzeichnis', 'utf8');
+    await writeFile(
+      join(directory, NAMESPACES.isochrones.name),
+      'kein Verzeichnis',
+      'utf8',
+    );
 
     await expect(store.set(NAMESPACES.isochrones, 'x', 1)).resolves.toBeUndefined();
     expect(await store.get(NAMESPACES.isochrones, 'x')).toBeNull();

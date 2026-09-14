@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { INTERSECTION_COLOR, POI_REGION_COLOR } from '../colors.js';
+import {
+  INTERSECTION_COLOR,
+  INTERSECTION_FILL_OPACITY,
+  ISOCHRONE_FILL_OPACITY,
+  POI_REGION_COLOR,
+  POI_REGION_FILL_OPACITY,
+} from '../colors.js';
 import type {
   AreaFeature,
   BoundingBox,
@@ -12,6 +18,7 @@ import type {
 import { ZoomControls } from './ZoomControls.js';
 import { loadViewport, saveViewport } from '../storage.js';
 import { isPoiSelected } from '../poi/selection.js';
+import { regionDistance } from '../poi/distance.js';
 import { CATEGORY_COLORS, poiIconId, poiIconSvg } from '../poi/icons.js';
 import { useTexts } from '../i18n/index.js';
 
@@ -301,7 +308,7 @@ export const MapView = ({
           id: `${sourceId}-fill`,
           type: 'fill',
           source: sourceId,
-          paint: { 'fill-color': target.color, 'fill-opacity': 0.18 },
+          paint: { 'fill-color': target.color, 'fill-opacity': ISOCHRONE_FILL_OPACITY },
         });
         map.addLayer({
           id: `${sourceId}-line`,
@@ -432,7 +439,10 @@ export const MapView = ({
         id: `${INTERSECTION_SOURCE}-fill`,
         type: 'fill',
         source: INTERSECTION_SOURCE,
-        paint: { 'fill-color': INTERSECTION_COLOR, 'fill-opacity': 0.5 },
+        paint: {
+          'fill-color': INTERSECTION_COLOR,
+          'fill-opacity': INTERSECTION_FILL_OPACITY,
+        },
       });
       map.addLayer({
         id: `${INTERSECTION_SOURCE}-line`,
@@ -475,7 +485,10 @@ export const MapView = ({
           id: `${POI_REGION_SOURCE}-fill`,
           type: 'fill',
           source: POI_REGION_SOURCE,
-          paint: { 'fill-color': POI_REGION_COLOR, 'fill-opacity': 0.55 },
+          paint: {
+            'fill-color': POI_REGION_COLOR,
+            'fill-opacity': POI_REGION_FILL_OPACITY,
+          },
         },
         below,
       );
@@ -617,10 +630,9 @@ export const MapView = ({
     if (poi.areaSquareMeters !== null) {
       facts.push(texts.map.floorArea(Math.round(poi.areaSquareMeters)));
     }
+    const distance = regionDistance(poi.distanceToRegionKm);
     facts.push(
-      poi.distanceToRegionKm === 0
-        ? texts.map.insideRegion
-        : texts.map.outsideRegion(poi.distanceToRegionKm.toFixed(1)),
+      distance === null ? texts.map.insideRegion : texts.map.outsideRegion(distance),
     );
 
     const meta = document.createElement('div');

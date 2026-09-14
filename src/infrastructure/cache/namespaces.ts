@@ -23,8 +23,15 @@ export const cacheNamespaces = (config: {
    * Routing-Graphen periodisch neu -- dieselbe Anfrage liefert danach ein
    * anderes Polygon. Eine Woche begrenzt den Irrtum und kostet bei fünf Zielen
    * fünf Anfragen pro Woche.
+   *
+   * Der Name trägt die Glättung (siehe SMOOTHING im ORS-Adapter). Ohne sie
+   * blieben die Schlüssel aus lat, lon, Verkehrsmittel und Minuten gleich,
+   * zeigten aber auf Flächen, die noch mit der Vorgabe des Dienstes gerechnet
+   * wurden: Eine Woche lang läge eine Mischung aus altem und neuem Umriss in
+   * derselben Schnittmenge -- unsichtbar falsch, genau der Fall, gegen den es
+   * die Haltedauer überhaupt gibt.
    */
-  isochrones: { name: 'isochrones', maxAgeMs: config.isochroneDays * DAY },
+  isochrones: { name: 'isochrones-s0', maxAgeMs: config.isochroneDays * DAY },
 
   /**
    * Orte: Studios und Supermärkte machen tatsächlich auf und zu. Ein Tag ist

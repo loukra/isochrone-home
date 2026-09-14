@@ -21,6 +21,41 @@ const CHAIN_CATEGORIES: ReadonlySet<PoiCategory> = new Set<PoiCategory>([
 ]);
 
 /**
+ * Kategorien, in denen die Grundfläche etwas aussagt -- und damit die einzigen,
+ * in denen "Große zuerst" überhaupt eine Reihenfolge ist.
+ *
+ * {@link rankOf} baut den Rang ganz auf Fläche und Kettenzugehörigkeit auf. Bei
+ * einem Supermarkt trägt das: 3200 m² sind ein Vollsortimenter, 200 m² ein
+ * Kiosk. Bei einem Bahnhof entscheidet die Fläche dagegen nur darüber, ob in
+ * OSM zufällig jemand ein Empfangsgebäude eingezeichnet hat -- ein
+ * Haltepunkt mit getaggtem Häuschen stand damit über dem Hauptbahnhof ohne.
+ * Das ist keine Reihenfolge, sondern eine Auskunft über den Fleiss der
+ * Kartierer.
+ *
+ * Die Menge deckt sich heute mit {@link CHAIN_CATEGORIES}, meint aber etwas
+ * anderes: dort geht es darum, ob eine Filiale austauschbar ist, hier darum, ob
+ * ein Quadratmeterwert eine Aussage trägt. Ein Schwimmbad etwa ist keine Kette,
+ * und trotzdem bleibt es hier draussen -- OSM misst dort das Becken, und das
+ * trifft auch Gartenpools.
+ */
+const AREA_RANKED_CATEGORIES: ReadonlySet<PoiCategory> = new Set<PoiCategory>([
+  'gym',
+  'supermarket',
+]);
+
+/**
+ * Ob "Große zuerst" in dieser Kategorie angeboten wird. Wo nicht, gibt es keine
+ * Auswahl: Ein Menü mit einem einzigen Eintrag verspricht eine Entscheidung,
+ * die es nicht gibt.
+ */
+export const canSortByRelevance = (category: PoiCategory): boolean =>
+  AREA_RANKED_CATEGORIES.has(category);
+
+/** Die Sortierung, mit der eine neue Bedingung startet. */
+export const defaultSortMode = (category: PoiCategory): PoiSortMode =>
+  canSortByRelevance(category) ? 'relevance' : 'distance';
+
+/**
  * Beschriftung einer Zeile. Bei Ketten benennt die Marke die Gruppe besser als
  * der Name einer Filiale -- bei ortsgebundenen Zielen ist es umgekehrt: Dort
  * steht im brand/operator der Betreiber ("DB InfraGO AG"), und der sagt nichts
