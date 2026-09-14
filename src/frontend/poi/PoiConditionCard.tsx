@@ -36,6 +36,17 @@ export type PoiCondition = {
   error: string | null;
   open: boolean;
   sortMode: PoiSortMode;
+  /**
+   * Schon einmal gesucht -- unabhängig davon, ob etwas gefunden wurde. Eine
+   * Suche ohne Treffer ist eine Antwort und darf nicht wie "noch nie gefragt"
+   * aussehen.
+   */
+  searched: boolean;
+  /**
+   * Zeit oder Verkehrsmittel seit der letzten Suche geändert. Solange das
+   * gilt, wartet die Bedingung auf den Knopf -- siehe `onSearch`.
+   */
+  dirty: boolean;
 };
 
 type PoiConditionCardProps = {
@@ -110,6 +121,13 @@ export const PoiConditionCard = ({
   // darunter hin und her. Anklickbar ist sie dabei nicht: Die Zahlen gehoeren
   // noch zum alten Radius.
   const stale = condition.busy && condition.pois.length > 0 ? ' is-stale' : '';
+  /*
+   * Die Einstellungen sind noch nicht eingelöst: entweder nie gesucht oder
+   * seither Zeit bzw. Verkehrsmittel geändert. Der Knopf ist dann der nächste
+   * Schritt und sagt das auch, statt still neben einer Liste zu stehen, die zu
+   * anderen Zahlen gehört.
+   */
+  const pending = !condition.searched || condition.dirty;
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
 
   const toggleExpanded = (key: string): void => {
@@ -150,9 +168,11 @@ export const PoiConditionCard = ({
             {selectedCount > 0 ? texts.poi.selectedCount(selectedCount) : ''}
             {condition.busy
               ? texts.poi.searchingSuffix
-              : condition.pois.length === 0
+              : !condition.searched
                 ? texts.poi.notSearched
-                : ''}
+                : condition.dirty
+                  ? texts.poi.changedSuffix
+                  : ''}
           </span>
         </button>
         <button
@@ -194,11 +214,19 @@ export const PoiConditionCard = ({
             />
             <button
               type="button"
-              className="ghost"
+              className={
+                pending
+                  ? 'ghost poi-cond__search poi-cond__search--pending'
+                  : 'ghost poi-cond__search'
+              }
               onClick={onSearch}
               disabled={condition.busy || !canSearch}
             >
-              {condition.busy ? texts.poi.searching : texts.poi.search}
+              {condition.busy
+                ? texts.poi.searching
+                : condition.searched
+                  ? texts.poi.searchAgain
+                  : texts.poi.search}
             </button>
           </div>
 

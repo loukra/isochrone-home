@@ -98,7 +98,8 @@ zwischengespeicherten Isochronen, kein Providerkontingent. Spec §2/§17/§20
 gelten insoweit als ueberholt.
 
 **Schritt 3 — Orte in der Naehe (mehrere Bedingungen, zwei Klicks).**
-"Orte suchen" holt ueber Overpass alle Orte der Kategorie im Umkreis der
+Eine Bedingung wird angelegt, ihre Zeit und ihr Verkehrsmittel eingestellt, und
+dann holt "Orte suchen" ueber Overpass alle Orte der Kategorie im Umkreis der
 gemeinsamen Region (kostenlos, kein ORS-Kontingent) und zeigt sie als kleine
 Punkte plus Liste. **Zeit und Verkehrsmittel sind hier nur ein Suchradius**
 (`Minuten x km-je-Minute`, Luftlinie) — noch keine Erreichbarkeit. Der Nutzer hakt
@@ -406,24 +407,54 @@ Daraus folgt:
   Trefferliste kennt nur Luftlinie, hier wird zum ersten Mal wirklich
   gefahren. Die
   Trennlinie ist der Preis, nicht die Schrittzahl:
-  - **Kostenlos laeuft von allein.** Die Schnittmenge rechnet sich, sobald alle
-    Ziele stehen (55 ms Geometrie auf zwischengespeicherten Isochronen). Aendert
-    sie sich, sucht *jede* Bedingung automatisch neu -- Suchbereich und
-    Entfernungsangaben haengen an der Region, ein Knopf dafuer waere eine Frage,
-    deren Antwort immer "ja" lautet.
+  - **Kostenlos laeuft von allein, wo die Frage schon gestellt ist.** Die
+    Schnittmenge rechnet sich, sobald alle Ziele stehen (55 ms Geometrie auf
+    zwischengespeicherten Isochronen). Aendert sie sich, sucht jede **bereits
+    gesuchte** Bedingung neu -- Suchbereich und Entfernungsangaben haengen an
+    der Region, ein Knopf dafuer waere eine Frage, deren Antwort immer "ja"
+    lautet. Fuer eine Bedingung, die noch nie gesucht hat, ist die Antwort
+    dagegen offen: Sie wartet.
   - **Kostenpflichtig fragt nach.** Nur dieser Knopf loest Isochronen um die
     angehakten Orte aus: eine je *neu* angehaktem Ort, bis zu 25, bei 500
     Anfragen am Tag. Wiederholungen sind dank Plattencache gratis, ein neuer Ort
     nicht. Die Zahl am Knopf sagt, wie viel gleich eingeloest wird.
 - Dieselbe Logik erklaert, warum Enter im Zielformular sofort eine Isochrone
   holt: Dieser eine Aufruf *ist* der Zweck der Eingabe.
-- **"Orte suchen" ist kein Pflichtschritt mehr.** Eine hinzugefuegte Bedingung
-  sucht sofort (die Kategorie zu waehlen *ist* die Aufforderung), ein
-  geaenderter Radius sucht sofort neu, und eine geaenderte Schnittmenge frischt
-  **alle** Bedingungen auf -- nicht nur die schon einmal gesuchten, sonst stuende
-  man beim ersten Durchlauf vor einer leeren Liste.
-  Der Knopf bleibt nur fuer den Fall, dass Overpass gehakt hat -- was real
-  vorkommt: Beim Test antwortete er einmal nach 46 s mit "ueberlastet".
+- **"Orte suchen" bestaetigt die ganze Bedingung, nicht nur die Kategorie**
+  (*geaendert am 14.09.2026 auf Wunsch des Nutzers*: "total nervig"). Vorher
+  suchte eine neu angelegte Bedingung sofort, und jede Aenderung an Zeit oder
+  Verkehrsmittel gleich noch einmal. Die Begruendung dafuer war, die Kategorie
+  zu waehlen *sei* die Aufforderung -- sie traegt nicht: Die Kategorie sagt,
+  **was** gesucht wird, Zeit und Verkehrsmittel sagen **wie weit** und
+  **womit**, und die stehen in diesem Moment erst auf der Vorgabe (10 Min.,
+  Auto). Wer danach auf Rad und 15 Minuten stellte, hatte drei Suchen ausgeloest
+  und zweimal zugesehen, wie sich eine Liste auf- und wieder umbaute.
+  - Das Zahlenfeld aendert sich **pro Tastendruck und pro Pfeilklick**. Von 10
+    auf 15 zu stellen waren gemessen fuenf Suchen, von denen vier niemanden
+    interessierten -- genau der Fall, gegen den die harte Regel "Keine
+    Tastendruck-API-Calls" steht. Sie galt bisher nur fuer das Geocoding, weil
+    Overpass nichts kostet; teuer ist hier aber nicht das Kontingent, sondern
+    die Liste, die einem unter dem Zeiger wegrutscht.
+  - Die Kopfzeile sagt, woran man ist: "· nicht gesucht", solange nie gesucht
+    wurde, "· geaendert", sobald Zeit oder Verkehrsmittel von der letzten Suche
+    abweichen. Der Knopf traegt dann die Akzentfarbe und heisst nach der ersten
+    Suche "Neu suchen".
+  - **Die Trefferliste bleibt dabei bedienbar.** Waehrend einer *laufenden*
+    Suche wird sie abgeblendet und gesperrt (`is-stale`), weil gleich eine neue
+    kommt; hier kommt von allein nichts, und eine auf Dauer unbedienbare Liste
+    waere eine Falle statt einer Auskunft.
+  - **Eine verschobene Schnittmenge frischt nur die schon gesuchten und seither
+    unveraenderten Bedingungen auf.** Eine, die noch auf ihren Knopf wartet,
+    duerfte eine neue Region nicht hinter dem Ruecken des Nutzers einloesen --
+    das waere dieselbe ungefragte zweite Antwort wie ein springender
+    Kartenausschnitt.
+  - Der Knopf faengt damit auch weiter den Fall ab, dass Overpass hakt -- was
+    real vorkommt: Beim Test antwortete er einmal nach 46 s mit "ueberlastet".
+  - Im gespeicherten Stand steht weiter nur der **Auftrag** (`searched`), nicht
+    das Ergebnis. Das Feld wird beim Laden uebernommen, nicht auf `false`
+    gesetzt: Der Speichereffekt laeuft beim Einhaengen mit und schriebe die
+    Unwahrheit sofort zurueck -- wer die Seite ohne Netz oeffnet, verloere
+    still, was er gesucht hatte.
 - **Der untere Rand der Seitenleiste ist ein Dock** (`.dock`): darin der
   Knopf (`PoiApplyBar`) und darunter die Statusleiste (`StatusBar`). Beide
   beantworten "was kann ich jetzt tun" und "was passiert gerade" -- das darf
@@ -1077,11 +1108,14 @@ Gewichtung:
   sie sich als „da kommt noch mehr", und genau das stimmt.
 - **Die aufgeklappte Kopfzeile sitzt auf `--sunk`.** Sie ist dann eine
   Überschrift über einem Inhalt und keine Zeile für sich.
-- **„Orte suchen" ist ein stiller Knopf** (`.ghost`). Gesucht wird von allein;
-  er ist der Rückfall für den Fall, dass Overpass hakt. Als gefüllter Knopf war
-  er die lauteste Fläche der Karte und stand damit in Konkurrenz zum einzigen
-  echten Knopf der App unten im Dock -- der Trennlinie nach Preis, die den
-  ganzen Bedienablauf traegt.
+- **„Orte suchen" bleibt ein stiller Knopf** (`.ghost`), obwohl er seit dem
+  14.09.2026 wieder der Weg ist und nicht mehr der Rückfall. Als gefüllter
+  Knopf war er die lauteste Fläche der Karte und stünde damit in Konkurrenz zum
+  einzigen echten Knopf der App unten im Dock -- der Trennlinie nach Preis, die
+  den ganzen Bedienablauf traegt: Suchen kostet kein Kontingent, Erreichbarkeit
+  rechnen schon. Solange die Einstellungen nicht eingelöst sind, trägt er die
+  Akzentfarbe in Randlinie und Schrift, aber keine Füllung
+  (`.poi-cond__search--pending`); danach tritt er zurück.
 - **Zählzeile und Sortierung sind leiser als die Suchzeile darüber.** Die eine
   berichtet („25 gefunden"), die andere stellt ein. Die Sortierung ist dabei
   eine Ansichtsoption und trägt darum keinen Rahmen (`select--quiet`), wie die
