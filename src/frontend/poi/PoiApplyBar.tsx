@@ -1,5 +1,5 @@
-import { CATEGORY_LABELS } from './PoiConditionCard.js';
 import type { PoiCategory } from '../types.js';
+import { useTexts } from '../i18n/index.js';
 
 /** Serverseitige Obergrenze aus poiRegionRequestSchema. */
 export const MAX_PLACES = 25;
@@ -40,25 +40,25 @@ export const PoiApplyBar = ({
   regionEmpty,
   onApply,
 }: PoiApplyBarProps) => {
-  const orte = selectedPlaces === 1 ? 'Ort' : 'Orte';
+  const texts = useTexts();
+  const unit = selectedPlaces === 1 ? texts.apply.placeOne : texts.apply.placeMany;
 
   return (
     <div className="poi-apply">
       {error !== null && <p className="error">{error}</p>}
 
       {selectedPlaces > MAX_PLACES && (
-        <p className="error">
-          {selectedPlaces} Orte ausgewählt — höchstens {MAX_PLACES} auf einmal. Nimm ein
-          paar Häkchen heraus.
-        </p>
+        <p className="error">{texts.apply.tooMany(selectedPlaces, MAX_PLACES)}</p>
       )}
 
       {regionEmpty && (
         <p className="error">
-          Kein Bereich erfüllt alle Bedingungen gleichzeitig.
+          {texts.apply.regionEmpty}
           {blocking.length > 0
-            ? ` Schuld ist: ${blocking.map((category) => CATEGORY_LABELS[category]).join(', ')}.`
-            : ' Jede Bedingung für sich passt — erst die Kombination ist zu streng.'}
+            ? texts.apply.blockedBy(
+                blocking.map((category) => texts.categories[category]).join(', '),
+              )
+            : texts.apply.blockedByCombination}
         </p>
       )}
 
@@ -69,8 +69,8 @@ export const PoiApplyBar = ({
         disabled={busy || disabled || selectedPlaces > MAX_PLACES}
       >
         {busy
-          ? `Berechne ${selectedPlaces} ${orte}…`
-          : `Erreichbarkeit berechnen (${selectedPlaces} ${orte})`}
+          ? texts.apply.busy(selectedPlaces, unit)
+          : texts.apply.button(selectedPlaces, unit)}
       </button>
 
       {/*
@@ -79,10 +79,10 @@ export const PoiApplyBar = ({
       */}
       <p className="hint poi-apply__note">
         {selectedPlaces === 0
-          ? 'Noch nichts ausgewählt — die Bedingungen sind inaktiv.'
+          ? texts.apply.nothingSelected
           : upToDate && !busy
-            ? 'Die verengte Region ist auf dem aktuellen Stand.'
-            : `${selectedPlaces} ${orte} angehakt.`}
+            ? texts.apply.upToDate
+            : texts.apply.selected(selectedPlaces, unit)}
       </p>
     </div>
   );

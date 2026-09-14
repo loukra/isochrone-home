@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ApiError, checkLocations, fetchTravelTimes, geocode } from './api.js';
+import { checkLocations, fetchTravelTimes, geocode } from './api.js';
 import { INTERSECTION_COLOR, POI_REGION_COLOR } from './colors.js';
 import {
-  TRAVEL_MODE_SHORT,
   type AreaFeature,
   type CheckedPlace,
   type Coordinate,
@@ -11,6 +10,8 @@ import {
   type Target,
   type TravelTimeLeg,
 } from './types.js';
+import { useTexts, type Texts } from './i18n/index.js';
+import { translateError } from './i18n/errors.js';
 
 type Props = {
   intersection: AreaFeature | null;
@@ -24,17 +25,12 @@ type Props = {
   onToggleOpen: (id: string) => void;
 };
 
-const messageOf = (error: unknown): string =>
-  error instanceof ApiError
-    ? error.message
-    : 'Der Ort konnte gerade nicht geprüft werden.';
-
-const formatMinutes = (minutes: number): string =>
-  minutes < 1 ? 'unter 1 Min' : `${Math.round(minutes)} Min`;
+const formatMinutes = (texts: Texts, minutes: number): string =>
+  minutes < 1 ? texts.address.underOneMinute : texts.address.minutes(Math.round(minutes));
 
 /** Unter zehn Kilometern ist die Nachkommastelle eine Aussage, darüber Rauschen. */
-const formatKilometers = (kilometers: number): string =>
-  `${kilometers.toLocaleString('de-DE', {
+const formatKilometers = (texts: Texts, kilometers: number): string =>
+  `${kilometers.toLocaleString(texts.app.locale, {
     maximumFractionDigits: kilometers < 10 ? 1 : 0,
   })} km`;
 
@@ -99,6 +95,7 @@ const TravelRow = ({
   target: Target;
   leg: TravelTimeLeg | undefined;
 }) => {
+  const texts = useTexts();
   const minutes = leg?.durationMinutes ?? null;
   // Verglichen wird die angezeigte Zahl, nicht die rohe: Sonst stünde bei einer
   // Grenze von 20 Minuten "20 Min" in Rot, weil es in Wahrheit 20,4 waren.
@@ -109,26 +106,29 @@ const TravelRow = ({
       <span className="travel-list__target">
         <span className="travel-list__name">{target.name}</span>
         <span className="travel-list__mode">
-          {TRAVEL_MODE_SHORT[target.travelMode]} · max. {target.maxTravelTimeMinutes} Min
+          {texts.travelModesShort[target.travelMode]} ·{' '}
+          {texts.address.limit(target.maxTravelTimeMinutes)}
         </span>
       </span>
 
       {minutes === null ? (
         <span
           className="travel-list__value hint"
-          title="Der Kartendienst kennt dorthin keine Route."
+          title={texts.address.noRoute}
         >
-          keine Route
+          {texts.address.noRouteShort}
         </span>
       ) : (
         <span className={over > 0 ? 'travel-list__value error' : 'travel-list__value'}>
-          <span className="travel-list__duration">{formatMinutes(minutes)}</span>
+          <span className="travel-list__duration">{formatMinutes(texts, minutes)}</span>
           {leg?.distanceKm !== null && leg?.distanceKm !== undefined && (
             <span className="travel-list__distance">
-              {formatKilometers(leg.distanceKm)}
+              {formatKilometers(texts, leg.distanceKm)}
             </span>
           )}
-          {over > 0 && <span className="travel-list__over">+{over} Min</span>}
+          {over > 0 && (
+            <span className="travel-list__over">{texts.address.overBy(over)}</span>
+          )}
         </span>
       )}
     </li>
@@ -165,6 +165,7 @@ const CheckedPlaceCard = ({
   onToggleOpen,
   onRemove,
 }: CardProps) => {
+  const texts = useTexts();
   const [legs, setLegs] = useState<TravelTimeLeg[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -189,7 +190,7 @@ const CheckedPlaceCard = ({
         // Die alte Liste bleibt stehen und wird nur abgeblendet: Sie
         // verschwinden zu lassen, würde die Seitenleiste zusammenfallen lassen
         // und sagt nichts, was der Fehler daneben nicht besser sagt.
-        if (!abgeloest) setError(messageOf(reason));
+        if (!abgeloest) setError(translateError(texts, reason));
       })
       .finally(() => {
         if (!abgeloest) setBusy(false);
@@ -225,9 +226,9 @@ const CheckedPlaceCard = ({
             color={INTERSECTION_COLOR}
             title={verdictText(
               inIntersection,
-              'Hauptkriterien erfüllt',
-              'Hauptkriterien nicht erfüllt',
-              'Noch keine gemeinsame Region berechnet',
+              texts.address.targetsMet,
+              texts.address.targetsUnmet,
+              texts.address.targetsUnknown,
             )}
           />
           <CheckBadge
@@ -235,9 +236,9 @@ const CheckedPlaceCard = ({
             color={POI_REGION_COLOR}
             title={verdictText(
               inPoiRegion,
-              'Auch die gewählten Orte sind erreichbar',
-              'Die gewählten Orte sind von hier nicht erreichbar',
-              'Noch keine Orte übernommen',
+              texts.address.placesMet,
+              texts.address.placesUnmet,
+              texts.address.placesUnknown,
             )}
           />
         </span>
@@ -246,8 +247,8 @@ const CheckedPlaceCard = ({
           type="button"
           className="poi-cond__remove"
           onClick={onRemove}
-          aria-label={`${place.label} entfernen`}
-          title="Ort entfernen"
+          aria-label={texts.address.removeLabel(place.label)}
+          title={texts.address.removeTitle}
         >
           ×
         </button>
@@ -262,9 +263,9 @@ const CheckedPlaceCard = ({
           >
             {verdictText(
               inIntersection,
-              'Liegt in der gemeinsamen Region.',
-              'Liegt außerhalb der gemeinsamen Region.',
-              'Führe zuerst eine Analyse durch, damit eine gemeinsame Region vorliegt.',
+              texts.address.insideRegion,
+              texts.address.outsideRegion,
+              texts.address.regionMissing,
             )}
           </p>
           <p
@@ -272,30 +273,28 @@ const CheckedPlaceCard = ({
           >
             {verdictText(
               inPoiRegion,
-              'Auch die gewählten Orte sind von hier erreichbar.',
-              'Die gewählten Orte sind von hier nicht erreichbar.',
-              'Übernimm zuerst mindestens eine Auswahl unter „Orte in der Nähe“.',
+              texts.address.placesReachable,
+              texts.address.placesUnreachable,
+              texts.address.placesMissing,
             )}
           </p>
 
           {/*
-            Die Haken oben sagen nur "drin oder draußen". Erst die Fahrzeit sagt
+            Die Haken oben sagen nur {texts.address.statusColumn}. Erst die Fahrzeit sagt
             *wie knapp* -- und bei einem Ort außerhalb, welches Ziel daran schuld
             ist. Die Orte aus Schritt 3 (Studios, Bahnhöfe) bleiben bewusst
             draußen: Bei achtzig Treffern wäre das eine Tabelle statt einer
             Antwort.
           */}
           {targets.length === 0 ? (
-            <p className="hint">
-              Lege zuerst ein Ziel an, dann steht hier die Fahrzeit dorthin.
-            </p>
+            <p className="hint">{texts.address.needsTargets}</p>
           ) : (
             <>
               {error !== null && <p className="error">{error}</p>}
 
               {legs === null ? (
                 <p className="hint">
-                  {busy ? 'Fahrzeiten werden berechnet…' : 'Noch keine Fahrzeiten.'}
+                  {busy ? texts.address.travelTimesBusy : texts.address.travelTimesEmpty}
                 </p>
               ) : (
                 <ul
@@ -336,6 +335,7 @@ export const LocationCheckPanel = ({
   onRemove,
   onToggleOpen,
 }: Props) => {
+  const texts = useTexts();
   const [query, setQuery] = useState('');
   const [candidates, setCandidates] = useState<GeocodingCandidate[]>([]);
   const [busy, setBusy] = useState(false);
@@ -378,7 +378,7 @@ export const LocationCheckPanel = ({
         setError(null);
       })
       .catch((reason: unknown) => {
-        if (!abgeloest) setError(messageOf(reason));
+        if (!abgeloest) setError(translateError(texts, reason));
       });
 
     return () => {
@@ -419,7 +419,7 @@ export const LocationCheckPanel = ({
     );
 
     if (bekannt) {
-      setError(`„${candidate.label}“ steht bereits in der Liste.`);
+      setError(texts.address.duplicate(candidate.label));
       return;
     }
 
@@ -433,7 +433,7 @@ export const LocationCheckPanel = ({
 
     const trimmed = query.trim();
     if (trimmed === '') {
-      setError('Bitte gib einen Ort oder eine Adresse ein.');
+      setError(texts.address.empty);
       return;
     }
 
@@ -443,14 +443,14 @@ export const LocationCheckPanel = ({
     try {
       const found = await geocode(trimmed);
       if (found.candidates.length === 0) {
-        setError(`Der Ort „${trimmed}“ konnte nicht gefunden werden.`);
+        setError(texts.address.notFound(trimmed));
       } else if (found.candidates.length === 1) {
         pick(found.candidates[0]!);
       } else {
         setCandidates(found.candidates);
       }
     } catch (reason) {
-      setError(messageOf(reason));
+      setError(translateError(texts, reason));
     } finally {
       setBusy(false);
     }
@@ -458,7 +458,7 @@ export const LocationCheckPanel = ({
 
   return (
     <section className="location-check" aria-labelledby="location-check-title">
-      <h2 id="location-check-title">Orte prüfen</h2>
+      <h2 id="location-check-title">{texts.address.heading}</h2>
       <p className="hint">
         Sammle Adressen und sieh auf einen Blick, welche die Hauptkriterien (hell) und
         welche zusätzlich die gewählten Orte (dunkel) erfüllen.
@@ -472,7 +472,7 @@ export const LocationCheckPanel = ({
           onKeyDown={(event) => {
             if (event.key === 'Enter') void submit();
           }}
-          placeholder="z. B. Musterstraße 1, Oldenburg"
+          placeholder={texts.address.placeholder}
         />
       </label>
       <button
@@ -481,14 +481,14 @@ export const LocationCheckPanel = ({
         onClick={() => void submit()}
         disabled={busy}
       >
-        {busy ? 'Suche…' : 'Ort hinzufügen'}
+        {busy ? texts.address.adding : texts.address.add}
       </button>
 
       {error !== null && <p className="error">{error}</p>}
 
       {candidates.length > 0 && (
         <div className="candidates">
-          <p className="candidates__hint">Bitte wähle den passenden Treffer:</p>
+          <p className="candidates__hint">{texts.address.chooseMatch}</p>
           {candidates.map((candidate) => (
             <button
               key={`${candidate.coordinate.latitude},${candidate.coordinate.longitude}`}

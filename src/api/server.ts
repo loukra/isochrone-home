@@ -95,7 +95,7 @@ const start = (): void => {
       // Die maschinenlesbare Zeile zuerst: Bei PORT=0 erfährt erst hier jemand,
       // welchen Port das Betriebssystem vergeben hat.
       console.log(`${READY_PREFIX} ${address.port}`);
-      console.log(`Location Optimizer API läuft auf http://localhost:${address.port}`);
+      console.log(`Wohnzone-API läuft auf http://localhost:${address.port}`);
       console.log(`Strategie: ${config.analysisStrategy}`);
     });
 

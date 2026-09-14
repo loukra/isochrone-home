@@ -21,8 +21,15 @@ export class ZoomControls implements maplibregl.IControl {
   private button: HTMLButtonElement | null = null;
   private map: maplibregl.Map | null = null;
 
-  constructor(getBounds: () => BoundingBox | null) {
+  private readonly label: string;
+
+  /**
+   * Die Beschriftung kommt von aussen: Diese Klasse lebt ausserhalb von React
+   * und kann die Sprache nicht selbst erfragen.
+   */
+  constructor(getBounds: () => BoundingBox | null, label: string) {
     this.getBounds = getBounds;
+    this.label = label;
   }
 
   onAdd(map: maplibregl.Map): HTMLElement {
@@ -33,8 +40,8 @@ export class ZoomControls implements maplibregl.IControl {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'maplibregl-ctrl-fit';
-    button.title = 'Alles einpassen';
-    button.setAttribute('aria-label', 'Alles einpassen');
+    button.title = this.label;
+    button.setAttribute('aria-label', this.label);
     // Leerer Span mit MapLibres eigener Icon-Klasse: Das Zeichen kommt als
     // background-image aus dem Stylesheet, genau wie bei „+“, „−“ und Kompass.
     // Ein <svg> im Knopf sass stattdessen oben statt mittig -- MapLibres

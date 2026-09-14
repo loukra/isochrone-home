@@ -1,10 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import {
-  TRAVEL_MODES,
-  TRAVEL_MODE_LABELS,
-  type GeocodingCandidate,
-  type TravelMode,
-} from '../types.js';
+import { TRAVEL_MODES, type GeocodingCandidate, type TravelMode } from '../types.js';
+import { useTexts } from '../i18n/index.js';
 
 export type DraftValues = {
   name: string;
@@ -38,6 +34,7 @@ export const TargetDraftForm = ({
   onPickCandidate,
   onCancel,
 }: TargetDraftFormProps) => {
+  const texts = useTexts();
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [minutes, setMinutes] = useState('30');
@@ -66,32 +63,32 @@ export const TargetDraftForm = ({
     <form className="card card--draft" onSubmit={handleSubmit}>
       <div className="card__head">
         <span className="dot" style={{ background: color }} />
-        <strong>Neues Ziel</strong>
+        <strong>{texts.target.heading}</strong>
       </div>
 
       <label>
-        Name
+        {texts.target.nameField}
         <input
           autoFocus
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="Eltern A"
+          placeholder={texts.target.namePlaceholder}
           disabled={busy}
         />
       </label>
 
       <label>
-        Ort / Adresse
+        {texts.target.addressField}
         <input
           value={address}
           onChange={(event) => setAddress(event.target.value)}
-          placeholder="Münster"
+          placeholder={texts.target.addressPlaceholder}
           disabled={busy}
         />
       </label>
 
       <label>
-        Verkehrsmittel
+        {texts.target.travelModeField}
         <select
           value={travelMode}
           onChange={(event) => setTravelMode(event.target.value as TravelMode)}
@@ -99,14 +96,14 @@ export const TargetDraftForm = ({
         >
           {TRAVEL_MODES.map((mode) => (
             <option key={mode} value={mode}>
-              {TRAVEL_MODE_LABELS[mode]}
+              {texts.travelModes[mode]}
             </option>
           ))}
         </select>
       </label>
 
       <label>
-        Max. Reisezeit (Minuten, max. {maxMinutes})
+        {texts.target.minutesField(maxMinutes)}
         <input
           type="number"
           min={1}
@@ -119,7 +116,7 @@ export const TargetDraftForm = ({
 
       {candidates.length > 0 && (
         <div className="candidates">
-          <p className="candidates__hint">Welchen Ort meinst du?</p>
+          <p className="candidates__hint">{texts.target.whichAddress}</p>
           {candidates.map((candidate) => (
             <button
               key={`${candidate.label}-${candidate.coordinate.latitude}`}
@@ -137,11 +134,11 @@ export const TargetDraftForm = ({
       {error !== null && <p className="error">{error}</p>}
 
       <div className="card__actions">
-        <button type="submit" disabled={!isValid || busy}>
-          {busy ? 'Berechne…' : 'Übernehmen (Enter)'}
+        <button type="submit" disabled={!isValid || busy} title={texts.target.submitHint}>
+          {busy ? texts.target.submitting : texts.target.submit}
         </button>
         <button type="button" className="ghost" onClick={onCancel} disabled={busy}>
-          Abbrechen
+          {texts.target.cancel}
         </button>
       </div>
     </form>

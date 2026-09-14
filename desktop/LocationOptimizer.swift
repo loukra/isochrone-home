@@ -281,7 +281,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "Location Optimizer"
+        window.title = "Wohnzone"
         window.minSize = NSSize(width: 900, height: 600)
         window.setFrameAutosaveName("LocationOptimizerWindow")
         window.center()
@@ -293,7 +293,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startingView() -> NSView {
         let container = NSView()
 
-        let label = NSTextField(labelWithString: "Starte Location Optimizer …")
+        let label = NSTextField(labelWithString: "Starte Wohnzone …")
         label.font = .systemFont(ofSize: 15)
         label.textColor = .secondaryLabelColor
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -346,7 +346,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let alert = NSAlert()
         alert.alertStyle = .critical
-        alert.messageText = "Location Optimizer konnte nicht starten"
+        alert.messageText = "Wohnzone konnte nicht starten"
         alert.informativeText = message
         alert.addButton(withTitle: "Beenden")
         alert.runModal()
@@ -366,9 +366,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "Location Optimizer ausblenden", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: "Wohnzone ausblenden", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Location Optimizer beenden", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Wohnzone beenden", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         main.addItem(appItem)
 

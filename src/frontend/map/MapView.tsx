@@ -13,6 +13,7 @@ import { ZoomControls } from './ZoomControls.js';
 import { loadViewport, saveViewport } from '../storage.js';
 import { isPoiSelected } from '../poi/selection.js';
 import { CATEGORY_COLORS, poiIconId, poiIconSvg } from '../poi/icons.js';
+import { useTexts } from '../i18n/index.js';
 
 type MapViewProps = {
   styleUrl: string;
@@ -183,6 +184,14 @@ export const MapView = ({
   // die POI-Liste des ersten Rendervorgangs festhalten.
   const poisRef = useRef(pois);
   poisRef.current = pois;
+  const texts = useTexts();
+  /**
+   * Der Karten-Effekt läuft genau einmal beim Einhängen. Über eine Ref liest
+   * der Einpassen-Knopf die *aktuelle* Beschriftung, nicht die vom Zeitpunkt
+   * seiner Erzeugung -- dieselbe Begründung wie bei der Box, die er einpasst.
+   */
+  const textsRef = useRef(texts);
+  textsRef.current = texts;
   const [styleReady, setStyleReady] = useState(false);
   /**
    * Was der Einpassen-Knopf zeigen soll: die Boxen aller Ziele plus die
@@ -233,7 +242,7 @@ export const MapView = ({
     map.on('moveend', rememberViewport);
 
     // Zoom, Norden und „alles einpassen“ in einer Gruppe -- siehe ZoomControls.
-    const controls = new ZoomControls(() => fitTargetRef.current);
+    const controls = new ZoomControls(() => fitTargetRef.current, textsRef.current.map.fitAll);
     map.addControl(controls, 'top-right');
     fitControlRef.current = controls;
 
@@ -377,20 +386,20 @@ export const MapView = ({
       if (existing === undefined) {
         const element = document.createElement('div');
         element.className = 'checked-location-marker';
-        element.setAttribute('aria-label', 'Geprüfter Wohnort');
+        element.setAttribute('aria-label', texts.map.markerLabel);
         element.textContent = '🏠';
 
         markers.set(
           place.id,
           new maplibregl.Marker({ element })
             .setLngLat(position)
-            .setPopup(new maplibregl.Popup().setText(`Geprüfter Ort: ${place.label}`))
+            .setPopup(new maplibregl.Popup().setText(texts.map.markerPopup(place.label)))
             .addTo(map),
         );
         neuerMarker = position;
       } else {
         existing.setLngLat(position);
-        existing.getPopup()?.setText(`Geprüfter Ort: ${place.label}`);
+        existing.getPopup()?.setText(texts.map.markerPopup(place.label));
       }
     }
 
@@ -606,12 +615,12 @@ export const MapView = ({
     if (poi.brand !== null) facts.push(poi.brand);
     if (poi.sport !== null) facts.push(poi.sport);
     if (poi.areaSquareMeters !== null) {
-      facts.push(`${Math.round(poi.areaSquareMeters)} m² Grundfläche`);
+      facts.push(texts.map.floorArea(Math.round(poi.areaSquareMeters)));
     }
     facts.push(
       poi.distanceToRegionKm === 0
-        ? 'in der Region'
-        : `${poi.distanceToRegionKm.toFixed(1)} km außerhalb`,
+        ? texts.map.insideRegion
+        : texts.map.outsideRegion(poi.distanceToRegionKm.toFixed(1)),
     );
 
     const meta = document.createElement('div');
@@ -629,7 +638,7 @@ export const MapView = ({
     box2.checked = isPoiSelected(poi, selectedKeys);
     box2.addEventListener('change', () => onPoiToggleRef.current(poi));
 
-    pick.append(box2, document.createTextNode('Auswählen'));
+    pick.append(box2, document.createTextNode(texts.map.select));
     box.append(pick);
 
     if (poi.website !== null) {
@@ -637,7 +646,7 @@ export const MapView = ({
       link.href = poi.website;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
-      link.textContent = 'Website öffnen';
+      link.textContent = texts.map.openWebsite;
       box.append(link);
     }
 

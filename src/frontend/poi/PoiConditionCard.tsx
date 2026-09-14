@@ -11,44 +11,11 @@ import {
 import { CATEGORY_COLORS } from './icons.js';
 import {
   TRAVEL_MODES,
-  TRAVEL_MODE_LABELS,
-  TRAVEL_MODE_SHORT,
   type FoundPoi,
   type PoiCategory,
   type TravelMode,
 } from '../types.js';
-
-/**
- * Die Reihenfolge hier ist die Reihenfolge im Auswahlmenü: erst der Alltag,
- * den man täglich fährt, dann Kinder, dann das Gelegentliche.
- *
- * "Kita" steht für Krippe, Kindergarten und Hort zusammen: OSM kennt für
- * Kita und Kindergarten nur `amenity=kindergarten`, zwei Einträge lieferten
- * also zweimal dieselbe Liste. Ein Name wie "Kita & Kindergarten" wäre
- * ehrlicher, bricht aber in der Kartenkopfzeile auf zwei Zeilen, während
- * jede andere Bedingung einzeilig bleibt -- und die Trefferliste zeigt mit
- * "Ev. Kindergarten ..." ohnehin sofort, was darin steckt.
- */
-export const CATEGORY_LABELS: Record<PoiCategory, string> = {
-  supermarket: 'Supermarkt',
-  station: 'Bahnhof',
-  kindergarten: 'Kita',
-  school: 'Schule',
-  doctor: 'Arztpraxis',
-  gym: 'Fitnessstudio',
-  pool: 'Schwimmbad',
-};
-
-/** Deutsche Mehrzahl ist unregelmäßig -- kein angehängtes "e" tut es. */
-export const CATEGORY_LABELS_PLURAL: Record<PoiCategory, string> = {
-  supermarket: 'Supermärkte',
-  station: 'Bahnhöfe',
-  kindergarten: 'Kitas',
-  school: 'Schulen',
-  doctor: 'Arztpraxen',
-  gym: 'Fitnessstudios',
-  pool: 'Schwimmbäder',
-};
+import { useTexts } from '../i18n/index.js';
 
 export type PoiCondition = {
   category: PoiCategory;
@@ -105,6 +72,7 @@ export const PoiConditionCard = ({
   onFocusGroup,
   onFocusMember,
 }: PoiConditionCardProps) => {
+  const texts = useTexts();
   const groups = sortGroups(groupPois(condition.pois), condition.sortMode);
   const selectedCount = groups.filter(
     (group) => groupSelectionOf(group, selectedKeys) !== 'none',
@@ -146,14 +114,14 @@ export const PoiConditionCard = ({
             className="dot"
             style={{ background: CATEGORY_COLORS[condition.category] }}
           />
-          <span className="poi-cond__name">{CATEGORY_LABELS[condition.category]}</span>
+          <span className="poi-cond__name">{texts.categories[condition.category]}</span>
           <span className="poi-cond__summary">
-            {condition.minutes} Min. {TRAVEL_MODE_SHORT[condition.travelMode]}
-            {selectedCount > 0 ? ` · ${selectedCount} gewählt` : ''}
+            {condition.minutes} {texts.poi.radiusUnit} {texts.travelModesShort[condition.travelMode]}
+            {selectedCount > 0 ? texts.poi.selectedCount(selectedCount) : ''}
             {condition.busy
-              ? ' · sucht…'
+              ? texts.poi.searchingSuffix
               : condition.pois.length === 0
-                ? ' · nicht gesucht'
+                ? texts.poi.notSearched
                 : ''}
           </span>
         </button>
@@ -161,7 +129,7 @@ export const PoiConditionCard = ({
           type="button"
           className="poi-cond__remove"
           onClick={onRemove}
-          aria-label={`${CATEGORY_LABELS[condition.category]} entfernen`}
+          aria-label={texts.poi.removeLabel(texts.categories[condition.category])}
         >
           ×
         </button>
@@ -179,9 +147,9 @@ export const PoiConditionCard = ({
                 onMinutesChange(Number.parseInt(event.target.value, 10))
               }
               disabled={condition.busy}
-              aria-label={`Fahrzeit ${CATEGORY_LABELS[condition.category]}`}
+              aria-label={`Fahrzeit ${texts.categories[condition.category]}`}
             />
-            <span>Min.</span>
+            <span>{texts.poi.radiusUnit}</span>
             <select
               className="poi-cond__mode"
               value={condition.travelMode}
@@ -189,12 +157,12 @@ export const PoiConditionCard = ({
                 onTravelModeChange(event.target.value as TravelMode)
               }
               disabled={condition.busy}
-              aria-label={`Verkehrsmittel ${CATEGORY_LABELS[condition.category]}`}
-              title={TRAVEL_MODE_LABELS[condition.travelMode]}
+              aria-label={`Verkehrsmittel ${texts.categories[condition.category]}`}
+              title={texts.travelModes[condition.travelMode]}
             >
               {TRAVEL_MODES.map((mode) => (
                 <option key={mode} value={mode}>
-                  {TRAVEL_MODE_SHORT[mode]}
+                  {texts.travelModesShort[mode]}
                 </option>
               ))}
             </select>
@@ -203,7 +171,7 @@ export const PoiConditionCard = ({
               onClick={onSearch}
               disabled={condition.busy || !canSearch}
             >
-              {condition.busy ? 'Suche…' : 'Orte suchen'}
+              {condition.busy ? texts.poi.searching : texts.poi.search}
             </button>
           </div>
 
@@ -226,10 +194,10 @@ export const PoiConditionCard = ({
                   onChange={(event) =>
                     onSortModeChange(event.target.value as PoiSortMode)
                   }
-                  aria-label="Sortierung"
+                  aria-label={texts.poi.sortLabel}
                 >
-                  <option value="relevance">Große zuerst</option>
-                  <option value="distance">Nächste zuerst</option>
+                  <option value="relevance">{texts.poi.sortByRelevance}</option>
+                  <option value="distance">{texts.poi.sortByDistance}</option>
                 </select>
               </div>
 
@@ -297,8 +265,8 @@ export const PoiConditionCard = ({
                           </span>
                           <span className="poi-row__meta">
                             {nearest === undefined || nearest.distanceToRegionKm === 0
-                              ? 'in der Region'
-                              : `${nearest.distanceToRegionKm.toFixed(1)} km außerhalb`}
+                              ? texts.poi.insideRegion
+                              : texts.poi.outsideRegion(nearest.distanceToRegionKm.toFixed(1))}
                             {nearest?.sport != null ? ` · ${nearest.sport}` : ''}
                             {area !== null
                               ? ` · ${many ? 'bis ' : ''}${Math.round(area)} m²`
@@ -334,8 +302,8 @@ export const PoiConditionCard = ({
                                 <span className="poi-row__name">{member.name}</span>
                                 <span className="poi-row__meta">
                                   {member.distanceToRegionKm === 0
-                                    ? 'in der Region'
-                                    : `${member.distanceToRegionKm.toFixed(1)} km außerhalb`}
+                                    ? texts.poi.insideRegion
+                                    : texts.poi.outsideRegion(member.distanceToRegionKm.toFixed(1))}
                                   {member.areaSquareMeters !== null
                                     ? ` · ${Math.round(member.areaSquareMeters)} m²`
                                     : ''}
