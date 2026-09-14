@@ -14,6 +14,15 @@ export type MapLayer = {
 
 export type GeocodingCandidate = { label: string; coordinate: Coordinate };
 
+/**
+ * Auftrag an die Karte, etwas zu zeigen -- ein Ereignis, kein Zustand.
+ * Denselben Ort zweimal anzuklicken soll zweimal dorthin springen, und zwei
+ * gleiche Aufträge hintereinander unterscheiden sich sonst in nichts; deshalb
+ * trägt jeder eine laufende Nummer. Mehrere Punkte, weil eine Kettenzeile
+ * *alle* Filialen meint -- die werden dann gemeinsam eingepasst.
+ */
+export type MapFocus = { points: Coordinate[]; stamp: number };
+
 export type LocationCheckResult = {
   /** null, wenn noch keine helle gemeinsame Region berechnet wurde. */
   inIntersection: boolean | null;

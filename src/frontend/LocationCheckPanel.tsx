@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { checkLocations, fetchTravelTimes, geocode } from './api.js';
+import { fetchTravelTimes, geocode } from './api.js';
 import { INTERSECTION_COLOR, POI_REGION_COLOR } from './colors.js';
 import {
-  type AreaFeature,
   type CheckedPlace,
   type Coordinate,
   type GeocodingCandidate,
@@ -12,18 +11,28 @@ import {
 } from './types.js';
 import { useTexts, type Texts } from './i18n/index.js';
 import { translateError } from './i18n/errors.js';
+import { verdictText, verdictTone } from './verdict.js';
 import { CaretIcon, CloseIcon } from './components/icons.js';
 
 type Props = {
-  intersection: AreaFeature | null;
-  poiRegion: AreaFeature | null;
   /** Nur Ziele mit bestätigter Koordinate -- zu einem Entwurf gibt es nichts zu messen. */
   targets: Target[];
   /** Die geprüften Orte; überleben den Reload und werden neu bewertet. */
   places: CheckedPlace[];
+  /**
+   * Die Urteile, nach Orts-ID. Sie werden eine Ebene höher geholt, weil auch
+   * die Info-Box am Haus auf der Karte sie braucht -- zweimal zu prüfen hiesse
+   * zwei Antworten auf dieselbe Frage, die auseinanderlaufen können.
+   */
+  verdicts: Record<string, LocationCheckResult>;
+  verdictError: string | null;
+  /** Zuletzt auf der Karte angeklicktes Haus -- dessen Kachel steht im Bild. */
+  focusedPlaceId: string | null;
   onAdd: (place: { label: string; coordinate: Coordinate }) => void;
   onRemove: (id: string) => void;
   onToggleOpen: (id: string) => void;
+  /** Nur den Ausschnitt verschieben -- ohne die Kachel anzufassen. */
+  onShowOnMap: (id: string) => void;
 };
 
 const formatMinutes = (texts: Texts, minutes: number): string =>
@@ -136,16 +145,16 @@ const TravelRow = ({
   );
 };
 
-const verdictText = (state: boolean | null, yes: string, no: string, open: string) =>
-  state === null ? open : state ? yes : no;
-
 type CardProps = {
   place: CheckedPlace;
   verdict: LocationCheckResult | undefined;
   targets: Target[];
   /** Ändert sich, sobald ein Zielpunkt oder ein Verkehrsmittel wechselt. */
   targetSignature: string;
+  /** Das zugehörige Haus auf der Karte ist gerade angeklickt. */
+  focused: boolean;
   onToggleOpen: () => void;
+  onShowOnMap: () => void;
   onRemove: () => void;
 };
 
@@ -163,7 +172,9 @@ const CheckedPlaceCard = ({
   verdict,
   targets,
   targetSignature,
+  focused,
   onToggleOpen,
+  onShowOnMap,
   onRemove,
 }: CardProps) => {
   const texts = useTexts();
@@ -172,6 +183,13 @@ const CheckedPlaceCard = ({
   const [error, setError] = useState<string | null>(null);
   /** Wofür die Zahlen unten gelten. Verhindert eine Messung je Aufklappen. */
   const measured = useRef<string | null>(null);
+  const cardRef = useRef<HTMLLIElement | null>(null);
+
+  // Wer auf der Karte ein Haus anklickt, sieht die Seitenleiste umschalten --
+  // und darf dann nicht selbst suchen, welche der acht Kacheln gemeint ist.
+  useEffect(() => {
+    if (focused) cardRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [focused]);
 
   useEffect(() => {
     if (!place.open || targetSignature === '') return;
@@ -209,17 +227,34 @@ const CheckedPlaceCard = ({
   const inPoiRegion = verdict?.inPoiRegion ?? null;
 
   return (
-    <li className="place-card">
+    <li ref={cardRef} className={focused ? 'place-card place-card--focused' : 'place-card'}>
       <div className="place-card__head">
+        {/*
+          Zwei Knoepfe, nicht einer: Der Name faehrt die Karte hin, der Pfeil
+          klappt auf. Zusammengelegt tat ein Klick beides -- wer nur nachsehen
+          wollte, wo der Ort liegt, bekam die Kachel mitsamt Fahrzeitmessung
+          dazu, und wer die Zahlen zuklappte, verlor seinen Ausschnitt.
+        */}
+        <button
+          type="button"
+          className="place-card__caret"
+          onClick={onToggleOpen}
+          aria-expanded={place.open}
+          aria-label={
+            place.open
+              ? texts.address.collapseDetails(place.label)
+              : texts.address.expandDetails(place.label)
+          }
+        >
+          <CaretIcon open={place.open} />
+        </button>
+
         <button
           type="button"
           className="place-card__toggle"
-          onClick={onToggleOpen}
-          aria-expanded={place.open}
+          onClick={onShowOnMap}
+          data-tip={texts.address.showOnMap}
         >
-          <span className="poi-cond__caret">
-            <CaretIcon open={place.open} />
-          </span>
           <span className="place-card__label">{place.label}</span>
         </button>
 
@@ -259,11 +294,7 @@ const CheckedPlaceCard = ({
 
       {place.open && (
         <div className="place-card__body">
-          <p
-            className={
-              inIntersection === null ? 'hint' : inIntersection ? 'success' : 'error'
-            }
-          >
+          <p className={verdictTone(inIntersection)}>
             {verdictText(
               inIntersection,
               texts.address.insideRegion,
@@ -271,9 +302,7 @@ const CheckedPlaceCard = ({
               texts.address.regionMissing,
             )}
           </p>
-          <p
-            className={inPoiRegion === null ? 'hint' : inPoiRegion ? 'success' : 'error'}
-          >
+          <p className={verdictTone(inPoiRegion)}>
             {verdictText(
               inPoiRegion,
               texts.address.placesReachable,
@@ -327,65 +356,21 @@ const CheckedPlaceCard = ({
 
 /** Eigenständiger Tab: Orte sammeln und gegen beide Regionen prüfen. */
 export const LocationCheckPanel = ({
-  intersection,
-  poiRegion,
   targets,
   places,
+  verdicts,
+  verdictError,
+  focusedPlaceId,
   onAdd,
   onRemove,
   onToggleOpen,
+  onShowOnMap,
 }: Props) => {
   const texts = useTexts();
   const [query, setQuery] = useState('');
   const [candidates, setCandidates] = useState<GeocodingCandidate[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [verdicts, setVerdicts] = useState<Record<string, LocationCheckResult>>({});
-
-  /**
-   * Die Urteile werden nicht gespeichert, sondern abgeleitet: Gemerkt wird nur
-   * der Ort. So stimmen sie nach einem Reload wieder -- und sie folgen
-   * späteren Änderungen an Analyse und Ortsauswahl, statt eine veraltete
-   * Antwort stehen zu lassen. Alle Orte in einem Aufruf: Die Flächen im Rumpf
-   * sind gross, die Punkte winzig.
-   */
-  const placeKey = places.map((place) => place.id).join('|');
-
-  useEffect(() => {
-    if (places.length === 0) {
-      setVerdicts({});
-      return;
-    }
-
-    let abgeloest = false;
-    const pruefung = places.map((place) => place.id);
-
-    checkLocations(
-      places.map((place) => place.coordinate),
-      intersection,
-      poiRegion,
-    )
-      .then((next) => {
-        if (abgeloest) return;
-        setVerdicts(
-          Object.fromEntries(
-            pruefung.flatMap((id, index) => {
-              const result = next.results[index];
-              return result === undefined ? [] : [[id, result] as const];
-            }),
-          ),
-        );
-        setError(null);
-      })
-      .catch((reason: unknown) => {
-        if (!abgeloest) setError(translateError(texts, reason));
-      });
-
-    return () => {
-      abgeloest = true;
-    };
-    // placeKey statt places: Ein Aufklappen ändert die Liste, aber kein Urteil.
-  }, [placeKey, intersection, poiRegion]);
 
   /**
    * Gemessen wird nur, was die Messung ändert: Zielpunkte und Verkehrsmittel.
@@ -482,6 +467,7 @@ export const LocationCheckPanel = ({
       </button>
 
       {error !== null && <p className="error">{error}</p>}
+      {verdictError !== null && <p className="error">{verdictError}</p>}
 
       {candidates.length > 0 && (
         <div className="candidates">
@@ -511,7 +497,9 @@ export const LocationCheckPanel = ({
               verdict={verdicts[place.id]}
               targets={targets}
               targetSignature={targetSignature}
+              focused={place.id === focusedPlaceId}
               onToggleOpen={() => onToggleOpen(place.id)}
+              onShowOnMap={() => onShowOnMap(place.id)}
               onRemove={() => onRemove(place.id)}
             />
           ))}

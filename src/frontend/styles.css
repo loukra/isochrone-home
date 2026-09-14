@@ -173,15 +173,13 @@ body {
 .layout {
   display: grid;
   grid-template-columns: 360px 1fr;
-  height: 100vh;
-}
-
-@media (max-width: 800px) {
-  .layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-    height: auto;
-  }
+  /*
+    `dvh` statt `vh`: iOS Safari rechnet die ein- und ausfahrende Adressleiste
+    bei `vh` nicht heraus, die Karte waere unten abgeschnitten. Wo es keine
+    solche Leiste gibt -- auf dem Schreibtisch -- ist `dvh` per Definition
+    dasselbe wie `vh`: gleiche Zahl, gleiches Bild.
+  */
+  height: 100dvh;
 }
 
 .sidebar {
@@ -587,9 +585,39 @@ button.link {
   overflow: hidden;
 }
 
+/*
+  Das zuletzt auf der Karte angeklickte Haus. Ohne die Hervorhebung schaltet
+  die Seitenleiste zwar um, aber welche der acht Kacheln gemeint ist, muesste
+  man selbst suchen -- dieselbe Rueckmeldung wie bei der Trefferzeile.
+*/
+.place-card--focused {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .place-card__head {
   display: flex;
   align-items: stretch;
+}
+
+/*
+  Der Pfeil ist ein eigener Knopf neben dem Namen, nicht ein Zeichen darin:
+  Der Name faehrt die Karte hin, der Pfeil klappt die Zahlen auf. Zusammen an
+  einem Knopf tat ein Klick beides.
+*/
+.place-card__caret {
+  background: none;
+  border: none;
+  padding: 9px 2px 9px 9px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.place-card__caret:hover {
+  color: var(--text);
 }
 
 .place-card__toggle {
@@ -597,10 +625,9 @@ button.link {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 7px;
   background: none;
   border: none;
-  padding: 9px 4px 9px 10px;
+  padding: 9px 4px 9px 5px;
   text-align: left;
   color: var(--text);
   cursor: pointer;
@@ -1052,6 +1079,17 @@ button.link {
   color: var(--muted);
   font-size: 11.5px;
   line-height: 1.4;
+}
+
+/*
+  Die beiden Urteile in der Info-Box am Haus -- dieselbe Aussage wie die Haken
+  in der Kachel, hier als Satz: Auf der Karte steht kein zweiter Haken daneben,
+  an dem sich ein Zeichen ablesen liesse.
+*/
+.poi-popup__verdict {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .poi-popup__pick {
@@ -1714,6 +1752,11 @@ button.link {
   .caret-icon {
     transition: none;
   }
+
+  /* Das Blatt springt dann auf seine Hoehe, statt hinzufahren. */
+  .sidebar {
+    transition: none;
+  }
 }
 
 /*
@@ -1842,4 +1885,174 @@ button.link {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
   border-radius: var(--radius-sm);
+}
+
+/* Auf dem Schreibtisch gibt es nichts zu ziehen. */
+.sheet-handle {
+  display: none;
+}
+
+/* --- Schmaler Schirm: die Karte traegt, die Bedienung liegt darauf ---------
+ *
+ * Nebeneinander beantwortet der Schreibtisch die Frage der App in einem Blick:
+ * Zeit aendern, Flaeche ansehen. Untereinander gestapelt -- so war es hier
+ * vorher -- geht das nicht mehr. Gemessen bei 375 x 812 mit *leerem* Formular:
+ * Die Seitenleiste allein war 874 px hoch, die Karte begann also 62 px
+ * unterhalb der Faltkante; beim Oeffnen war von ihr nichts zu sehen, und das
+ * Dock, das auf dem Schreibtisch unten klebt, war mitten im Dokument gelandet
+ * (die Seitenleiste ist dort kein eigener Scrollbehaelter mehr).
+ *
+ * Deshalb: Karte fest im Hintergrund ueber den ganzen Schirm, Bedienung als
+ * ziehbares Blatt darueber. Die Seitenleiste bleibt dabei, was sie ist -- ein
+ * Scrollbehaelter mit klebendem Dock; nur ihre Aussenmasse aendern sich. Kein
+ * zweiter Komponentenbaum: Die Karte duerfte sonst bei jeder Drehung des
+ * Geraets neu aufgebaut werden.
+ */
+@media (max-width: 800px) {
+  .layout {
+    display: block;
+    /* Die Seite selbst scrollt nicht -- das tut das Blatt. */
+    overflow: hidden;
+    /* Wie hoch das Blatt steht. Die Karte liest denselben Wert. */
+    --sheet: 60dvh;
+  }
+
+  /*
+    Eingeklappt ist das Blatt genau so hoch wie das, was fest daran haengt:
+    Griff plus Dock. Gemessen in `sheet.ts`, weil das Dock atmet -- eine
+    Fehlermeldung oder eine laufende Suche macht es eine Zeile hoeher. Ein
+    fester Anteil (vorher 25 %) war mal zu gross und mal zu klein, und zu klein
+    hiess: Der Griff lag auf dem Knopf.
+  */
+  .layout[data-snap='peek'] {
+    --sheet: var(--sheet-peek, 25dvh);
+  }
+
+  .layout[data-snap='half'] {
+    --sheet: 60dvh;
+  }
+
+  .layout[data-snap='full'] {
+    --sheet: 92dvh;
+  }
+
+  .map-area {
+    position: fixed;
+    inset: 0;
+    min-height: 0;
+  }
+
+  .sidebar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    height: var(--sheet);
+    /* Oben kein Polster: Das liefert der Griff, der darueber klebt. */
+    padding-top: 0;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -10px 28px rgb(0 0 0 / 16%);
+    /* Am Listenende nicht die Seite mitziehen (und kein Neuladen per Wisch). */
+    overscroll-behavior: contain;
+    transition: height 0.25s ease;
+  }
+
+  /* Beim Ziehen kommt die Hoehe Bild fuer Bild aus dem Finger -- eine
+     Ueberblendung liefe ihm hinterher. */
+  .layout[data-dragging='true'] .sidebar {
+    transition: none;
+  }
+
+  /*
+    Der Griff. Er klebt oben im Blatt, statt mit der Liste wegzuscrollen --
+    sonst waere das Blatt nur noch zuzuziehen, wenn man vorher ganz nach oben
+    scrollt. `touch-action: none`, weil der Browser den senkrechten Wisch sonst
+    als Bildlauf nimmt und der Griff nie einen `pointermove` sieht.
+  */
+  .sheet-handle {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    /* Bis an beide Raender, wie das Dock -- die Liste soll dahinter
+       verschwinden, nicht daneben durchblitzen. */
+    margin: 0 -20px;
+    padding: 11px 0 9px;
+    border: none;
+    background: var(--panel);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .sheet-handle::before {
+    content: '';
+    display: block;
+    width: 38px;
+    height: 4px;
+    margin: 0 auto;
+    border-radius: 2px;
+    background: var(--border);
+  }
+
+  .sheet-handle:active {
+    cursor: grabbing;
+  }
+
+  /*
+    Die Bereichswahl klebt **nicht**. Sie tat es kurzzeitig, damit man vom
+    eingeklappten Blatt aus umschalten kann -- und legte sich dabei genau ueber
+    den Knopf im Dock: Beide klebten, die eine oben, das andere unten, und bei
+    wenig Hoehe trafen sie sich in der Mitte. Angeheftet gehoert das, was man
+    braucht, wenn sonst nichts zu sehen ist, und das ist der Knopf. Die Reiter
+    scrollen jetzt mit und verschwinden hinter dem Dock -- es ist deckend und
+    steht als einziges positioniertes Element am Ende der Liste, also darueber.
+  */
+
+  /*
+    Die Herkunftsangabe der Karte gehoert sichtbar auf die Karte. Sie sitzt
+    unten rechts und laege sonst unter dem Blatt -- also steigt sie mit ihm.
+  */
+  .maplibregl-ctrl-bottom-right,
+  .maplibregl-ctrl-bottom-left {
+    bottom: var(--sheet);
+  }
+
+  /*
+    Finger statt Zeiger: Die Bedienzeilen sind auf dem Schreibtisch auf
+    Dichte gerechnet (24 bis 34 px). Hier zaehlt die Trefferflaeche, und das
+    Blatt ist breit genug, um sie herzugeben.
+  */
+  .card__head {
+    --control-h: 32px;
+  }
+
+  .poi-cond__body .poi-controls {
+    --control-h: 36px;
+  }
+
+  .card--draft,
+  .pois > .poi-controls {
+    --control-h: 40px;
+  }
+
+  .poi-row input[type='checkbox'],
+  .poi-popup__pick input[type='checkbox'] {
+    width: 20px;
+    height: 20px;
+  }
+
+  .poi-row__expand,
+  .place-card__caret,
+  .poi-cond__remove,
+  .numfield .numfield__step {
+    /* Die gezeichnete Groesse bleibt; nur der Bereich darum waechst. */
+    min-width: 28px;
+  }
+
+  .poi-row__expand {
+    height: 28px;
+  }
 }

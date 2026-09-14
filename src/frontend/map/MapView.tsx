@@ -13,14 +13,17 @@ import type {
   BoundingBox,
   CheckedPlace,
   FoundPoi,
+  LocationCheckResult,
+  MapFocus,
   Target,
 } from '../types.js';
+import { verdictText, verdictTone } from '../verdict.js';
 import { ZoomControls } from './ZoomControls.js';
 import { loadViewport, saveViewport } from '../storage.js';
 import { isPoiSelected } from '../poi/selection.js';
 import { regionDistance } from '../poi/distance.js';
 import { CATEGORY_COLORS, poiIconId, poiIconSvg } from '../poi/icons.js';
-import { useTexts } from '../i18n/index.js';
+import { useTexts, type Texts } from '../i18n/index.js';
 
 type MapViewProps = {
   styleUrl: string;
@@ -30,6 +33,12 @@ type MapViewProps = {
   poiRegion: AreaFeature | null;
   /** Die im Tab „Orte prüfen“ gesammelten Adressen. */
   checkedPlaces: CheckedPlace[];
+  /** Urteil je geprüftem Ort, nach dessen ID -- steht in der Info-Box am Haus. */
+  placeVerdicts: Record<string, LocationCheckResult>;
+  /** Das Haus wurde angeklickt: Die Seitenleiste zeigt dazu die ganze Kachel. */
+  onPlaceOpen: (id: string) => void;
+  /** Die Info-Box am Haus ist zu -- die Kachel ist nicht mehr hervorgehoben. */
+  onPlaceClose: (id: string) => void;
   bounds: BoundingBox | null;
   pois: FoundPoi[];
   selectedKeys: Set<string>;
@@ -46,10 +55,21 @@ type MapViewProps = {
   focusedPoiIds: ReadonlySet<string>;
   /** Ort, dessen Info-Box offen ist -- immer höchstens einer. */
   popupPoiId: string | null;
+  /**
+   * Wohin die Karte springen soll, ausgelöst aus der Liste links. Die
+   * Gegenrichtung zum Klick auf einen Punkt, der dort die Zeile hervorhebt.
+   */
+  focus: MapFocus | null;
 };
 
 const INITIAL_CENTER: [number, number] = [10.45, 51.16];
 const INITIAL_ZOOM = 5;
+
+/**
+ * Obergrenze beim Einpassen einer Kette. Nur dort: Ein einzelner Ort wird
+ * zentriert, ohne den Zoom anzufassen -- siehe den Effekt weiter unten.
+ */
+const FIT_MAX_ZOOM = 14;
 
 const ISOCHRONE_PREFIX = 'isochrone-src-';
 const INTERSECTION_SOURCE = 'intersection-src';
@@ -152,6 +172,57 @@ const ensurePoiIcons = async (map: maplibregl.Map): Promise<void> => {
   );
 };
 
+/**
+ * Die Info-Box am Haus. Sie sagt dasselbe wie die beiden Haken in der Kachel
+ * der Seitenleiste -- und muss es sagen, weil man beim Klick auf der Karte
+ * steht und nicht in der Liste: Ein Marker, der nur seinen eigenen Namen
+ * wiederholt, beantwortet genau die Frage nicht, wegen der man ihn anklickt.
+ */
+const placePopupContent = (
+  texts: Texts,
+  place: CheckedPlace,
+  verdict: LocationCheckResult | undefined,
+): HTMLElement => {
+  const box = document.createElement('div');
+  box.className = 'poi-popup';
+
+  const title = document.createElement('strong');
+  title.textContent = place.label;
+  box.append(title);
+
+  const kind = document.createElement('div');
+  kind.className = 'poi-popup__meta';
+  kind.textContent = texts.map.markerLabel;
+  box.append(kind);
+
+  const line = (state: boolean | null, yes: string, no: string, open: string): void => {
+    const row = document.createElement('p');
+    row.className = `poi-popup__verdict ${verdictTone(state)}`;
+    row.textContent = verdictText(state, yes, no, open);
+    box.append(row);
+  };
+
+  line(
+    verdict?.inIntersection ?? null,
+    texts.address.targetsMet,
+    texts.address.targetsUnmet,
+    texts.address.targetsUnknown,
+  );
+  line(
+    verdict?.inPoiRegion ?? null,
+    texts.address.placesMet,
+    texts.address.placesUnmet,
+    texts.address.placesUnknown,
+  );
+
+  const more = document.createElement('div');
+  more.className = 'poi-popup__meta';
+  more.textContent = texts.map.markerDetails;
+  box.append(more);
+
+  return box;
+};
+
 const removeLayerIfPresent = (map: maplibregl.Map, id: string): void => {
   if (map.getLayer(id) !== undefined) map.removeLayer(id);
 };
@@ -166,6 +237,9 @@ export const MapView = ({
   intersection,
   poiRegion,
   checkedPlaces,
+  placeVerdicts,
+  onPlaceOpen,
+  onPlaceClose,
   bounds,
   pois,
   selectedKeys,
@@ -174,6 +248,7 @@ export const MapView = ({
   onPoiToggle,
   focusedPoiIds,
   popupPoiId,
+  focus,
 }: MapViewProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -187,6 +262,12 @@ export const MapView = ({
   onPoiCloseRef.current = onPoiClose;
   const onPoiToggleRef = useRef(onPoiToggle);
   onPoiToggleRef.current = onPoiToggle;
+  // Die Rueckmeldungen der Haus-Info-Box haengen an einer Popup-Instanz, die
+  // nur einmal entsteht -- ohne Ref hielte sie den Stand jenes Rendervorgangs.
+  const onPlaceOpenRef = useRef(onPlaceOpen);
+  onPlaceOpenRef.current = onPlaceOpen;
+  const onPlaceCloseRef = useRef(onPlaceClose);
+  onPlaceCloseRef.current = onPlaceClose;
   // Der Klick-Handler wird nur einmal registriert und würde sonst dauerhaft
   // die POI-Liste des ersten Rendervorgangs festhalten.
   const poisRef = useRef(pois);
@@ -396,17 +477,28 @@ export const MapView = ({
         element.setAttribute('aria-label', texts.map.markerLabel);
         element.textContent = '🏠';
 
+        const popup = new maplibregl.Popup({ offset: 20 }).setDOMContent(
+          placePopupContent(texts, place, placeVerdicts[place.id]),
+        );
+
+        // Nicht der Marker meldet den Klick, sondern die Box: MapLibre schaltet
+        // sie beim Klick um, und ein eigener Zuhoerer am Marker wuerde beim
+        // Zuklappen gegen sie arbeiten -- erst schliessen, dann wieder oeffnen.
+        popup.on('open', () => onPlaceOpenRef.current(place.id));
+        popup.on('close', () => onPlaceCloseRef.current(place.id));
+
         markers.set(
           place.id,
-          new maplibregl.Marker({ element })
-            .setLngLat(position)
-            .setPopup(new maplibregl.Popup().setText(texts.map.markerPopup(place.label)))
-            .addTo(map),
+          new maplibregl.Marker({ element }).setLngLat(position).setPopup(popup).addTo(map),
         );
         neuerMarker = position;
       } else {
         existing.setLngLat(position);
-        existing.getPopup()?.setText(texts.map.markerPopup(place.label));
+        // Das Urteil aendert sich mit jeder neuen Region -- eine offene Box
+        // zeigt sonst die Antwort von vorhin.
+        existing
+          .getPopup()
+          ?.setDOMContent(placePopupContent(texts, place, placeVerdicts[place.id]));
       }
     }
 
@@ -416,7 +508,7 @@ export const MapView = ({
     if (neuerMarker !== null && !map.getBounds().contains(neuerMarker)) {
       map.easeTo({ center: neuerMarker, zoom: Math.max(map.getZoom(), 10) });
     }
-  }, [checkedPlaces, styleReady]);
+  }, [checkedPlaces, placeVerdicts, texts, styleReady]);
 
   // Schnittmenge als eigener, hervorgehobener Layer (Spec 10).
   useEffect(() => {
@@ -685,6 +777,57 @@ export const MapView = ({
     // selectedKeys gehoert in die Abhaengigkeiten, damit das Haekchen auch
     // stimmt, wenn die Auswahl ueber die Liste geaendert wird.
   }, [popupPoiId, pois, selectedKeys, styleReady]);
+
+  /**
+   * Die Gegenrichtung zum Klick auf einen Punkt: Der hebt links die Zeile
+   * hervor und scrollt sie ins Bild -- also muss ein Klick auf die Zeile den
+   * Ort auf der Karte zeigen. Ohne das steht der Treffer zwar angehakt in der
+   * Liste, aber irgendwo unter hundert gleich aussehenden Punkten.
+   *
+   * Ein einzelner Ort wird nur zentriert -- der Zoom bleibt, wie der Nutzer ihn
+   * eingestellt hat. Eine Kette wird eingepasst: Bei „clever fit" sind alle
+   * Filialen gemeint, und die einzelne anzusteuern waere geraten; mehrere
+   * Punkte zu zeigen geht ohne Zoom nicht.
+   */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map === null || !styleReady) return;
+    if (focus === null || focus.points.length === 0) return;
+
+    const first = focus.points[0]!;
+
+    if (focus.points.length === 1) {
+      // Nur zentrieren, den Zoom lassen, wie er ist. Auch hineinzuzoomen waere
+      // eine zweite, ungefragte Antwort: Wer eine Uebersicht eingestellt hat,
+      // will den Ort *in* dieser Uebersicht sehen, nicht die Uebersicht
+      // verlieren -- der Ausschnitt gehoert dem Nutzer, der Zoom erst recht.
+      map.easeTo({ center: [first.longitude, first.latitude], duration: 600 });
+      return;
+    }
+
+    let box: BoundingBox = [
+      first.longitude,
+      first.latitude,
+      first.longitude,
+      first.latitude,
+    ];
+    for (const point of focus.points) {
+      box = [
+        Math.min(box[0], point.longitude),
+        Math.min(box[1], point.latitude),
+        Math.max(box[2], point.longitude),
+        Math.max(box[3], point.latitude),
+      ];
+    }
+
+    map.fitBounds(
+      [
+        [box[0], box[1]],
+        [box[2], box[3]],
+      ],
+      { padding: 80, duration: 600, maxZoom: FIT_MAX_ZOOM },
+    );
+  }, [focus, styleReady]);
 
   // Karte einpassen -- genau einmal, beim ersten Ziel. Jede spätere Änderung
   // (Reisezeit, Verkehrsmittel, weiteres Ziel) lässt den Ausschnitt in Ruhe;

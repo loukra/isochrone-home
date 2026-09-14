@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   analyze,
+  checkLocations,
   fetchIsochrone,
   fetchMapConfig,
   geocode,
@@ -22,6 +23,7 @@ import { LanguageSwitch } from './i18n/LanguageSwitch.js';
 import { ThemeSwitch } from './components/ThemeSwitch.js';
 import { TooltipLayer } from './components/TooltipLayer.js';
 import { useTheme } from './theme.js';
+import { useSheet } from './sheet.js';
 import { translateError } from './i18n/errors.js';
 import {
   canSortByRelevance,
@@ -46,6 +48,8 @@ import type {
   Coordinate,
   FoundPoi,
   GeocodingCandidate,
+  LocationCheckResult,
+  MapFocus,
   PoiCategory,
   Target,
   TravelMode,
@@ -92,6 +96,25 @@ export const App = () => {
   const [checkedPlaces, setCheckedPlaces] = useState<CheckedPlace[]>(
     restored?.checkedPlaces ?? [],
   );
+  /**
+   * Das Urteil je geprüftem Ort. Es steht hier und nicht in der Kachel, weil
+   * die Info-Box am Haus auf der Karte dieselbe Antwort geben muss -- zweimal
+   * zu prüfen hiesse zwei Antworten auf dieselbe Frage.
+   */
+  const [verdicts, setVerdicts] = useState<Record<string, LocationCheckResult>>({});
+  const [verdictError, setVerdictError] = useState<string | null>(null);
+  /** Das zuletzt auf der Karte angeklickte Haus; seine Kachel steht im Bild. */
+  const [focusedPlaceId, setFocusedPlaceId] = useState<string | null>(null);
+  /** Auftrag an die Karte, einen angeklickten Ort zu zeigen -- siehe MapFocus. */
+  const [mapFocus, setMapFocus] = useState<MapFocus | null>(null);
+  const focusStamp = useRef(0);
+  /**
+   * Das Blatt über der Karte -- nur auf schmalen Schirmen sichtbar, siehe
+   * `sheet.ts`. Oben bleibt `data-snap` wirkungslos: Die Regeln dazu stehen
+   * sämtlich im Medienblock.
+   */
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const sheet = useSheet(sidebarRef);
   /** Providerabhaengige Obergrenze; kommt aus der Backend-Konfiguration. */
   const [maxMinutes, setMaxMinutes] = useState(60);
   const [targets, setTargets] = useState<Target[]>(restored?.targets ?? []);
@@ -259,10 +282,54 @@ export const App = () => {
     setCheckedPlaces((current) => current.filter((place) => place.id !== id));
   }, []);
 
+  /**
+   * Auftrag an die Karte, etwas zu zeigen. Die laufende Nummer macht aus zwei
+   * gleichen Aufträgen zwei -- sonst spränge ein zweiter Klick auf dieselbe
+   * Zeile nirgendwohin, weil sich am Zustand nichts geändert hätte.
+   */
+  const showOnMap = useCallback((points: Coordinate[]) => {
+    if (points.length === 0) return;
+    focusStamp.current += 1;
+    setMapFocus({ points, stamp: focusStamp.current });
+  }, []);
+
   const toggleCheckedPlace = useCallback((id: string) => {
     setCheckedPlaces((current) =>
       current.map((place) => (place.id === id ? { ...place, open: !place.open } : place)),
     );
+  }, []);
+
+  /**
+   * Der Name in der Kachel fährt die Karte hin -- und tut sonst nichts. Beides
+   * an einen Knopf zu hängen hiess: Wer nachsehen wollte, wo der Ort liegt,
+   * bekam die Kachel mitsamt Fahrzeitmessung dazu, und wer die Zahlen zuklappte,
+   * verlor dafür seinen Ausschnitt. Aufgeklappt wird am Pfeil daneben.
+   */
+  const showCheckedPlaceOnMap = useCallback(
+    (id: string) => {
+      const place = checkedPlaces.find((item) => item.id === id);
+      if (place !== undefined) showOnMap([place.coordinate]);
+    },
+    [checkedPlaces, showOnMap],
+  );
+
+  /**
+   * Klick auf ein Haus auf der Karte. Die Info-Box dort nennt nur die beiden
+   * Urteile; alles Weitere -- die Fahrzeit zu jedem Ziel -- steht in der
+   * Kachel, also wird die aufgeschlagen. Dass damit gemessen wird, ist
+   * dieselbe Trennlinie wie sonst: Das Aufklappen *ist* die Frage danach.
+   */
+  const openCheckedPlace = useCallback((id: string) => {
+    setActiveTab('location-check');
+    setFocusedPlaceId(id);
+    setCheckedPlaces((current) =>
+      current.map((place) => (place.id === id ? { ...place, open: true } : place)),
+    );
+  }, []);
+
+  /** Die Info-Box ist zu -- die Hervorhebung der Kachel gehörte zu ihr. */
+  const closeCheckedPlace = useCallback((id: string) => {
+    setFocusedPlaceId((current) => (current === id ? null : current));
   }, []);
 
   // Jede Aenderung sofort sichern, damit auch ein harter Reload nichts verliert.
@@ -464,6 +531,52 @@ export const App = () => {
     analysis.kind === 'done' && !analysis.stale ? analysis.result.intersection : null;
 
   /**
+   * Die Urteile werden nicht gespeichert, sondern abgeleitet: Gemerkt wird nur
+   * der Ort. So stimmen sie nach einem Reload wieder -- und sie folgen späteren
+   * Änderungen an Analyse und Ortsauswahl, statt eine veraltete Antwort stehen
+   * zu lassen. Alle Orte in einem Aufruf: Die Flächen im Rumpf sind gross, die
+   * Punkte winzig.
+   */
+  const placeKey = checkedPlaces.map((place) => place.id).join('|');
+
+  useEffect(() => {
+    if (checkedPlaces.length === 0) {
+      setVerdicts({});
+      return;
+    }
+
+    let abgeloest = false;
+    const pruefung = checkedPlaces.map((place) => place.id);
+
+    checkLocations(
+      checkedPlaces.map((place) => place.coordinate),
+      intersection,
+      poiRegion,
+    )
+      .then((next) => {
+        if (abgeloest) return;
+        setVerdicts(
+          Object.fromEntries(
+            pruefung.flatMap((id, index) => {
+              const result = next.results[index];
+              return result === undefined ? [] : [[id, result] as const];
+            }),
+          ),
+        );
+        setVerdictError(null);
+      })
+      .catch((reason: unknown) => {
+        if (!abgeloest) setVerdictError(translateError(texts, reason));
+      });
+
+    return () => {
+      abgeloest = true;
+    };
+    // placeKey statt checkedPlaces: Ein Aufklappen ändert die Liste, aber kein
+    // Urteil.
+  }, [placeKey, intersection, poiRegion]);
+
+  /**
    * Aufklappen ist ein Akkordeon: Eine Bedingung zu öffnen schliesst die
    * anderen.
    *
@@ -651,21 +764,35 @@ export const App = () => {
   );
 
   /** Ganze Kette hervorheben, ohne Info-Box -- die gilt einem einzelnen Ort. */
-  const focusGroup = useCallback((group: PoiGroup) => {
-    const ids = group.members.map((member) => member.id);
-    setFocusedPoiIds((current) => {
-      const same = ids.length === current.size && ids.every((id) => current.has(id));
-      return same ? new Set() : new Set(ids);
-    });
-    setPopupPoiId(null);
-  }, []);
+  const focusGroup = useCallback(
+    (group: PoiGroup) => {
+      const ids = group.members.map((member) => member.id);
+      const same =
+        ids.length === focusedPoiIds.size && ids.every((id) => focusedPoiIds.has(id));
 
-  const focusMember = useCallback((poi: FoundPoi) => {
-    setPopupPoiId((current) => (current === poi.id ? null : poi.id));
-    setFocusedPoiIds((current) =>
-      current.size === 1 && current.has(poi.id) ? new Set() : new Set([poi.id]),
-    );
-  }, []);
+      setFocusedPoiIds(same ? new Set() : new Set(ids));
+      setPopupPoiId(null);
+
+      // Alle Filialen einpassen, nicht die nächstbeste ansteuern: Die Zeile
+      // meint die Kette. Beim Abwählen bleibt der Ausschnitt, wo er ist.
+      if (!same) showOnMap(group.members.map((member) => member.coordinate));
+    },
+    [focusedPoiIds, showOnMap],
+  );
+
+  const focusMember = useCallback(
+    (poi: FoundPoi) => {
+      setPopupPoiId((current) => (current === poi.id ? null : poi.id));
+      setFocusedPoiIds((current) =>
+        current.size === 1 && current.has(poi.id) ? new Set() : new Set([poi.id]),
+      );
+
+      // Hervorheben allein hilft nicht, wenn der Punkt gar nicht im Bild ist --
+      // genau das ist der Normalfall bei achtzig Treffern über eine Region.
+      if (popupPoiId !== poi.id) showOnMap([poi.coordinate]);
+    },
+    [popupPoiId, showOnMap],
+  );
 
   /**
    * Karteninhalt: Orte der aufgeklappten Bedingungen. Zwei Kategorien auf
@@ -915,8 +1042,32 @@ export const App = () => {
   );
 
   return (
-    <div className="layout">
-      <aside className="sidebar">
+    <div
+      className="layout"
+      data-snap={sheet.snap}
+      data-dragging={sheet.dragging ? 'true' : undefined}
+      style={sheet.style}
+    >
+      <aside className="sidebar" ref={sidebarRef}>
+        {/*
+          Der Griff des Blattes. Auf dem Schreibtisch `display: none` -- dort
+          ist die Seitenleiste eine Spalte und hat nichts zu ziehen.
+        */}
+        <button
+          type="button"
+          className="sheet-handle"
+          onPointerDown={sheet.onPointerDown}
+          // Mit der Tastatur gibt es kein Ziehen; Enter und Leertaste schalten
+          // weiter. Kein `onClick`: Ein Tipp löst das schon beim Loslassen aus,
+          // und beides zusammen schöbe das Blatt um zwei Rastpunkte.
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            sheet.cycle();
+          }}
+          aria-label={texts.app.sheetHandle}
+        />
+
         <header>
           <h1>{texts.app.title}</h1>
           <p className="subtitle">{texts.app.subtitle}</p>
@@ -1036,13 +1187,15 @@ export const App = () => {
           </>
         ) : (
           <LocationCheckPanel
-            intersection={intersection}
-            poiRegion={poiRegion}
             targets={readyTargets}
             places={checkedPlaces}
+            verdicts={verdicts}
+            verdictError={verdictError}
+            focusedPlaceId={focusedPlaceId}
             onAdd={addCheckedPlace}
             onRemove={removeCheckedPlace}
             onToggleOpen={toggleCheckedPlace}
+            onShowOnMap={showCheckedPlaceOnMap}
           />
         )}
 
@@ -1093,6 +1246,9 @@ export const App = () => {
             intersection={intersection}
             poiRegion={poiRegion}
             checkedPlaces={checkedPlaces}
+            placeVerdicts={verdicts}
+            onPlaceOpen={openCheckedPlace}
+            onPlaceClose={closeCheckedPlace}
             bounds={fitBounds}
             pois={pois}
             selectedKeys={selectedKeys}
@@ -1107,6 +1263,7 @@ export const App = () => {
             onPoiToggle={togglePoiFromMap}
             focusedPoiIds={focusedPoiIds}
             popupPoiId={popupPoiId}
+            focus={mapFocus}
           />
         )}
       </main>
