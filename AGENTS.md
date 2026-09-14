@@ -1,4 +1,4 @@
-# Location Optimizer — Agent Guide
+# Wohnzone — Agent Guide
 
 Der Inhalt dieser Datei steht in **[CLAUDE.md](CLAUDE.md)**.
 

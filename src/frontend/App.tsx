@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   analyze,
-  ApiError,
   fetchIsochrone,
   fetchMapConfig,
   geocode,
@@ -17,7 +16,10 @@ import { StatusBar } from './StatusBar.js';
 import { LocationCheckPanel } from './LocationCheckPanel.js';
 import { PoiPanel } from './poi/PoiPanel.js';
 import { PoiApplyBar } from './poi/PoiApplyBar.js';
-import { CATEGORY_LABELS_PLURAL, type PoiCondition } from './poi/PoiConditionCard.js';
+import { type PoiCondition } from './poi/PoiConditionCard.js';
+import { useTexts } from './i18n/index.js';
+import { LanguageSwitch } from './i18n/LanguageSwitch.js';
+import { translateError } from './i18n/errors.js';
 import {
   groupPois,
   isPoiSelected,
@@ -50,11 +52,6 @@ type AnalysisState =
   | { kind: 'done'; result: AnalysisResponse; stale: boolean }
   | { kind: 'error'; message: string };
 
-const messageOf = (error: unknown): string =>
-  error instanceof ApiError
-    ? error.message
-    : 'Es ist ein unerwarteter Fehler aufgetreten.';
-
 const newCondition = (category: PoiCategory): PoiCondition => ({
   category,
   // Das Auto als Vorgabe, wie bei den Zielen: Es ist die weiteste Reichweite
@@ -73,6 +70,7 @@ const restored = loadState();
 const restoredSelection = loadPoiSelection();
 
 export const App = () => {
+  const texts = useTexts();
   const [activeTab, setActiveTab] = useState<'analysis' | 'location-check'>('analysis');
   const [mapStyleUrl, setMapStyleUrl] = useState<string | null>(null);
   /** Die im Tab "Orte prüfen" gesammelten Adressen; überleben den Reload. */
@@ -211,7 +209,7 @@ export const App = () => {
       setTargets((current) =>
         current.map((item) =>
           item.id === target.id
-            ? { ...item, status: 'error', error: messageOf(error) }
+            ? { ...item, status: 'error', error: translateError(texts, error) }
             : item,
         ),
       );
@@ -302,7 +300,7 @@ export const App = () => {
 
           if (found.length === 0) {
             setDraftError(
-              `Die Adresse "${values.address}" konnte nicht gefunden werden.`,
+              texts.target.addressNotFound(values.address),
             );
             setDraftBusy(false);
             return;
@@ -346,7 +344,7 @@ export const App = () => {
 
         await loadIsochrone(target);
       } catch (error) {
-        setDraftError(messageOf(error));
+        setDraftError(translateError(texts, error));
       } finally {
         setDraftBusy(false);
       }
@@ -435,7 +433,7 @@ export const App = () => {
       // Signatur freigeben, sonst bliebe ein einmaliger Netzfehler für immer
       // stehen -- es gibt keinen Knopf mehr, der es erneut anstoßen könnte.
       lastAnalysed.current = null;
-      setAnalysis({ kind: 'error', message: messageOf(error) });
+      setAnalysis({ kind: 'error', message: translateError(texts, error) });
     }
   }, [readyTargets]);
 
@@ -492,7 +490,7 @@ export const App = () => {
         // Die vorige Liste bleibt stehen. Sie gehoert zum alten Radius, aber
         // sie zu leeren wuerde die Seitenleiste zusammenklappen lassen -- der
         // Fehler steht daneben und sagt, warum nichts Neues gekommen ist.
-        patchCondition(category, { busy: false, error: messageOf(error) });
+        patchCondition(category, { busy: false, error: translateError(texts, error) });
       }
     },
     [conditions, readyTargets, patchCondition],
@@ -677,7 +675,7 @@ export const App = () => {
       setSelectionDirty(false);
       stepThree.current.applied = true;
     } catch (error) {
-      setPoiError(messageOf(error));
+      setPoiError(translateError(texts, error));
     } finally {
       setPoiBusy(false);
     }
@@ -725,31 +723,28 @@ export const App = () => {
    */
   const analysisLine: { text: string; tone: 'hint' | 'error' | 'success' } =
     readyTargets.length === 0
-      ? { text: 'Füge mindestens ein Ziel hinzu.', tone: 'hint' }
+      ? { text: texts.analysis.addFirstTarget, tone: 'hint' }
       : analysis.kind === 'error'
         ? { text: analysis.message, tone: 'error' }
         : analysis.kind !== 'done'
-          ? { text: 'Gemeinsame Region wird berechnet…', tone: 'hint' }
+          ? { text: texts.analysis.computing, tone: 'hint' }
           : analysis.stale
-            ? { text: 'Die Ziele haben sich geändert.', tone: 'hint' }
+            ? { text: texts.analysis.targetsChanged, tone: 'hint' }
             : analysis.result.intersection === null
-              ? {
-                  text: 'Für diese Anforderungen wurde keine gemeinsame Region gefunden.',
-                  tone: 'error',
-                }
-              : { text: 'Gemeinsame Region gefunden.', tone: 'success' };
+              ? { text: texts.analysis.none, tone: 'error' }
+              : { text: texts.analysis.found, tone: 'success' };
 
   const activities = [
     ...targets
       .filter((target) => target.status === 'loading')
-      .map((target) => `Isochrone für ${target.name} wird berechnet…`),
-    ...(analysis.kind === 'loading' ? ['Gemeinsame Region wird berechnet…'] : []),
+      .map((target) => texts.analysis.targetBusy(target.name)),
+    ...(analysis.kind === 'loading' ? [texts.analysis.computing] : []),
     ...conditions
       .filter((condition) => condition.busy)
-      .map(
-        (condition) => `${CATEGORY_LABELS_PLURAL[condition.category]} werden gesucht…`,
+      .map((condition) =>
+        texts.analysis.categoryBusy(texts.categoriesPlural[condition.category]),
       ),
-    ...(poiBusy ? ['Erreichbarkeit der gewählten Orte wird geprüft…'] : []),
+    ...(poiBusy ? [texts.analysis.checkingPlaces] : []),
   ];
 
   const rechnetGerade =
@@ -861,13 +856,12 @@ export const App = () => {
     <div className="layout">
       <aside className="sidebar">
         <header>
-          <h1>Location Optimizer</h1>
-          <p className="subtitle">
-            Ziele setzen, Isochronen ansehen, gemeinsame Region analysieren.
-          </p>
+          <h1>{texts.app.title}</h1>
+          <p className="subtitle">{texts.app.subtitle}</p>
+          <LanguageSwitch />
         </header>
 
-        <nav className="sidebar-tabs" aria-label="Bereiche" role="tablist">
+        <nav className="sidebar-tabs" aria-label={texts.app.tablistLabel} role="tablist">
           <button
             type="button"
             role="tab"
@@ -877,7 +871,7 @@ export const App = () => {
             aria-selected={activeTab === 'analysis'}
             onClick={() => setActiveTab('analysis')}
           >
-            Analyse
+            {texts.tabs.targets}
           </button>
           <button
             type="button"
@@ -890,7 +884,7 @@ export const App = () => {
             aria-selected={activeTab === 'location-check'}
             onClick={() => setActiveTab('location-check')}
           >
-            Orte prüfen
+            {texts.tabs.addresses}
           </button>
         </nav>
 
@@ -930,7 +924,7 @@ export const App = () => {
                 />
               ) : (
                 <button type="button" className="add" onClick={() => setDraftOpen(true)}>
-                  + Ziel hinzufügen
+                  {texts.target.add}
                 </button>
               )}
             </section>
@@ -1019,8 +1013,8 @@ export const App = () => {
       <main className="map-area">
         {mapStyleUrl === null ? (
           <div className="map-placeholder">
-            <p>Karte kann nicht geladen werden.</p>
-            <p className="hint">Läuft das Backend? (npm run dev)</p>
+            <p>{texts.map.loadFailed}</p>
+            <p className="hint">{texts.map.loadFailedHint}</p>
           </div>
         ) : (
           <MapView

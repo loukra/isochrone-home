@@ -1,12 +1,6 @@
 import type { FoundPoi, PoiCategory } from '../types.js';
 
 /**
- * Platzhalter, den der Overpass-Adapter für Orte ohne name-Tag setzt.
- * Er ist kein Name -- solche Orte dürfen nicht zusammengefasst werden.
- */
-export const UNNAMED_LABEL = 'Ohne Namen';
-
-/**
  * Schlüssel der Gruppe, zu der ein Ort gehört.
  *
  * Filialen einer Kette teilen sich einen Schlüssel: Wer "McFit" auswählt,
@@ -35,14 +29,14 @@ const CHAIN_CATEGORIES: ReadonlySet<PoiCategory> = new Set<PoiCategory>([
 export const labelOf = (poi: {
   category: PoiCategory;
   brand: string | null;
-  name: string;
-}): string =>
-  CHAIN_CATEGORIES.has(poi.category) ? poi.brand?.trim() || poi.name : poi.name;
+  name: string | null;
+}): string | null =>
+  CHAIN_CATEGORIES.has(poi.category) ? (poi.brand?.trim() || poi.name) : poi.name;
 
 export const groupKeyOf = (poi: {
   category: PoiCategory;
   brand: string | null;
-  name: string;
+  name: string | null;
   id: string;
 }): string => {
   if (!CHAIN_CATEGORIES.has(poi.category)) return `poi:${poi.id}`;
@@ -50,11 +44,11 @@ export const groupKeyOf = (poi: {
   // Marke und Name teilen sich bewusst einen Namensraum: In Oldenburg traegt
   // eine clever-fit-Filiale ein brand-Tag, die naechste nur den Namen. Mit
   // getrennten Praefixen stuenden sie als zwei Ketten in der Liste.
-  const label = normalizeLabel(poi.brand ?? '') || normalizeLabel(poi.name);
+  const label = normalizeLabel(poi.brand ?? '') || normalizeLabel(poi.name ?? '');
 
-  if (label.length > 0 && label !== normalizeLabel(UNNAMED_LABEL)) {
-    return `place:${label}`;
-  }
+  // Ohne Marke und ohne Namen bleibt nur die OSM-Kennung: Namenlose Orte
+  // dürfen nicht zu einer Kette zusammengefasst werden.
+  if (label.length > 0) return `place:${label}`;
 
   return `poi:${poi.id}`;
 };
@@ -71,7 +65,8 @@ export const normalizeLabel = (label: string): string =>
 
 export type PoiGroup = {
   key: string;
-  label: string;
+  /** `null` bei Orten ohne Namen -- die Oberfläche setzt den Text ein. */
+  label: string | null;
   /** Nach Entfernung sortiert; das nächste zuerst. */
   members: FoundPoi[];
   isBrand: boolean;
@@ -199,7 +194,7 @@ export const poiKeyOf = (poi: { id: string }): string => `poi:${poi.id}`;
  * trägt über Regionsgrenzen hinweg, die Einzelwahl erlaubt Ausnahmen.
  */
 export const isPoiSelected = (
-  poi: { category: PoiCategory; brand: string | null; name: string; id: string },
+  poi: { category: PoiCategory; brand: string | null; name: string | null; id: string },
   keys: ReadonlySet<string>,
 ): boolean => keys.has(poiKeyOf(poi)) || keys.has(groupKeyOf(poi));
 

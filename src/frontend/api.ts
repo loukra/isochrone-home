@@ -32,10 +32,9 @@ const post = async <T>(path: string, body: unknown): Promise<T> => {
       body: JSON.stringify(body),
     });
   } catch {
-    throw new ApiError(
-      'NETWORK_ERROR',
-      'Der Server ist nicht erreichbar. Läuft das Backend?',
-    );
+    // Die Meldung ist nur der Rückfall: Die Oberfläche übersetzt über den Code
+    // (siehe i18n/errors.ts) und zeigt diesen Text nur, wenn sie ihn nicht kennt.
+    throw new ApiError('NETWORK_ERROR', 'Die App erreicht ihren Server nicht.');
   }
 
   const payload: unknown = await response.json().catch(() => null);
@@ -45,7 +44,7 @@ const post = async <T>(path: string, body: unknown): Promise<T> => {
       ?.error;
     throw new ApiError(
       error?.code ?? 'INTERNAL_ERROR',
-      error?.message ?? 'Es ist ein unerwarteter Fehler aufgetreten.',
+      error?.message ?? 'Es ist ein unerwarteter Fehler aufgetreten. Bitte versuche es erneut.',
     );
   }
 
@@ -140,6 +139,7 @@ export type AppSettings = {
 
 export const fetchMapConfig = async (): Promise<AppSettings> => {
   const response = await fetch('/api/config');
-  if (!response.ok) throw new ApiError('CONFIG_ERROR', 'Konfiguration nicht ladbar.');
+  if (!response.ok)
+    throw new ApiError('CONFIG_ERROR', 'Die App konnte ihre Konfiguration nicht laden.');
   return (await response.json()) as AppSettings;
 };

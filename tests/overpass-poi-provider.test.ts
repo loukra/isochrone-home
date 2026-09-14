@@ -197,7 +197,9 @@ describe('OverpassPoiProvider', () => {
 
     expect(spy).toHaveBeenCalledTimes(3);
     expect(pois).toHaveLength(1);
-    expect(pois[0]?.name).toBe('Ohne Namen');
+    // Kein erfundener Anzeigetext aus der Infrastruktur: Ein fehlender Name
+    // ist null, die Oberfläche setzt das Wort dafür ein.
+    expect(pois[0]?.name).toBeNull();
   });
 
   it('meldet dauerhafte Überlastung als Domain-Fehler', async () => {

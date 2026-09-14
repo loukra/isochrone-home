@@ -1,12 +1,10 @@
-import {
-  CATEGORY_LABELS,
-  PoiConditionCard,
-  type PoiCondition,
-} from './PoiConditionCard.js';
+import { PoiConditionCard, type PoiCondition } from './PoiConditionCard.js';
+import { useTexts } from '../i18n/index.js';
+import { POI_CATEGORIES } from '../types.js';
 import type { PoiGroup, PoiSortMode } from './selection.js';
 import type { FoundPoi, PoiCategory, TravelMode } from '../types.js';
 
-const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as PoiCategory[];
+const ALL_CATEGORIES: readonly PoiCategory[] = POI_CATEGORIES;
 
 type PoiPanelProps = {
   conditions: PoiCondition[];
@@ -48,17 +46,16 @@ export const PoiPanel = ({
   onFocusGroup,
   onFocusMember,
 }: PoiPanelProps) => {
+  const texts = useTexts();
   const used = new Set(conditions.map((condition) => condition.category));
   const available = ALL_CATEGORIES.filter((category) => !used.has(category));
 
   return (
     <section className="pois">
-      <h2>Was brauche ich in der Nähe?</h2>
+      <h2>{texts.poi.heading}</h2>
 
       {!canSearch && (
-        <p className="hint">
-          Erst analysieren — die Suche braucht eine gemeinsame Region.
-        </p>
+        <p className="hint">{texts.poi.needsRegion}</p>
       )}
 
       <ul className="poi-conds">
@@ -92,12 +89,12 @@ export const PoiPanel = ({
             onChange={(event) => {
               if (event.target.value !== '') onAdd(event.target.value as PoiCategory);
             }}
-            aria-label="Bedingung hinzufügen"
+            aria-label={texts.poi.addCondition}
           >
-            <option value="">+ Bedingung hinzufügen</option>
+            <option value="">{texts.poi.addConditionOption}</option>
             {available.map((category) => (
               <option key={category} value={category}>
-                {CATEGORY_LABELS[category]}
+                {texts.categories[category]}
               </option>
             ))}
           </select>

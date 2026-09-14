@@ -1069,3 +1069,38 @@ button.link {
     background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns=%22http:%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width=%2229%22%20height=%2229%22%20viewBox=%220%200%2029%2029%22%20fill=%22none%22%20stroke=%22%23fff%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M8%2012V8h4M21%2012V8h-4M8%2017v4h4M21%2017v4h-4%22%2F%3E%3C%2Fsvg%3E");
   }
 }
+
+/* Sprachumschalter: oben rechts in der Kopfzeile, absichtlich klein und
+   unauffaellig -- man braucht ihn genau einmal. */
+.sidebar header {
+  position: relative;
+}
+
+.language-switch {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: auto;
+  padding: 2px 4px;
+  /* Groesser als die 12px der uebrigen Kopfzeile: Eine Flagge auf 12px ist ein
+     Farbfleck, aus dem sich Schwarz-Rot-Gold nicht mehr herauslesen laesst. */
+  font-size: 16px;
+  line-height: 1;
+  /* Ausdrueckliche Emoji-Schriften, sonst greift die Textschrift zuerst und
+     zeigt die beiden Regionalbuchstaben statt der Flagge. */
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji',
+    'Twemoji Mozilla', sans-serif;
+  /* Wirkt nicht auf die Flagge -- Emoji bringen ihre Farben mit -- wohl aber
+     auf den Windows-Rueckfall "DE"/"GB", der dort als Text ankommt. */
+  color: var(--muted, #6b7280);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.language-switch:hover,
+.language-switch:focus-visible {
+  border-color: var(--line, #e5e7eb);
+  color: inherit;
+}

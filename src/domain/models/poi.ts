@@ -22,7 +22,12 @@ export type Poi = {
   /** Stabile Kennung über Suchläufe hinweg: "<osm-typ>/<osm-id>". */
   id: string;
   category: PoiCategory;
-  name: string;
+  /**
+   * `null`, wenn OSM kein name-Tag führt. Bewusst kein Platzhaltertext: Die
+   * Beschriftung ist Sache der Oberfläche und hat eine Sprache -- ein hier
+   * erfundenes Wort stünde auch in einer englischen Oberfläche.
+   */
+  name: string | null;
   coordinate: Coordinate;
   /** Kette bzw. Betreiber, sofern getaggt. Trägt die Auswahl über Regionen hinweg. */
   brand: string | null;

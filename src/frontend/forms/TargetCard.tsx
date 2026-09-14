@@ -1,11 +1,6 @@
 import { useState } from 'react';
-import {
-  TRAVEL_MODES,
-  TRAVEL_MODE_LABELS,
-  TRAVEL_MODE_SHORT,
-  type Target,
-  type TravelMode,
-} from '../types.js';
+import { TRAVEL_MODES, type Target, type TravelMode } from '../types.js';
+import { useTexts } from '../i18n/index.js';
 
 type TargetCardProps = {
   target: Target;
@@ -57,6 +52,7 @@ export const TargetCard = ({
   onToggleVisible,
   onRetry,
 }: TargetCardProps) => {
+  const texts = useTexts();
   const [minutes, setMinutes] = useState(String(target.maxTravelTimeMinutes));
 
   const parsed = Number.parseInt(minutes, 10);
@@ -77,12 +73,12 @@ export const TargetCard = ({
             onChangeTravelMode(target.id, event.target.value as TravelMode)
           }
           disabled={target.status === 'loading'}
-          aria-label={`Verkehrsmittel ${target.name}`}
-          title={TRAVEL_MODE_LABELS[target.travelMode]}
+          aria-label={texts.target.travelModeLabel(target.name)}
+          title={texts.travelModes[target.travelMode]}
         >
           {TRAVEL_MODES.map((mode) => (
             <option key={mode} value={mode}>
-              {TRAVEL_MODE_SHORT[mode]}
+              {texts.travelModesShort[mode]}
             </option>
           ))}
         </select>
@@ -102,9 +98,9 @@ export const TargetCard = ({
             value={minutes}
             onChange={(event) => setMinutes(event.target.value)}
             disabled={target.status === 'loading'}
-            aria-label={`Reisezeit ${target.name} in Minuten`}
+            aria-label={texts.target.minutesLabel(target.name)}
           />
-          <span>Min.</span>
+          <span>{texts.target.minutesUnit}</span>
           {/* Immer da, nur unsichtbar, wenn es nichts zu übernehmen gibt: Ein
               erst beim Tippen erscheinender Knopf schöbe die ganze Kopfzeile
               nach links -- unter dem Zeiger weg, der eben noch auf dem Pfeil
@@ -113,8 +109,8 @@ export const TargetCard = ({
             type="submit"
             className={pending ? 'card__apply' : 'card__apply card__apply--idle'}
             disabled={!pending || target.status === 'loading'}
-            title="Geänderte Reisezeit übernehmen"
-            aria-label={`Reisezeit ${target.name} übernehmen`}
+            title={texts.target.applyTitle}
+            aria-label={texts.target.applyLabel(target.name)}
           >
             <CheckIcon />
           </button>
@@ -125,14 +121,12 @@ export const TargetCard = ({
           className={target.visible ? 'card__eye' : 'card__eye card__eye--off'}
           onClick={() => onToggleVisible(target.id)}
           aria-pressed={!target.visible}
-          aria-label={`Isochrone ${target.name} ${
-            target.visible ? 'ausblenden' : 'einblenden'
-          }`}
-          title={
+          aria-label={
             target.visible
-              ? 'Auf der Karte ausblenden (zählt weiter mit)'
-              : 'Wieder einblenden'
+              ? texts.target.hideLabel(target.name)
+              : texts.target.showLabel(target.name)
           }
+          title={target.visible ? texts.target.hideTitle : texts.target.showTitle}
         >
           <EyeIcon open={target.visible} />
         </button>
@@ -141,7 +135,7 @@ export const TargetCard = ({
           type="button"
           className="remove"
           onClick={() => onRemove(target.id)}
-          aria-label={`${target.name} entfernen`}
+          aria-label={texts.target.removeLabel(target.name)}
         >
           ×
         </button>
@@ -149,12 +143,12 @@ export const TargetCard = ({
 
       <p className="card__address">
         {target.resolvedLabel ?? target.address}
-        {!target.visible && <span className="card__hidden"> · ausgeblendet</span>}
+        {!target.visible && <span className="card__hidden">{texts.target.hiddenSuffix}</span>}
       </p>
 
       {target.status === 'loading' && (
         <p className="hint">
-          Isochrone wird berechnet ({TRAVEL_MODE_LABELS[target.travelMode]})…
+          {texts.target.computing(texts.travelModes[target.travelMode])}
         </p>
       )}
 
@@ -162,7 +156,7 @@ export const TargetCard = ({
         <p className="error">
           {target.error}{' '}
           <button type="button" className="link" onClick={() => onRetry(target.id)}>
-            Erneut versuchen
+            {texts.target.retry}
           </button>
         </p>
       )}

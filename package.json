@@ -1,5 +1,5 @@
 {
-  "name": "location-optimizer",
+  "name": "wohnzone",
   "version": "0.1.0",
   "description": "Findet die gemeinsame erreichbare Wohnregion mehrerer Zielorte via Isochronen-Schnittmenge.",
   "scripts": {

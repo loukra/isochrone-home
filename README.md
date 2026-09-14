@@ -1,4 +1,4 @@
-# Location Optimizer
+# Wohnzone
 
 **Wo kann ich wohnen, damit alle wichtigen Orte in erträglicher Zeit erreichbar
 sind?**

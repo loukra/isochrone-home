@@ -63,25 +63,11 @@ export const TRAVEL_MODES = ['driving', 'cycling', 'ebike', 'walking'] as const;
 
 export type TravelMode = (typeof TRAVEL_MODES)[number];
 
-export const TRAVEL_MODE_LABELS: Record<TravelMode, string> = {
-  driving: 'Auto',
-  cycling: 'Fahrrad',
-  ebike: 'E-Bike',
-  walking: 'zu Fuß',
-};
-
-/** Kurzform für die Kopfzeile, wo neben dem Namen kaum Platz ist. */
-export const TRAVEL_MODE_SHORT: Record<TravelMode, string> = {
-  driving: 'Auto',
-  cycling: 'Rad',
-  ebike: 'E-Bike',
-  walking: 'Fuß',
-};
-
 export type FoundPoi = {
   id: string;
   category: PoiCategory;
-  name: string;
+  /** `null`, wenn OSM keinen Namen führt -- die Oberfläche setzt den Text ein. */
+  name: string | null;
   coordinate: Coordinate;
   brand: string | null;
   website: string | null;

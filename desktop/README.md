@@ -15,7 +15,7 @@ bleibt.
 | `LocationOptimizer.swift` | Fenster, Kindprozess, Aufräumen, Menü |
 | `build-app.sh` | baut Oberfläche und `.app`, trägt die Pfade ein |
 
-Bauen mit `npm run app` im Projektordner. Ergebnis ist `LocationOptimizer.app`
+Bauen mit `npm run app` im Projektordner. Ergebnis ist `Wohnzone.app`
 eine Ebene höher (gitignored).
 
 ## Warum sie nicht weitergebbar ist

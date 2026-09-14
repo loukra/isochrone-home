@@ -1,4 +1,4 @@
-# Location Optimizer — Agent Guide
+# Wohnzone — Agent Guide
 
 Verbindliche Arbeitsanweisung für jede Änderung in diesem Repo.
 Fachliche Quelle der Wahrheit: `location-optimizer-mvp.md`. Diese Datei enthält
@@ -431,6 +431,75 @@ die **einzelnen Isochronen**, §2/§17/§20 (Button) gilt fuer die **Schnittmeng
 Hinweis: Die Spec hat zweimal `# 11`. Gemeint sind API (§11) und
 Fehlerbehandlung (§12).
 
+## Texte und Sprachen
+
+Alle Nutzertexte der Oberfläche liegen in `src/frontend/i18n/`, nicht im Code.
+Deutsch (`de.ts`) ist die Urfassung, Englisch (`en.ts`) die Übersetzung.
+
+- **Der Typ erzwingt Vollständigkeit.** `Texts` wird aus `de.ts` abgeleitet,
+  `en.ts` muss ihn erfüllen. Ein vergessener Schlüssel ist ein Typfehler, kein
+  stiller deutscher Rest in einer englischen Oberfläche.
+- **Platzhalter sind Funktionen**, keine Vorlagen mit `{0}`: `removeLabel: (name)
+  => ...`. Das prüft Anzahl und Typ der Werte beim Übersetzen mit. Die
+  Ergänzung dazu ist `tests/i18n.test.ts` -- der Typ sieht weder leere Texte
+  noch eine Funktion mit zu wenigen Parametern noch einen fehlenden Eintrag in
+  `errors.byCode` (ein `Record`, das jede Menge annimmt).
+- **Zugriff als Objektbaum**, nicht per Schlüsselzeichenkette:
+  `texts.tabs.addresses` statt `t('tabs.addresses')`. Ein Tippfehler ist damit
+  ein Typfehler, und beim Lesen einer Komponente sieht man am Pfad, worum es
+  geht.
+- **Die Sprache kommt aus der gespeicherten Wahl, sonst aus dem Browser, sonst
+  Deutsch.** Die gespeicherte Wahl gewinnt, weil sie eine Entscheidung ist --
+  dieselbe Regel wie beim Kartenausschnitt.
+- `lang` am Dokument und der Fenstertitel folgen der Sprache. `lang` ist kein
+  Beiwerk: Vorleseprogramme wählen danach die Aussprache.
+- **Fehlermeldungen des Backends werden über den Code übersetzt**
+  (`i18n/errors.ts`), nicht über den Text. Das Backend liefert Code *und*
+  deutsche Meldung; es kann die Sprache des Browsers nicht kennen, und
+  Übersetzungen gehören nicht in die Domäne. Gibt es zu einem Code keine
+  Übersetzung, bleibt die Meldung des Servers stehen -- eine deutsche
+  Detailmeldung ist besser als ein englisches "Something went wrong".
+- Zahlenformate hängen über `texts.app.locale` an der Sprache (2,3 km gegen
+  2.3 km).
+- **Der Umschalter zeigt Flaggen** (*geändert am 14.09.2026 auf Wunsch des
+  Nutzers*; vorher standen dort die Sprachnamen). Der Einwand bleibt richtig und
+  steht hier, damit ihn niemand neu entdecken muss: Eine Flagge ist ein Land,
+  keine Sprache -- Deutsch wird in vier Ländern gesprochen, Englisch in weit
+  mehr, und wer eine Oberfläche vor sich hat, die er gerade *nicht* versteht,
+  sucht das Wort in seiner Sprache. Gewählt ist jeweils das Land der
+  Schreibweise des Katalogs (`en` ist `en-GB`, also 🇬🇧).
+  - Der Name verschwindet nur aus dem **Bild**, nicht aus der Bedienung:
+    `LANGUAGE_NAMES` bleibt der zugängliche Name jeder Auswahl, steht im
+    Tooltip, und das Auswahlfeld heisst "Sprache: Deutsch". Ohne das sagte ein
+    Vorleseprogramm "Flagge Deutschland" und benennte damit keine Sprache.
+  - **Windows hat für Flaggen bewusst keine Glyphen.** Dort stehen statt der
+    Flagge die beiden Regionalbuchstaben "DE" bzw. "GB" -- lesbar, aber ein
+    anderes Bild als auf dem Mac. Deshalb bleibt die `color`-Regel im CSS
+    stehen: Sie wirkt nicht auf ein Emoji, wohl aber auf diesen Rückfall.
+  - Die Schriftliste im CSS nennt die Emoji-Schriften **ausdrücklich**; sonst
+    greift die Textschrift zuerst und zeigt auch auf dem Mac zwei Buchstaben.
+- Die Swift-Hülle bleibt davon unberührt und deutsch: sechs Zeichenketten, ein
+  eigener Übersetzungsmechanismus wäre mehr Aufbau als Nutzen.
+
+## Namen gegen Schlüssel
+
+Die App heisst **Wohnzone**. Umbenannt wurde ausschliesslich, was Menschen
+lesen. **Nicht** angefasst wurden:
+
+| Schlüssel | Was ein Umbenennen kostete |
+| --- | --- |
+| `location-optimizer:state:v1` u. a. (`storage.ts`) | Alle gespeicherten Ziele wären weg, in Browser *und* App. |
+| `TAG = 'location-optimizer-cache'` (`file-store.ts`) | Der komplette Plattencache wäre unerreichbar -- alles neu beim Anbieter. |
+| `de.louiskrause.location-optimizer` (`build-app.sh`) | macOS hielte die App für ein anderes Programm: neuer Speicher, Ziele weg. |
+
+Ein sichtbarer Name darf sich ändern, weil ihn nur Menschen lesen. Ein Schlüssel
+ist die Adresse, unter der Daten liegen -- ihn zu ändern heisst nicht
+"umbenennen", sondern "woanders nachsehen und nichts finden". Dass beide einmal
+gleich hiessen, ist kein Grund, sie gemeinsam zu ändern.
+
+Die Spec behält den alten Namen: Ein rückwirkend umbenannter Auftrag wäre nicht
+mehr das historische Dokument, als das er gekennzeichnet ist.
+
 ## Caching (Plattenspeicher, nicht Browser)
 
 Provider-Antworten liegen in `.cache/` (gitignored, `CACHE_DIR`), davor ein
@@ -462,7 +531,7 @@ LRU im Arbeitsspeicher. Kette: **Speicher -> Platte -> Provider**.
 
 ## Mac-App (lokaler Betrieb)
 
-`npm run app` baut `LocationOptimizer.app` — ein Fenster (`WKWebView`), das die
+`npm run app` baut `Wohnzone.app` — ein Fenster (`WKWebView`), das die
 Oberfläche anzeigt, und dahinter der Node-Server als Kindprozess. Quelle:
 `desktop/LocationOptimizer.swift`, zusammengesetzt von `desktop/build-app.sh`.
 

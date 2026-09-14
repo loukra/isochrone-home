@@ -11,7 +11,7 @@
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP="$PROJECT_DIR/LocationOptimizer.app"
+APP="$PROJECT_DIR/Wohnzone.app"
 NODE_PATH="$(command -v node || true)"
 ARCH="$(uname -m)"
 
@@ -34,9 +34,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <plist version="1.0">
 <dict>
 	<key>CFBundleName</key>
-	<string>Location Optimizer</string>
+	<string>Wohnzone</string>
 	<key>CFBundleDisplayName</key>
-	<string>Location Optimizer</string>
+	<string>Wohnzone</string>
 	<key>CFBundleExecutable</key>
 	<string>LocationOptimizer</string>
 	<key>CFBundleIdentifier</key>
