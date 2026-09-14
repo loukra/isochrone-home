@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { missesHouseNumber, soleAnswer } from './address.js';
 import { fetchTravelTimes, geocode } from './api.js';
 import { INTERSECTION_COLOR, POI_REGION_COLOR } from './colors.js';
 import {
@@ -122,10 +123,7 @@ const TravelRow = ({
       </span>
 
       {minutes === null ? (
-        <span
-          className="travel-list__value hint"
-          data-tip={texts.address.noRoute}
-        >
+        <span className="travel-list__value hint" data-tip={texts.address.noRoute}>
           {texts.address.noRouteShort}
         </span>
       ) : (
@@ -227,7 +225,10 @@ const CheckedPlaceCard = ({
   const inPoiRegion = verdict?.inPoiRegion ?? null;
 
   return (
-    <li ref={cardRef} className={focused ? 'place-card place-card--focused' : 'place-card'}>
+    <li
+      ref={cardRef}
+      className={focused ? 'place-card place-card--focused' : 'place-card'}
+    >
       <div className="place-card__head">
         {/*
           Zwei Knoepfe, nicht einer: Der Name faehrt die Karte hin, der Pfeil
@@ -427,11 +428,16 @@ export const LocationCheckPanel = ({
 
     try {
       const found = await geocode(trimmed);
+      const sole = soleAnswer(trimmed, found.candidates);
+
       if (found.candidates.length === 0) {
         setError(texts.address.notFound(trimmed));
-      } else if (found.candidates.length === 1) {
-        pick(found.candidates[0]!);
+      } else if (sole !== null) {
+        pick(sole);
       } else {
+        // Auch ein einzelner Treffer landet hier, wenn er ungenauer ist als
+        // die Frage -- siehe address.ts.
+        setQuery(trimmed);
         setCandidates(found.candidates);
       }
     } catch (reason) {
@@ -471,7 +477,11 @@ export const LocationCheckPanel = ({
 
       {candidates.length > 0 && (
         <div className="candidates">
-          <p className="candidates__hint">{texts.address.chooseMatch}</p>
+          <p className="candidates__hint">
+            {missesHouseNumber(query, candidates)
+              ? texts.address.noHouseNumber
+              : texts.address.chooseMatch}
+          </p>
           {candidates.map((candidate) => (
             <button
               key={`${candidate.coordinate.latitude},${candidate.coordinate.longitude}`}
@@ -481,6 +491,11 @@ export const LocationCheckPanel = ({
               disabled={busy}
             >
               {candidate.label}
+              {candidate.precision !== 'address' && (
+                <span className="candidate__precision">
+                  {texts.address.precision[candidate.precision]}
+                </span>
+              )}
             </button>
           ))}
         </div>

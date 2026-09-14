@@ -57,6 +57,11 @@ export const de = {
     namePlaceholder: 'Eltern A',
     addressPlaceholder: 'Münster',
     whichAddress: 'Welche Adresse meinst du?',
+    // Wird gezeigt, wenn nach einer Hausnummer gefragt war und kein Treffer
+    // eine ist. Vorher wurde ein einzelner solcher Treffer wortlos übernommen:
+    // eingegeben war ein Haus, geliefert wurde der Mittelpunkt der Straße,
+    // gemessen bis zu 1530 m daneben -- und nichts sagte es.
+    noHouseNumber: 'Die Hausnummer wurde nicht gefunden. Das ist das Nächste:',
     // Ein Ortsteil ist keine Hausnummer. Steht das nicht dabei, sehen beide
     // Zeilen gleich aus und der Mittelpunkt eines Dorfes geht als Adresse durch.
     precision: { street: 'ganze Straße', place: 'nur der Ort' },
@@ -81,10 +86,12 @@ export const de = {
     editSaving: 'Wird geprüft…',
     // Bewusst nicht "Isochrone": Das Wort steht sonst nirgends in der
     // Oberfläche, und wer sie nur vorgelesen bekommt, hörte es ständig.
-    computing: (travelMode: string) => `Erreichbarer Bereich wird berechnet (${travelMode})…`,
+    computing: (travelMode: string) =>
+      `Erreichbarer Bereich wird berechnet (${travelMode})…`,
     add: '+ Ziel hinzufügen',
     retry: 'Erneut versuchen',
-    addressNotFound: (address: string) => `Die Adresse „${address}" konnte nicht gefunden werden.`,
+    addressNotFound: (address: string) =>
+      `Die Adresse „${address}" konnte nicht gefunden werden.`,
   },
 
   poi: {
@@ -100,7 +107,8 @@ export const de = {
     travelModeLabel: (category: string) => `Verkehrsmittel ${category}`,
     search: 'Orte suchen',
     blocking: 'Diese Bedingung allein lässt nichts von der gemeinsamen Region übrig.',
-    foundCount: (found: number, entries: number) => `${found} gefunden, ${entries} Einträge`,
+    foundCount: (found: number, entries: number) =>
+      `${found} gefunden, ${entries} Einträge`,
     expandBranches: (label: string) => `Filialen von ${label} ausklappen`,
     collapseBranches: (label: string) => `Filialen von ${label} einklappen`,
     sortHint:
@@ -128,7 +136,8 @@ export const de = {
     button: (n: number, unit: string) => `Erreichbarkeit berechnen (${n} ${unit})`,
     busy: (n: number, unit: string) => `${n} ${unit} werden geprüft…`,
     blockedBy: (categories: string) => ` Daran liegt es: ${categories}.`,
-    blockedByCombination: ' Jede Bedingung für sich passt — erst die Kombination ist zu streng.',
+    blockedByCombination:
+      ' Jede Bedingung für sich passt — erst die Kombination ist zu streng.',
     tooMany: (selected: number, max: number) =>
       `${selected} Orte ausgewählt — höchstens ${max} auf einmal. Nimm ein paar Häkchen heraus.`,
     regionEmpty: 'Kein Bereich erfüllt alle Bedingungen gleichzeitig.',
@@ -150,6 +159,8 @@ export const de = {
     add: 'Adresse hinzufügen',
     adding: 'Wird gesucht…',
     chooseMatch: 'Bitte wähle den passenden Treffer:',
+    noHouseNumber: 'Die Hausnummer wurde nicht gefunden. Das ist das Nächste:',
+    precision: { street: 'ganze Straße', place: 'nur der Ort' },
     empty: 'Bitte gib eine Adresse ein.',
     duplicate: (label: string) => `„${label}" steht bereits in der Liste.`,
     notFound: (label: string) => `Die Adresse „${label}" konnte nicht gefunden werden.`,
@@ -202,7 +213,8 @@ export const de = {
     openWebsite: 'Website öffnen',
     fitAll: 'Alles einpassen',
     loadFailed: 'Die Karte kann gerade nicht geladen werden.',
-    loadFailedHint: 'Der Kartendienst antwortet nicht. Versuch es in einem Moment erneut.',
+    loadFailedHint:
+      'Der Kartendienst antwortet nicht. Versuch es in einem Moment erneut.',
   },
 
   travelModes: {

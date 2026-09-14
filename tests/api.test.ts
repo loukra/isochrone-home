@@ -12,11 +12,16 @@ const realFetch = globalThis.fetch;
 const CONFIG: AppConfig = {
   port: 0,
   analysisStrategy: 'isochrone-intersection',
+  // Diese Tests stubben Pelias-Antworten, also ist hier ORS der Erste und der
+  // Rueckfall aus -- sonst haenge das Ergebnis daran, welcher Anbieter
+  // antwortet, und der Test pruefte nicht mehr die Route, sondern die Kette.
   geocodingProvider: 'openrouteservice',
+  geocodingFallbackProvider: null,
   isochroneProvider: 'openrouteservice',
   openRouteServiceApiKey: 'test-key',
   openRouteServiceIsochroneUrl: 'https://api.heigit.org/openrouteservice',
   openRouteServiceGeocodingUrl: 'https://api.heigit.org/pelias/v1',
+  photonUrl: 'https://photon.test',
   overpassUrl: 'https://overpass.test/api/interpreter',
   mapStyleUrl: 'https://example.test/style.json',
   mapStyleUrlDark: 'https://example.test/style-dark.json',

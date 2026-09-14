@@ -8,6 +8,7 @@ import {
   refinePoiRegion,
   searchPois,
 } from './api.js';
+import { soleAnswer } from './address.js';
 import { unionBounds } from './bounds.js';
 import { colorAt } from './colors.js';
 import { TargetCard, type TargetEditValues } from './forms/TargetCard.js';
@@ -145,9 +146,7 @@ export const App = () => {
           minutes: condition.minutes,
           // Nur die erste offene überlebt: Ein Stand aus der Zeit vor dem
           // Akkordeon kann mehrere mitbringen.
-          open:
-            condition.open &&
-            all.findIndex((other) => other.open) === index,
+          open: condition.open && all.findIndex((other) => other.open) === index,
           // Ein Stand von vor dieser Regel kann "Große zuerst" für eine
           // Kategorie mitbringen, in der es das nicht mehr gibt.
           sortMode: canSortByRelevance(condition.category)
@@ -400,14 +399,18 @@ export const App = () => {
           const { candidates: found } = await geocode(values.address);
 
           if (found.length === 0) {
-            setDraftError(
-              texts.target.addressNotFound(values.address),
-            );
+            setDraftError(texts.target.addressNotFound(values.address));
             setDraftBusy(false);
             return;
           }
 
-          if (found.length > 1) {
+          // Ein Treffer genuegt nicht -- er muss auch die gestellte Frage
+          // beantworten. Wer eine Hausnummer eingibt und einen
+          // Strassenmittelpunkt bekommt, soll das sehen, statt stillschweigend
+          // eine Flaeche um einen anderen Punkt zu bekommen (siehe address.ts).
+          const sole = soleAnswer(values.address, found);
+
+          if (sole === null) {
             // Nutzer entscheidet, welcher Treffer gemeint ist.
             setCandidates(found);
             setPendingDraft(values);
@@ -415,7 +418,7 @@ export const App = () => {
             return;
           }
 
-          chosen = found[0];
+          chosen = sole;
         }
 
         if (chosen === undefined) return;
@@ -528,7 +531,9 @@ export const App = () => {
             return;
           }
 
-          if (found.length > 1) {
+          const sole = soleAnswer(address, found);
+
+          if (sole === null) {
             // Nutzer entscheidet, welcher Treffer gemeint ist.
             setEditCandidates(found);
             setPendingEdit({ name, address });
@@ -536,7 +541,7 @@ export const App = () => {
             return;
           }
 
-          chosen = found[0];
+          chosen = sole;
         }
 
         if (chosen === undefined) return;

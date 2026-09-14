@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { missesHouseNumber } from '../address.js';
 import {
   TRAVEL_MODES,
   type GeocodingCandidate,
@@ -277,7 +278,11 @@ const TargetEditFields = ({
 
       {edit.candidates.length > 0 && (
         <div className="candidates">
-          <p className="candidates__hint">{texts.target.whichAddress}</p>
+          <p className="candidates__hint">
+            {missesHouseNumber(address, edit.candidates)
+              ? texts.target.noHouseNumber
+              : texts.target.whichAddress}
+          </p>
           {edit.candidates.map((candidate) => (
             <button
               key={`${candidate.label}-${candidate.coordinate.latitude}`}
@@ -287,6 +292,11 @@ const TargetEditFields = ({
               disabled={edit.busy}
             >
               {candidate.label}
+              {candidate.precision !== 'address' && (
+                <span className="candidate__precision">
+                  {texts.target.precision[candidate.precision]}
+                </span>
+              )}
             </button>
           ))}
         </div>

@@ -5,7 +5,8 @@ import type {
   GeocodingProvider,
 } from '../../domain/ports/geocoding-provider.js';
 import { DEFAULT_GEOCODING_BASE_URL, orsFetch } from '../openrouteservice/client.js';
-import { labelOf, precisionOf, type PeliasProperties } from './pelias-label.js';
+import { labelOf } from './address-label.js';
+import { partsOf, precisionOf, type PeliasProperties } from './pelias-label.js';
 
 /** Ausschnitt der Pelias-Antwort, den dieser Adapter auswertet. */
 type OrsGeocodeResponse = {
@@ -151,7 +152,7 @@ export class OpenRouteServiceGeocoder implements GeocodingProvider {
       const properties = feature.properties ?? {};
 
       candidates.push({
-        label: labelOf(properties, fallbackLabel),
+        label: labelOf(partsOf(properties), fallbackLabel),
         coordinate: { latitude, longitude },
         precision: precisionOf(properties.layer),
       });

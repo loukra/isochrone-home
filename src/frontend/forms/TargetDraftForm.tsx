@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { missesHouseNumber } from '../address.js';
 import { TRAVEL_MODES, type GeocodingCandidate, type TravelMode } from '../types.js';
 import { useTexts } from '../i18n/index.js';
 import { Select, type SelectOption } from '../components/Select.js';
@@ -122,7 +123,11 @@ export const TargetDraftForm = ({
 
       {candidates.length > 0 && (
         <div className="candidates">
-          <p className="candidates__hint">{texts.target.whichAddress}</p>
+          <p className="candidates__hint">
+            {missesHouseNumber(address, candidates)
+              ? texts.target.noHouseNumber
+              : texts.target.whichAddress}
+          </p>
           {candidates.map((candidate) => (
             <button
               key={`${candidate.label}-${candidate.coordinate.latitude}`}
@@ -145,7 +150,11 @@ export const TargetDraftForm = ({
       {error !== null && <p className="error">{error}</p>}
 
       <div className="card__actions">
-        <button type="submit" disabled={!isValid || busy} data-tip={texts.target.submitHint}>
+        <button
+          type="submit"
+          disabled={!isValid || busy}
+          data-tip={texts.target.submitHint}
+        >
           {busy ? texts.target.submitting : texts.target.submit}
         </button>
         <button type="button" className="ghost" onClick={onCancel} disabled={busy}>
