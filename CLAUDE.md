@@ -199,6 +199,40 @@ Daraus folgt:
     Auge daneben sagt dasselbe, und der Zusatz brach die Zeile um: Ob die
     Zielkarte zwei oder drei Zeilen hoch war, haing damit an der Laenge der
     Adresse.
+- **Name und Adresse eines Ziels sind aenderbar** (*ergaenzt am 14.09.2026 auf
+  Wunsch des Nutzers*). Vorher liess sich ein gesetztes Ziel nur noch loeschen
+  und neu anlegen -- fuer einen Tippfehler im Namen oder eine falsch getroffene
+  Adresse hiess das: Ziel weg, Farbe weg, Formular neu ausfuellen, und die
+  Schnittmenge rechnete zweimal. Ein Stift oeffnet stattdessen die beiden
+  Felder, die die Kopfzeile nicht bedienen kann.
+  - **Der Stift steht in der Adresszeile, nicht in der Kopfzeile.** Gemessen bei
+    293 px Kartenbreite teilen sich dort Punkt, Name, Verkehrsmittel, Zahlenfeld,
+    Haken, Auge und × den Platz; alles ausser dem Namen ist unverrueckbar, also
+    schrumpft der Name. Mit einem vierten Zeichen blieben ihm **25,8 px** fuer
+    die 41 px von "Arbeit" -- auf dem Schirm stand "A…". Die Adresszeile
+    darunter ist dagegen fast leer, und sie zeigt genau das, was der Stift
+    aendert.
+  - **Das Formular ersetzt die Adresszeile, die Kopfzeile bleibt stehen.** Dort
+    steht weiter der *gespeicherte* Name, im Feld der getippte; Verkehrsmittel
+    und Zeit bleiben nebenbei bedienbar. Die Felder nehmen ihren Anfangsstand
+    beim Einhaengen aus dem Ziel (eigene Komponente statt Nachfuehren per
+    Effekt) -- sonst ueberschriebe ein Effekt, was gerade getippt wird.
+  - **Drei Faelle, drei Preise** -- dieselbe Trennlinie wie im Dock:
+    *Nur der Name* ist reines Umbenennen und fragt niemanden: kein Adressbuch,
+    keine Isochrone, kein veraltetes Ergebnis (nachgemessen: kein einziger
+    Request). *Andere Schreibweise, derselbe Ort* -- das Adressbuch antwortet
+    mit derselben Koordinate, dann bleibt die Flaeche stehen; eine korrigierte
+    Hausnummer darf nicht die ganze Schnittmenge kosten. *Anderer Ort* wirkt wie
+    eine geaenderte Reisezeit: Isochrone sofort neu, Analyse veraltet, und die
+    Kette `analyze -> pois -> pois/region` laeuft nach.
+  - Die Adresse wird wie beim Anlegen erst **auf Bestaetigung** aufgeloest, und
+    mehrere Treffer stehen als dieselbe Auswahlliste im Formular. Bearbeitet
+    wird immer hoechstens **ein** Ziel: Zwei offene Formulare haetten zwei
+    Stapel Vorschlaege, und welcher zu welchem gehoert, saehe man ihnen nicht an.
+  - Der Stift ist gesperrt, solange die Isochrone laedt -- wie Verkehrsmittel
+    und Zahlenfeld daneben. Bei **Fehler** ist er offen: Eine nicht gefundene
+    Adresse ist der haeufigste Grund fuer den Fehler und hier die Reparatur.
+
 - **Der Kartenausschnitt gehoert dem Nutzer.** Eingepasst wird genau einmal
   automatisch -- beim allerersten Ziel, sonst bliebe die Deutschlanduebersicht
   stehen und die erste Isochrone waere ein Fleck. Danach nie wieder von allein:
