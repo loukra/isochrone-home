@@ -1040,6 +1040,23 @@ button.link {
 }
 
 /*
+ * "Orte suchen" ist wieder der Weg, nicht der Rückfall: Seit eine neue
+ * Bedingung nicht mehr von allein sucht, ist dieser Knopf der nächste Schritt.
+ * Er bleibt trotzdem ein stiller Knopf -- der einzige gefüllte gehört dem
+ * Dock, und das ist die Trennlinie nach Preis: Suchen kostet kein Kontingent,
+ * Erreichbarkeit rechnen schon.
+ *
+ * Solange die Einstellungen nicht eingelöst sind, trägt er die Akzentfarbe:
+ * Randlinie und Schrift, keine Füllung. Danach tritt er zurück, denn dann ist
+ * er nur noch die Wiederholung einer beantworteten Frage.
+ */
+.poi-cond__search--pending:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/*
  * Veraltet, aber noch da: Waehrend eine Bedingung neu sucht, bleibt die alte
  * Trefferliste stehen und wird nur abgeblendet. Sie zu entfernen liess die
  * Seitenleiste um ein paar hundert Pixel zusammenfallen und einen Augenblick

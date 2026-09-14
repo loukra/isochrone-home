@@ -99,6 +99,9 @@ export const de = {
     radiusUnit: 'Min.',
     travelModeLabel: (category: string) => `Verkehrsmittel ${category}`,
     search: 'Orte suchen',
+    // Nach einer Suche heißt derselbe Knopf anders: Was er tut, ist dann eine
+    // Wiederholung mit geänderten Einstellungen, keine erste Frage.
+    searchAgain: 'Neu suchen',
     blocking: 'Diese Bedingung allein lässt nichts von der gemeinsamen Region übrig.',
     foundCount: (found: number, entries: number) => `${found} gefunden, ${entries} Einträge`,
     expandBranches: (label: string) => `Filialen von ${label} ausklappen`,
@@ -108,6 +111,9 @@ export const de = {
     searching: 'Wird gesucht…',
     searchingSuffix: ' · sucht…',
     notSearched: ' · nicht gesucht',
+    // Zeit oder Verkehrsmittel wurden seit der Suche geändert -- die Liste
+    // unten gehört noch zum alten Radius.
+    changedSuffix: ' · geändert',
     selectedCount: (n: number) => ` · ${n} gewählt`,
     sortLabel: 'Sortierung',
     sortByRelevance: 'Große zuerst',

@@ -74,6 +74,11 @@ const newCondition = (category: PoiCategory): PoiCondition => ({
   // "Große zuerst" nur, wo eine Grundfläche etwas aussagt -- siehe
   // `canSortByRelevance` in poi/selection.ts.
   sortMode: defaultSortMode(category),
+  // Eine frisch angelegte Bedingung hat noch nichts gesucht: Die Kategorie zu
+  // wählen sagt *was* gesucht werden soll, nicht *womit* -- Zeit und
+  // Verkehrsmittel stehen erst auf der Vorgabe. Gesucht wird auf den Knopf.
+  searched: false,
+  dirty: false,
 });
 
 /** Einmalig beim Start gelesen, damit ein Reload die Ziele nicht verwirft. */
@@ -157,6 +162,18 @@ export const App = () => {
           pois: [],
           busy: false,
           error: null,
+          /*
+           * Der Auftrag überlebt, nicht das Ergebnis -- wie überall im
+           * gespeicherten Stand. `searched` sagt "hier war eine Frage
+           * gestellt"; die Treffer dazu holt `pendingRestore` gleich nach.
+           *
+           * Das Feld hier auf `false` zu setzen wäre nicht bloß ungenau: Der
+           * Speichereffekt läuft beim Einhängen mit und schriebe die Unwahrheit
+           * sofort zurück. Wer die Seite ohne Netz öffnet, verlöre damit still,
+           * was er gesucht hatte.
+           */
+          searched: condition.searched,
+          dirty: false,
         }))
       : [newCondition('gym')],
   );
@@ -211,10 +228,7 @@ export const App = () => {
    * hier nachgezogen statt weggeworfen -- eine geänderte Fahrzeit soll die
    * Arbeit an den Bahnhöfen nicht vernichten.
    */
-  const stepThree = useRef({
-    searched: new Set<PoiCategory>(pendingRestore.current.searches),
-    applied: pendingRestore.current.region,
-  });
+  const stepThree = useRef({ applied: pendingRestore.current.region });
 
   useEffect(() => {
     fetchMapConfig()
@@ -359,13 +373,15 @@ export const App = () => {
       checkedPlaces,
       pois: {
         conditions: conditions.map(
-          ({ category, travelMode, minutes, open, sortMode, pois: found }) => ({
+          ({ category, travelMode, minutes, open, sortMode, searched }) => ({
             category,
             travelMode,
             minutes,
             open,
             sortMode,
-            searched: found.length > 0,
+            // Das Feld, nicht die Trefferzahl: Eine Suche, die nichts gefunden
+            // hat, ist eine Antwort und keine offene Frage.
+            searched,
           }),
         ),
         applied: poiRegion !== null,
@@ -778,8 +794,14 @@ export const App = () => {
 
       try {
         const result = await searchPois(readyTargets, category, travelMode, minutes);
-        patchCondition(category, { pois: result.pois, busy: false });
-        stepThree.current.searched.add(category);
+        // Die Einstellungen sind damit eingelöst: Der Knopf tritt zurück, und
+        // die Kopfzeile sagt nicht mehr "nicht gesucht".
+        patchCondition(category, {
+          pois: result.pois,
+          busy: false,
+          searched: true,
+          dirty: false,
+        });
       } catch (error) {
         // Die vorige Liste bleibt stehen. Sie gehoert zum alten Radius, aber
         // sie zu leeren wuerde die Seitenleiste zusammenklappen lassen -- der
@@ -791,26 +813,30 @@ export const App = () => {
   );
 
   /**
-   * Eine hinzugefügte Bedingung sucht sofort: "Supermarkt" auszuwählen *ist*
-   * die Aufforderung, Supermärkte zu zeigen.
+   * Eine hinzugefügte Bedingung sucht **nicht** sofort.
+   *
+   * *Geändert am 14.09.2026 auf Wunsch des Nutzers* ("total nervig"). Vorher
+   * war die Kategorie zu wählen zugleich die Aufforderung, zu suchen. Das war
+   * eine halbe Frage: Die Kategorie sagt *was* gesucht wird, Zeit und
+   * Verkehrsmittel sagen *wie weit* und *womit* -- und die stehen in diesem
+   * Moment erst auf der Vorgabe (10 Min., Auto). Wer danach auf Rad und 15
+   * Minuten stellte, hatte schon zwei überflüssige Suchen ausgelöst und
+   * zweimal zugesehen, wie sich eine Liste auf- und wieder umbaute.
+   *
+   * Die Bedingung klappt stattdessen auf, und der Knopf daneben wartet.
    */
   const addCondition = useCallback(
     (category: PoiCategory) => {
       const vorhanden = conditions.some((condition) => condition.category === category);
       if (vorhanden) return;
 
-      const angelegt = newCondition(category);
       // Die neue ist die, um die es gerade geht: Sie klappt auf, die übrigen zu.
       setConditions((current) => [
         ...current.map((condition) => ({ ...condition, open: false })),
-        angelegt,
+        newCondition(category),
       ]);
-
-      // Ohne gemeinsame Region gibt es nichts zu durchsuchen -- dann bleibt es
-      // beim Knopf, bis analysiert wurde.
-      if (intersection !== null) void runPoiSearch(category, angelegt);
     },
-    [conditions, intersection, runPoiSearch],
+    [conditions],
   );
 
   const removeCondition = useCallback(
@@ -818,45 +844,48 @@ export const App = () => {
       setConditions((current) =>
         current.filter((condition) => condition.category !== category),
       );
-      stepThree.current.searched.delete(category);
       invalidateRegion();
     },
     [invalidateRegion],
   );
 
   /**
-   * Ein geänderter Radius sucht sofort neu. Die Absicht ist eindeutig -- wer
-   * von 10 auf 12 Minuten stellt, will Orte in 12 Minuten sehen und kein leeres
-   * Kästchen mit einem Knopf daneben. Seit die Treffer aus dem Plattencache
-   * kommen, kostet das nichts als einen Augenblick.
+   * Ein geänderter Radius wartet auf den Knopf.
+   *
+   * *Geändert am 14.09.2026 auf Wunsch des Nutzers.* Vorher suchte jede
+   * Änderung sofort -- und das Zahlenfeld ändert sich pro Tastendruck und pro
+   * Klick auf ein Pfeilchen: Von 10 auf 15 zu stellen waren fünf Suchen, von
+   * denen vier niemanden interessierten. Zeit und Verkehrsmittel gehören
+   * zusammen; erst beide ergeben den Suchradius, und erst der Knopf sagt, dass
+   * beide stimmen.
+   *
+   * Die gefundenen Orte bleiben solange stehen und werden nicht abgeblendet:
+   * Anders als während einer laufenden Suche kommt hier von allein nichts
+   * Neues, und eine unbedienbare Liste bliebe es dann auf Dauer. Dass sie zu
+   * anderen Einstellungen gehört, sagt die Kopfzeile ("· geändert").
    */
   const changeConditionMinutes = useCallback(
     (category: PoiCategory, minutes: number) => {
-      // Die gefundenen Orte gelten fuer den alten Suchradius nicht mehr --
-      // trotzdem bleiben sie stehen, bis die neuen da sind. Sie zu loeschen
-      // liess die halbe Seitenleiste verschwinden und einen Wimpernschlag
-      // spaeter wieder auftauchen; alles darunter sprang mit.
-      patchCondition(category, { minutes });
+      patchCondition(category, { minutes, dirty: true });
+      // Die verengte Fläche wurde mit der alten Zahl gerechnet -- sie ist die
+      // Fahrzeit der Isochronen um die angehakten Orte, nicht bloss ein
+      // Suchradius. Eine falsche Fläche stehen zu lassen wäre irreführend.
       invalidateRegion();
-      if (intersection !== null) void runPoiSearch(category, { minutes });
     },
-    [patchCondition, invalidateRegion, intersection, runPoiSearch],
+    [patchCondition, invalidateRegion],
   );
 
   /**
    * Ein gewechseltes Verkehrsmittel verhält sich wie eine geänderte Zeit: Es
-   * verschiebt den Suchradius (zehn Minuten zu Fuß sind nicht zehn im Auto),
-   * also wird sofort neu gesucht -- die Auswahl im Menü *ist* die Bestätigung.
-   * Die verengte Region gehört zum alten Verkehrsmittel und fällt weg; neu
-   * berechnet wird sie erst auf Knopfdruck, denn sie kostet Kontingent.
+   * verschiebt den Suchradius (zehn Minuten zu Fuß sind nicht zehn im Auto)
+   * und wartet damit auf denselben Knopf.
    */
   const changeConditionTravelMode = useCallback(
     (category: PoiCategory, travelMode: TravelMode) => {
-      patchCondition(category, { travelMode });
+      patchCondition(category, { travelMode, dirty: true });
       invalidateRegion();
-      if (intersection !== null) void runPoiSearch(category, { travelMode });
     },
-    [patchCondition, invalidateRegion, intersection, runPoiSearch],
+    [patchCondition, invalidateRegion],
   );
 
   const applyKeys = useCallback(
@@ -1104,12 +1133,31 @@ export const App = () => {
     // Veraltet (Ziel geaendert, noch nicht analysiert): Liste stehen lassen.
     if (intersection === null) return;
 
-    // Alle Bedingungen, nicht nur die schon einmal gesuchten: Eine Bedingung
-    // anzulegen *ist* die Aufforderung, ihre Orte zu zeigen -- sonst stünde man
-    // beim ersten Durchlauf vor einer leeren Liste.
-    pendingRestore.current.searches = new Set(
-      conditionsRef.current.map((condition) => condition.category),
-    );
+    /*
+     * Nur die schon einmal gesuchten -- und auch die nur, solange niemand
+     * inzwischen an Zeit oder Verkehrsmittel gedreht hat.
+     *
+     * Eine Bedingung, die noch auf ihren Knopf wartet, darf eine verschobene
+     * Region nicht hinter dem Rücken des Nutzers einlösen: Wer gerade von 10
+     * auf 16 Minuten gestellt hat, hat damit noch nichts gefragt, und eine
+     * Suche von allein nähme ihm die Antwort ab. Sie zeigt weiter "· geändert"
+     * und wartet.
+     *
+     * Was einmal gesucht war und unverändert dasteht, wird dagegen nachgezogen:
+     * Die Treffer wurden im Puffer um die *alte* Region gesucht und taugen
+     * nicht mehr. Das kostet kein Providerkontingent -- Overpass, und in aller
+     * Regel aus dem Plattencache.
+     *
+     * Hinzugefügt, nicht gesetzt: Beim ersten Start steht in der Liste bereits,
+     * was ein Reload nachzuholen hat, und genau dann ist `searched` an den
+     * Bedingungen noch überall `false` -- ein Ersetzen löschte die Merkliste,
+     * bevor sie jemand abgearbeitet hat.
+     */
+    for (const condition of conditionsRef.current) {
+      if (condition.searched && !condition.dirty) {
+        pendingRestore.current.searches.add(condition.category);
+      }
+    }
     pendingRestore.current.region = stepThree.current.applied;
   }, [intersection, invalidateRegion]);
 
