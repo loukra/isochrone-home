@@ -11,6 +11,7 @@ import type { IsochroneProvider } from '../../domain/ports/isochrone-provider.js
 import type { LocationAnalysisStrategy } from '../../domain/ports/analysis-strategy.js';
 import { validateAnalysisRequest } from '../../domain/services/constraint-validation.js';
 import { boundsOf, intersectAreas } from '../../domain/services/geometry.js';
+import { reachableArea } from './reachable-area.js';
 
 export class IsochroneIntersectionStrategy implements LocationAnalysisStrategy {
   readonly id = 'isochrone-intersection';
@@ -29,7 +30,7 @@ export class IsochroneIntersectionStrategy implements LocationAnalysisStrategy {
 
     const isochrones = await Promise.all(
       targets.map((target) =>
-        this.isochrones.calculate(target.coordinate, {
+        reachableArea(this.isochrones, target.coordinate, {
           travelMode: target.travelMode,
           maxTravelTimeMinutes: target.maxTravelTimeMinutes,
         }),

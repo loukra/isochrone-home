@@ -247,6 +247,25 @@ describe('PoiRegionRefinement', () => {
     ]);
   });
 
+  it('holt je Ort genau eine Isochrone, Richtung Hinweg', async () => {
+    // Anders als bei den Zielen bewusst einseitig: Hier duerfen es 25 Orte
+    // sein, beidseitig waeren das 50 von 500 Tagesanfragen. Die Richtung ist
+    // trotzdem der Hinweg -- "von wo aus erreiche ich dieses Studio" ist die
+    // Frage der Bedingung, nicht "wohin komme ich vom Studio aus".
+    const isochrones = new StubIsochroneProvider([square(0, 0, 10, 10)]);
+    const refinement = new PoiRegionRefinement(
+      new StubStrategy(square(0, 0, 10, 10)),
+      isochrones,
+    );
+
+    await refinement.execute(request([at(1, 1), at(2, 2)]));
+
+    expect(isochrones.calls).toHaveLength(2);
+    expect(isochrones.calls.every((call) => call.options.direction === 'toTarget')).toBe(
+      true,
+    );
+  });
+
   it('verlangt mindestens einen Ort', async () => {
     const refinement = new PoiRegionRefinement(
       new StubStrategy(square(0, 0, 10, 10)),

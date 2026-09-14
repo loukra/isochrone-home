@@ -115,7 +115,7 @@ describe('OpenRouteServiceIsochroneProvider', () => {
 
     await new OpenRouteServiceIsochroneProvider('key').calculate(
       { latitude: 51.96, longitude: 7.63 },
-      { travelMode, maxTravelTimeMinutes: 30 },
+      { travelMode, maxTravelTimeMinutes: 30, direction: 'toTarget' },
     );
 
     const [url] = spy.mock.calls[0] as [string];
@@ -148,7 +148,7 @@ describe('OpenRouteServiceIsochroneProvider', () => {
 
     const result = await new OpenRouteServiceIsochroneProvider('key').calculate(
       { latitude: 51.96, longitude: 7.63 },
-      { travelMode: 'driving', maxTravelTimeMinutes: 30 },
+      { travelMode: 'driving', maxTravelTimeMinutes: 30, direction: 'toTarget' },
     );
 
     const [url, init] = spy.mock.calls[0] as [string, RequestInit];
@@ -172,11 +172,30 @@ describe('OpenRouteServiceIsochroneProvider', () => {
 
     await new OpenRouteServiceIsochroneProvider('key').calculate(
       { latitude: 51.96, longitude: 7.63 },
-      { travelMode: 'driving', maxTravelTimeMinutes: 30 },
+      { travelMode: 'driving', maxTravelTimeMinutes: 30, direction: 'toTarget' },
     );
 
     const [, init] = spy.mock.calls[0] as [string, RequestInit];
     expect(JSON.parse(init.body as string)).toMatchObject({ smoothing: 0 });
+  });
+
+  it.each([
+    ['toTarget', 'destination'],
+    ['fromTarget', 'start'],
+  ] as const)('schickt fuer %s den location_type %s', async (direction, expected) => {
+    // ORS benennt aus Sicht des uebergebenen Punktes: "destination" heisst
+    // "der Punkt ist das Ziel", die Flaeche ist also der Hinweg -- genau
+    // umgekehrt zur fachlichen Lesart. Eine vertauschte Tabelle waere an der
+    // Flaeche nicht zu erkennen, deshalb steht sie hier fest.
+    const spy = mockFetch(POLYGON_RESPONSE);
+
+    await new OpenRouteServiceIsochroneProvider('key').calculate(
+      { latitude: 51.96, longitude: 7.63 },
+      { travelMode: 'driving', maxTravelTimeMinutes: 30, direction },
+    );
+
+    const [, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({ location_type: expected });
   });
 
   it('meldet eine Fahrzeit über dem Providerlimit als Eingabefehler', async () => {
@@ -188,7 +207,7 @@ describe('OpenRouteServiceIsochroneProvider', () => {
     await expect(
       provider.calculate(
         { latitude: 51.96, longitude: 7.63 },
-        { travelMode: 'driving', maxTravelTimeMinutes: 75 },
+        { travelMode: 'driving', maxTravelTimeMinutes: 75, direction: 'toTarget' },
       ),
     ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
 
@@ -219,7 +238,7 @@ describe('OpenRouteServiceIsochroneProvider', () => {
 
     await new OpenRouteServiceIsochroneProvider('key').calculate(
       { latitude: 51.96, longitude: 7.63 },
-      { travelMode: 'driving', maxTravelTimeMinutes: 60 },
+      { travelMode: 'driving', maxTravelTimeMinutes: 60, direction: 'toTarget' },
     );
 
     const [, init] = spy.mock.calls[0] as [string, RequestInit];
@@ -232,7 +251,7 @@ describe('OpenRouteServiceIsochroneProvider', () => {
     await expect(
       new OpenRouteServiceIsochroneProvider('key').calculate(
         { latitude: 51.96, longitude: 7.63 },
-        { travelMode: 'driving', maxTravelTimeMinutes: 30 },
+        { travelMode: 'driving', maxTravelTimeMinutes: 30, direction: 'toTarget' },
       ),
     ).rejects.toBeInstanceOf(DomainError);
   });

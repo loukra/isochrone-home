@@ -137,6 +137,13 @@ export class PoiRegionRefinement {
           this.isochrones.calculate(job.origin, {
             travelMode: job.travelMode,
             maxTravelTimeMinutes: job.minutes,
+            // Bewusst einseitig, anders als bei den Zielen: "von wo aus
+            // erreiche ich dieses Studio" ist die Frage der Bedingung. Den
+            // Rueckweg mitzurechnen wuerde die Aufrufe verdoppeln, und hier
+            // duerfen es 25 Orte sein statt einer Handvoll Ziele -- 50 von 500
+            // Tagesanfragen fuer einen Genauigkeitsgewinn, der am Rand ein
+            // paar hundert Meter ausmacht.
+            direction: 'toTarget',
           }),
         ),
       );

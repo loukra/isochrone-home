@@ -2,6 +2,7 @@ import type { TravelMode } from '../../domain/models/analysis.js';
 import { DomainError } from '../../domain/models/errors.js';
 import type { AreaFeature, Coordinate } from '../../domain/models/geo.js';
 import type {
+  IsochroneDirection,
   IsochroneOptions,
   IsochroneProvider,
 } from '../../domain/ports/isochrone-provider.js';
@@ -28,6 +29,20 @@ type OrsIsochroneResponse = {
     geometry?: { type?: string; coordinates?: unknown };
     properties?: Record<string, unknown>;
   }>;
+};
+
+/**
+ * Fachliche Richtung -> ORS-`location_type`. Die Namen sind bei ORS aus Sicht
+ * *des uebergebenen Punktes* gedacht: `destination` heisst "der Punkt ist das
+ * Ziel", die Flaeche umfasst also alles, von wo aus man ihn erreicht -- genau
+ * umgekehrt zur fachlichen Lesart. Darum diese Tabelle statt der Namen selbst.
+ *
+ * Das Feld wegzulassen ist nicht neutral: ORS nimmt dann `start`, also den
+ * Rueckweg.
+ */
+const LOCATION_TYPE_BY_DIRECTION: Record<IsochroneDirection, string> = {
+  toTarget: 'destination',
+  fromTarget: 'start',
 };
 
 /** ORS lehnt range > 3600 Sekunden mit Fehlercode 3004 ab. */
@@ -86,6 +101,7 @@ export class OpenRouteServiceIsochroneProvider implements IsochroneProvider {
           locations: [[origin.longitude, origin.latitude]],
           range: [Math.round(options.maxTravelTimeMinutes * 60)],
           range_type: 'time',
+          location_type: LOCATION_TYPE_BY_DIRECTION[options.direction],
           area_units: 'km',
           smoothing: SMOOTHING,
         }),

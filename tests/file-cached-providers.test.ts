@@ -22,7 +22,11 @@ const NAMESPACES = cacheNamespaces({
   routeDays: 7,
 });
 const ORIGIN = { latitude: 51.96, longitude: 7.63 };
-const OPTIONS = { travelMode: 'driving' as const, maxTravelTimeMinutes: 30 };
+const OPTIONS = {
+  travelMode: 'driving' as const,
+  maxTravelTimeMinutes: 30,
+  direction: 'toTarget' as const,
+};
 const AREA: BoundingBox = [7.998, 52.876, 8.654, 53.397];
 
 class StubPoiProvider implements PoiProvider {
@@ -113,6 +117,23 @@ describe('Plattencache vor den Providern', () => {
 
     await provider.calculate(ORIGIN, OPTIONS);
     await provider.calculate(ORIGIN, { ...OPTIONS, travelMode: 'ebike' });
+
+    expect(delegate.calls).toHaveLength(2);
+  });
+
+  it('unterscheidet nach Fahrtrichtung', async () => {
+    const delegate = new StubIsochroneProvider([
+      square(0, 0, 10, 10),
+      square(0, 0, 3, 3),
+    ]);
+    const provider = new FileCachedIsochroneProvider(
+      delegate,
+      new FileStore(directory),
+      NAMESPACES.isochrones,
+    );
+
+    await provider.calculate(ORIGIN, { ...OPTIONS, direction: 'toTarget' });
+    await provider.calculate(ORIGIN, { ...OPTIONS, direction: 'fromTarget' });
 
     expect(delegate.calls).toHaveLength(2);
   });
