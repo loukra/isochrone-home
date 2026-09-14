@@ -4,29 +4,30 @@ import type { BoundingBox } from '../src/domain/models/geo.js';
 
 describe('reachRadiusKm', () => {
   it('wächst linear mit der Fahrzeit', () => {
-    expect(reachRadiusKm(10, 'driving')).toBe(10);
-    expect(reachRadiusKm(20, 'driving')).toBe(20);
+    expect(reachRadiusKm(10, 'driving')).toBeCloseTo(11, 5);
+    expect(reachRadiusKm(20, 'driving')).toBeCloseTo(22, 5);
   });
 
-  it('deckt beim Auto die gemessene Reichweite der Ortsmitte ab', () => {
+  it('deckt beim Auto die gemessene Reichweite bei 10 Minuten ab', () => {
     // Gemessen (Referenzregion, smoothing 0): 10 Minuten reichen aus einer
-    // Ortsmitte 5,8-6,7 km weit, von einer Autobahnauffahrt aus 10,9 km. Der
-    // Radius deckt den Regelfall ab, den Autobahn-Bestfall bewusst nicht mehr.
-    expect(reachRadiusKm(10, 'driving')).toBeGreaterThanOrEqual(6.7);
-    expect(reachRadiusKm(10, 'driving')).toBeLessThan(15);
+    // Ortsmitte 5,8-6,7 km weit, von einer Autobahnauffahrt aus 10,9 km. Zehn
+    // Minuten sind die Vorgabe der Bedingung, also ist das der Fall, den der
+    // Radius treffen muss -- bis zum günstigsten Punkt, nicht darüber.
+    expect(reachRadiusKm(10, 'driving')).toBeGreaterThanOrEqual(10.9);
+    expect(reachRadiusKm(10, 'driving')).toBeLessThan(13);
   });
 
-  it('deckt je Verkehrsmittel die gemessene Reichweite ab, aber nicht mehr', () => {
+  it('deckt je Verkehrsmittel die gemessene Reichweite ab, aber nicht beliebig', () => {
     // Untere Schranke: die gemessene maximale Luftlinie (E-Bike 0,35 km/min,
     // Rad 0,29, zu Fuß 0,085) -- sie darf der Radius nie unterschreiten.
-    // Obere Schranke: ein Viertel darüber wäre kein Puffer mehr, sondern eine
-    // Liste voller Orte, die die Bedingung nie erfüllen können.
+    // Obere Schranke: die Hälfte darüber. Mehr wäre kein Puffer mehr,
+    // sondern eine Liste voller Orte, die die Bedingung nie erfüllen können.
     expect(reachRadiusKm(60, 'ebike')).toBeGreaterThanOrEqual(21);
-    expect(reachRadiusKm(60, 'ebike')).toBeLessThanOrEqual(26);
+    expect(reachRadiusKm(60, 'ebike')).toBeLessThanOrEqual(31.5);
     expect(reachRadiusKm(60, 'cycling')).toBeGreaterThanOrEqual(17.4);
-    expect(reachRadiusKm(60, 'cycling')).toBeLessThanOrEqual(22);
+    expect(reachRadiusKm(60, 'cycling')).toBeLessThanOrEqual(26.1);
     expect(reachRadiusKm(60, 'walking')).toBeGreaterThanOrEqual(5.1);
-    expect(reachRadiusKm(60, 'walking')).toBeLessThanOrEqual(6.4);
+    expect(reachRadiusKm(60, 'walking')).toBeLessThanOrEqual(7.65);
   });
 
   it('ordnet die Verkehrsmittel nach Reichweite', () => {

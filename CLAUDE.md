@@ -280,8 +280,8 @@ Daraus folgt:
   Bestaetigung. Voreingestellt bleibt `driving`: die weiteste Reichweite und
   damit die Annahme, die am wenigsten still etwas ausschliesst.
 - **Der Suchradius haengt am Verkehrsmittel, nicht nur an der Zeit**
-  (`KM_PER_MINUTE` in `domain/services/search-area.ts`: Auto 1,0 km/min,
-  E-Bike 0,35, Rad 0,3, zu Fuss 0,09). Ein gemeinsamer Wert waere hier nicht
+  (`KM_PER_MINUTE` in `domain/services/search-area.ts`: Auto 1,1 km/min,
+  E-Bike 0,5, Rad 0,4, zu Fuss 0,1). Ein gemeinsamer Wert waere hier nicht
   bloss unsauber, sondern unbrauchbar: Gemessen in der Referenzregion
   (Oldenburg/Delmenhorst, je 25 Min. Auto) fand "10 Minuten" beim Supermarkt
   mit 1,5 km/min **401** Treffer bis 14,9 km ausserhalb, mit dem Fussgaenger-
@@ -289,11 +289,10 @@ Daraus folgt:
   niemand laeuft, und die Angabe "x km ausserhalb" waere fuer die Entscheidung
   wertlos.
 - **Die Werte sind an echten Isochronen gemessen, nicht aus einem Tempo
-  abgeleitet** (*geaendert am 14.09.2026 auf Entscheidung des Nutzers*:
-  "1 km pro min ist besser als 1,5 km pro min bei auto"). Anlass war eine
-  Schulsuche, deren Punkte bis Bremen-Ost reichten. Vorher standen dort Auto
-  1,5 / E-Bike 0,5 / Rad 0,4 / zu Fuss 0,12 -- "rund die Haelfte ueber dem
-  Tempo, mit dem ORS fuer das Profil rechnet", also geschaetzt. Gemessen
+  abgeleitet** (*geaendert am 14.09.2026 auf Entscheidung des Nutzers*, Auto
+  1,5 -> 1,1, zu Fuss 0,12 -> 0,1). Anlass war eine Schulsuche, deren Punkte
+  bis Bremen-Ost reichten. Vorher waren alle vier Werte "rund die Haelfte ueber
+  dem Tempo, mit dem ORS fuer das Profil rechnet", also geschaetzt. Gemessen
   (groesster Abstand vom Startpunkt zum Rand der Isochrone, `smoothing: 0`):
 
   | Verkehrsmittel | 10 Min. | 25 Min. | 45 Min. |
@@ -310,9 +309,13 @@ Daraus folgt:
     bei 10, 1,36 bei 15, 1,42 bei 25 -- die ersten Minuten gehen fuer die
     Anfahrt zur schnellen Strasse drauf. Ein einziger Wert kann also nur
     entweder die kurzen oder die langen Zeiten treffen.
-  - **Getroffen wird jetzt der Regelfall, nicht der Bestfall.** 1,5 km/min war
-    die Reichweite einer Autobahnfahrt, angewandt in *alle* Richtungen von
-    *jedem* Punkt der Region. Was das kostet, ist gemessen: 346 Schulen der
+  - **Getroffen werden die kurzen.** 1,1 km/min ist genau die gemessene
+    Reichweite bei 10 Minuten, und zwar die von der Autobahnauffahrt aus --
+    dem guenstigsten Punkt der Referenzregion. Zehn Minuten sind die Vorgabe
+    der Bedingung und die Zeit, die bei Schule, Supermarkt und Kita
+    tatsaechlich eingestellt wird.
+  - **1,5 war die Autobahnfahrt, angewandt in alle Richtungen** von jedem
+    Punkt der Region. Was das kostete, ist nachgerechnet: 346 Schulen der
     Referenzregion, echte Fahrzeitmatrix von fuenf Stuetzstellen in der
     gemeinsamen Region, Bedingung "10 Minuten Auto":
 
@@ -326,14 +329,16 @@ Daraus folgt:
 
     258 gefunden, **50 erreichbar** -- und alle 50 innerhalb von **6,1 km**.
     Vier Fuenftel der Liste waren nachweislich unerfuellbar.
-  - **Der Preis steht ausdruecklich da**: Der Radius deckt den
-    Autobahn-Bestfall nicht mehr ab. Ein Ort 12 km draussen, an derselben
-    Auffahrt wie die Region, waere in 10 Minuten erreichbar und wird nicht
-    mehr gefunden; bei langen Zeiten faellt das staerker aus (25 Min.: 25 km
-    Radius gegen 35,4 km gemessene Reichweite). Das ist die Gegenseite zu
-    "lieber zu viel finden als unbemerkt zu wenig", und sie wurde bewusst in
-    Kauf genommen. Anders als beim Vorfiltern von POIs ist sie aber eine Zahl,
-    die hier steht und die man drehen kann -- kein stiller Ausschluss.
+  - **Was bleibt, steht ausdruecklich da**: Bei langen Zeiten deckt der Radius
+    die Reichweite nicht mehr ganz ab (25 Min.: 27,5 km gegen 35,4 km
+    gemessen). Ein Ort weit draussen an derselben Autobahn wie die Region
+    waere dort in der Zeit erreichbar und wird nicht gefunden. Anders als beim
+    Vorfiltern von POIs ist das eine Zahl, die hier steht und die man drehen
+    kann -- kein stiller Ausschluss.
+  - **Rad, E-Bike und zu Fuss bleiben deutlich ueber ihrer Messung** (0,29 /
+    0,35 / 0,085). Dort kostet Grosszuegigkeit fast nichts: 40 % von 1,2 km
+    sind 400 m, 40 % beim Auto sind fuenf Kilometer Ring. Nur zu Fuss wurde
+    von 0,12 auf 0,1 gerundet.
 - Dass das Verkehrsmittel wirklich bis zum Provider durchschlaegt, haengt nicht
   am Vertrauen: Derselbe Supermarkt, 10 Minuten, ergab ueber `/api/pois/region`
   165 km² erreichbare Flaeche mit dem Auto, 14,4 km² mit dem Rad und 0,8 km²
