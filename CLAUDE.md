@@ -461,9 +461,23 @@ Deutsch (`de.ts`) ist die Urfassung, Englisch (`en.ts`) die Übersetzung.
   Detailmeldung ist besser als ein englisches "Something went wrong".
 - Zahlenformate hängen über `texts.app.locale` an der Sprache (2,3 km gegen
   2.3 km).
-- Der Umschalter zeigt **Sprachnamen, keine Flaggen**: Eine Flagge steht für ein
-  Land, nicht für eine Sprache. Jede Sprache nennt sich in ihrem eigenen Wort,
-  damit sie findet, wer die aktuelle gerade *nicht* versteht.
+- **Der Umschalter zeigt Flaggen** (*geändert am 14.09.2026 auf Wunsch des
+  Nutzers*; vorher standen dort die Sprachnamen). Der Einwand bleibt richtig und
+  steht hier, damit ihn niemand neu entdecken muss: Eine Flagge ist ein Land,
+  keine Sprache -- Deutsch wird in vier Ländern gesprochen, Englisch in weit
+  mehr, und wer eine Oberfläche vor sich hat, die er gerade *nicht* versteht,
+  sucht das Wort in seiner Sprache. Gewählt ist jeweils das Land der
+  Schreibweise des Katalogs (`en` ist `en-GB`, also 🇬🇧).
+  - Der Name verschwindet nur aus dem **Bild**, nicht aus der Bedienung:
+    `LANGUAGE_NAMES` bleibt der zugängliche Name jeder Auswahl, steht im
+    Tooltip, und das Auswahlfeld heisst "Sprache: Deutsch". Ohne das sagte ein
+    Vorleseprogramm "Flagge Deutschland" und benennte damit keine Sprache.
+  - **Windows hat für Flaggen bewusst keine Glyphen.** Dort stehen statt der
+    Flagge die beiden Regionalbuchstaben "DE" bzw. "GB" -- lesbar, aber ein
+    anderes Bild als auf dem Mac. Deshalb bleibt die `color`-Regel im CSS
+    stehen: Sie wirkt nicht auf ein Emoji, wohl aber auf diesen Rückfall.
+  - Die Schriftliste im CSS nennt die Emoji-Schriften **ausdrücklich**; sonst
+    greift die Textschrift zuerst und zeigt auch auf dem Mac zwei Buchstaben.
 - Die Swift-Hülle bleibt davon unberührt und deutsch: sechs Zeichenketten, ein
   eigener Übersetzungsmechanismus wäre mehr Aufbau als Nutzen.
 

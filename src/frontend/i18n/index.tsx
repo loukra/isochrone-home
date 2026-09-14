@@ -16,10 +16,30 @@ export const LANGUAGES: readonly Language[] = ['de', 'en'];
 
 const CATALOGUES: Record<Language, Texts> = { de, en };
 
-/** Wie die Sprache im Umschalter heißt -- immer in der Sprache selbst. */
+/**
+ * Wie die Sprache heißt -- immer in der Sprache selbst. Sichtbar ist im
+ * Umschalter die Flagge; dieser Name bleibt der **zugängliche** Name, den
+ * Vorleseprogramme und der Tooltip benutzen. Ein Vorleseprogramm sagt zu einer
+ * Flagge sonst "Flagge Deutschland", was keine Sprache benennt.
+ */
 export const LANGUAGE_NAMES: Record<Language, string> = {
   de: 'Deutsch',
   en: 'English',
+};
+
+/**
+ * Die Flagge je Sprache. Sie ist eine **Abkürzung, keine Aussage**: Deutsch
+ * wird in vier Ländern gesprochen, Englisch in weit mehr, und keine Flagge
+ * deckt das ab. Gewählt ist jeweils das Land, aus dem die Schreibweise des
+ * Katalogs stammt -- `en` ist auf `en-GB` eingestellt, deshalb 🇬🇧.
+ *
+ * Windows liefert für Flaggen bewusst keine Glyphen: Dort stehen statt der
+ * Flagge die zwei Buchstaben "DE" bzw. "GB". Das bleibt lesbar, sieht aber
+ * anders aus als auf dem Mac.
+ */
+export const LANGUAGE_FLAGS: Record<Language, string> = {
+  de: '🇩🇪',
+  en: '🇬🇧',
 };
 
 /**

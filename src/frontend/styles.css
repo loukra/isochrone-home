@@ -1082,7 +1082,16 @@ button.link {
   right: 0;
   width: auto;
   padding: 2px 4px;
-  font-size: 12px;
+  /* Groesser als die 12px der uebrigen Kopfzeile: Eine Flagge auf 12px ist ein
+     Farbfleck, aus dem sich Schwarz-Rot-Gold nicht mehr herauslesen laesst. */
+  font-size: 16px;
+  line-height: 1;
+  /* Ausdrueckliche Emoji-Schriften, sonst greift die Textschrift zuerst und
+     zeigt die beiden Regionalbuchstaben statt der Flagge. */
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji',
+    'Twemoji Mozilla', sans-serif;
+  /* Wirkt nicht auf die Flagge -- Emoji bringen ihre Farben mit -- wohl aber
+     auf den Windows-Rueckfall "DE"/"GB", der dort als Text ankommt. */
   color: var(--muted, #6b7280);
   background: transparent;
   border: 1px solid transparent;
