@@ -97,6 +97,27 @@ export const PencilIcon = ({ size = 16 }: IconProps) => (
   </svg>
 );
 
+/** Lupe: Orte zu einer Bedingung suchen. */
+export const SearchIcon = ({ size = 16 }: IconProps) => (
+  <svg {...box(size)}>
+    <circle
+      cx="8.8"
+      cy="8.8"
+      r="5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+    />
+    <path
+      d="m12.6 12.6 4 4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 /** Auge auf/zu: Sichtbarkeit eines Ziels auf der Karte. */
 export const EyeIcon = ({ open, size = 16 }: IconProps & { open: boolean }) => (
   <svg {...box(size)}>
