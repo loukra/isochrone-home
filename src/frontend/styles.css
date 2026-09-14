@@ -1040,20 +1040,59 @@ button.link {
 }
 
 /*
- * "Orte suchen" ist wieder der Weg, nicht der Rückfall: Seit eine neue
- * Bedingung nicht mehr von allein sucht, ist dieser Knopf der nächste Schritt.
- * Er bleibt trotzdem ein stiller Knopf -- der einzige gefüllte gehört dem
- * Dock, und das ist die Trennlinie nach Preis: Suchen kostet kein Kontingent,
- * Erreichbarkeit rechnen schon.
+ * Die Lupe. Ein quadratischer Knopf in der Höhe der Zeile, kein Wort darin:
+ * Die Bedienzeile trägt schon Zahlenfeld, Einheit und Verkehrsmittel, und
+ * "Orte suchen" war darin die breiteste Fläche.
  *
- * Solange die Einstellungen nicht eingelöst sind, trägt er die Akzentfarbe:
- * Randlinie und Schrift, keine Füllung. Danach tritt er zurück, denn dann ist
- * er nur noch die Wiederholung einer beantworteten Frage.
+ * In Ruhe grau -- dann ist er nur die Wiederholung einer beantworteten Frage.
+ * Steht etwas aus (nie gesucht, geändert, oder die letzte Suche ist
+ * gescheitert), nimmt er die Akzentfarbe an: Randlinie und Zeichnung, keine
+ * Füllung. Der einzige gefüllte Knopf der App gehört dem Dock -- das ist die
+ * Trennlinie nach Preis, die den ganzen Bedienablauf traegt.
  */
+.poi-cond__body .poi-controls > button.poi-cond__search {
+  width: var(--control-h);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
 .poi-cond__search--pending:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
-  font-weight: 600;
+}
+
+/*
+ * Beschaeftigt ist nicht gesperrt. Der Knopf ist waehrend der Suche zwar
+ * `disabled` -- zweimal dasselbe abzuschicken hat keinen Sinn --, aber die
+ * allgemeine Regel blendet Gesperrtes auf die Haelfte ab, und ein halb
+ * durchsichtiges Rad sieht nach "geht gerade nicht" aus statt nach "laeuft".
+ */
+.poi-cond__search--busy:disabled {
+  opacity: 1;
+}
+
+/*
+ * Waehrend gesucht wird, dreht sich an der Stelle der Lupe ein Ring -- dasselbe
+ * Zeichen wie in der Statusleiste. Ein Knopf, der nur ausgraut, sieht aus wie
+ * gesperrt und nicht wie beschaeftigt.
+ */
+.poi-cond__searching {
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: status-spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poi-cond__searching {
+    animation: none;
+    border-color: var(--accent);
+  }
 }
 
 /*

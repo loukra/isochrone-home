@@ -437,8 +437,34 @@ Daraus folgt:
     die Liste, die einem unter dem Zeiger wegrutscht.
   - Die Kopfzeile sagt, woran man ist: "· nicht gesucht", solange nie gesucht
     wurde, "· geaendert", sobald Zeit oder Verkehrsmittel von der letzten Suche
-    abweichen. Der Knopf traegt dann die Akzentfarbe und heisst nach der ersten
-    Suche "Neu suchen".
+    abweichen, "· sucht…", waehrend es laeuft. Der Knopf traegt dann die
+    Akzentfarbe.
+  - **Ein gescheiterter Versuch zaehlt als offener Posten**
+    (*nachgetragen am 14.09.2026 auf Nachfrage des Nutzers*, "ist der jemals
+    notwendig?"). Die Bedingung war: nie gesucht **oder** geaendert -- und
+    genau der dritte Fall fehlte. Frischt sich eine Bedingung nach einer
+    verschobenen Region von allein auf und Overpass antwortet nicht, bleibt
+    `searched` stehen und `dirty` ist `false`: Die Liste gehoert noch zur alten
+    Region, die Fehlermeldung steht darueber, und der Knopf -- der einzige
+    Ausweg -- sah aus wie "nichts zu tun". Die Farbe verspricht "hier wartet
+    etwas"; ausgerechnet dort brach das Versprechen. Jetzt zaehlt
+    `error !== null` mit.
+  - **Der Knopf ist eine Lupe, kein Wort** (*geaendert am 14.09.2026 auf Wunsch
+    des Nutzers*). Die Bedienzeile traegt schon Zahlenfeld, Einheit und
+    Verkehrsmittel; "Orte suchen" war darin die breiteste Flaeche -- gemessen
+    bei 375 px Fensterbreite **93 px** gegen **36 px** fuer den quadratischen
+    Knopf, also 57 px von 313 px Zeilenbreite zurueck. Was er tut, sagt ohnehin
+    die Kopfzeile darueber; das Wort daneben war die zweite Antwort auf
+    dieselbe Frage.
+    - Der Text bleibt als `aria-label` **und** als Tooltip, beide aus einer
+      Variablen: Getrennt gesetzt liefen sie auseinander, und dann sagt das
+      Vorleseprogramm etwas anderes als die Blase daneben. Ein Bild ohne Namen
+      waere fuer ein Vorleseprogramm ein Knopf ohne Aufschrift.
+    - Waehrend der Suche steht an der Stelle der Lupe **derselbe drehende Ring
+      wie in der Statusleiste**, und der Knopf behaelt volle Deckkraft
+      (`--busy`), obwohl er `disabled` ist. Die allgemeine Regel blendet
+      Gesperrtes auf die Haelfte ab -- ein halb durchsichtiges Rad sieht nach
+      "geht gerade nicht" aus statt nach "laeuft".
   - **Die Trefferliste bleibt dabei bedienbar.** Waehrend einer *laufenden*
     Suche wird sie abgeblendet und gesperrt (`is-stale`), weil gleich eine neue
     kommt; hier kommt von allein nichts, und eine auf Dauer unbedienbare Liste
@@ -1108,14 +1134,19 @@ Gewichtung:
   sie sich als „da kommt noch mehr", und genau das stimmt.
 - **Die aufgeklappte Kopfzeile sitzt auf `--sunk`.** Sie ist dann eine
   Überschrift über einem Inhalt und keine Zeile für sich.
-- **„Orte suchen" bleibt ein stiller Knopf** (`.ghost`), obwohl er seit dem
-  14.09.2026 wieder der Weg ist und nicht mehr der Rückfall. Als gefüllter
-  Knopf war er die lauteste Fläche der Karte und stünde damit in Konkurrenz zum
-  einzigen echten Knopf der App unten im Dock -- der Trennlinie nach Preis, die
-  den ganzen Bedienablauf traegt: Suchen kostet kein Kontingent, Erreichbarkeit
-  rechnen schon. Solange die Einstellungen nicht eingelöst sind, trägt er die
-  Akzentfarbe in Randlinie und Schrift, aber keine Füllung
-  (`.poi-cond__search--pending`); danach tritt er zurück.
+- **„Orte suchen" ist eine graue Lupe** (`.ghost`, quadratisch in der Höhe der
+  Zeile), obwohl er seit dem 14.09.2026 wieder der Weg ist und nicht mehr der
+  Rückfall. Als gefüllter Knopf wäre er die lauteste Fläche der Karte und
+  stünde damit in Konkurrenz zum einzigen echten Knopf der App unten im Dock --
+  der Trennlinie nach Preis, die den ganzen Bedienablauf traegt: Suchen kostet
+  kein Kontingent, Erreichbarkeit rechnen schon. In Ruhe ist er deshalb
+  `--muted`; steht etwas aus, nimmt er die Akzentfarbe in Randlinie und
+  Zeichnung an, aber keine Füllung (`.poi-cond__search--pending`).
+  - Ein Wort darin hätte die Bedienzeile gesprengt -- die Messung steht oben
+    beim Bedienablauf. Ein Symbol geht hier, weil die Kopfzeile darüber den
+    Zustand ohnehin ausschreibt; anderswo in der App ist ein alleinstehendes
+    Symbol nur dort vertretbar, wo dasselbe gilt (der Haken zum Übernehmen, das
+    Auge, der Stift).
 - **Zählzeile und Sortierung sind leiser als die Suchzeile darüber.** Die eine
   berichtet („25 gefunden"), die andere stellt ein. Die Sortierung ist dabei
   eine Ansichtsoption und trägt darum keinen Rahmen (`select--quiet`), wie die

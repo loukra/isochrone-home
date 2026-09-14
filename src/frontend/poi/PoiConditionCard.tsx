@@ -20,7 +20,7 @@ import {
 import { useTexts } from '../i18n/index.js';
 import { Select, type SelectOption } from '../components/Select.js';
 import { NumberField } from '../components/NumberField.js';
-import { CaretIcon, CloseIcon } from '../components/icons.js';
+import { CaretIcon, CloseIcon, SearchIcon } from '../components/icons.js';
 
 export type PoiCondition = {
   category: PoiCategory;
@@ -122,12 +122,32 @@ export const PoiConditionCard = ({
   // noch zum alten Radius.
   const stale = condition.busy && condition.pois.length > 0 ? ' is-stale' : '';
   /*
-   * Die Einstellungen sind noch nicht eingelöst: entweder nie gesucht oder
-   * seither Zeit bzw. Verkehrsmittel geändert. Der Knopf ist dann der nächste
-   * Schritt und sagt das auch, statt still neben einer Liste zu stehen, die zu
-   * anderen Zahlen gehört.
+   * Die Einstellungen sind noch nicht eingelöst. Drei Wege dorthin:
+   *
+   * - nie gesucht,
+   * - seither Zeit oder Verkehrsmittel geändert,
+   * - **die letzte Suche ist gescheitert**.
+   *
+   * Der dritte fehlte und war der schlimmste der drei. Frischt sich eine
+   * Bedingung nach einer verschobenen Region von allein auf und Overpass
+   * antwortet nicht (real vorgekommen: nach 46 s "überlastet"), dann bleibt
+   * `searched` stehen und `dirty` ist `false` -- die Liste gehört noch zur
+   * alten Region, der Fehler steht darüber, und der Knopf, der der einzige
+   * Ausweg ist, sah aus wie "nichts zu tun". Die Farbe verspricht "hier wartet
+   * etwas"; genau dort brach das Versprechen.
    */
-  const pending = !condition.searched || condition.dirty;
+  const pending =
+    !condition.searched || condition.dirty || condition.error !== null;
+  /*
+   * Ein Name für beides -- `aria-label` und Tooltip. Getrennt gesetzt liefen
+   * sie auseinander, und dann sagt das Vorleseprogramm etwas anderes als die
+   * Blase daneben.
+   */
+  const searchLabel = condition.busy
+    ? texts.poi.searching
+    : condition.searched
+      ? texts.poi.searchAgain
+      : texts.poi.search;
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
 
   const toggleExpanded = (key: string): void => {
@@ -212,21 +232,36 @@ export const PoiConditionCard = ({
               title={texts.travelModes[condition.travelMode]}
               disabled={condition.busy}
             />
+            {/*
+              Eine Lupe statt eines Wortes. Die Zeile trägt schon Zahlenfeld,
+              Einheit und Verkehrsmittel; "Orte suchen" war darin die breiteste
+              Fläche und drängte bei schmalem Schirm den Rest zusammen. Was der
+              Knopf tut, sagt ohnehin die Kopfzeile darüber ("nicht gesucht",
+              "geändert", "sucht…") -- das Wort daneben war die zweite Antwort
+              auf dieselbe Frage.
+
+              Der Text bleibt als zugänglicher Name und als Tooltip: Ein Bild
+              ohne Namen ist für ein Vorleseprogramm ein Knopf ohne Aufschrift.
+            */}
             <button
               type="button"
-              className={
-                pending
-                  ? 'ghost poi-cond__search poi-cond__search--pending'
-                  : 'ghost poi-cond__search'
-              }
+              className={[
+                'ghost poi-cond__search',
+                pending ? 'poi-cond__search--pending' : '',
+                condition.busy ? 'poi-cond__search--busy' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
               onClick={onSearch}
               disabled={condition.busy || !canSearch}
+              aria-label={searchLabel}
+              data-tip={searchLabel}
             >
-              {condition.busy
-                ? texts.poi.searching
-                : condition.searched
-                  ? texts.poi.searchAgain
-                  : texts.poi.search}
+              {condition.busy ? (
+                <span className="poi-cond__searching" aria-hidden="true" />
+              ) : (
+                <SearchIcon size={15} />
+              )}
             </button>
           </div>
 
