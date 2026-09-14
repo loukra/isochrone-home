@@ -10,7 +10,7 @@ import {
 } from './api.js';
 import { unionBounds } from './bounds.js';
 import { colorAt } from './colors.js';
-import { TargetCard } from './forms/TargetCard.js';
+import { TargetCard, type TargetEditValues } from './forms/TargetCard.js';
 import { TargetDraftForm, type DraftValues } from './forms/TargetDraftForm.js';
 import { MapView } from './map/MapView.js';
 import { StatusBar } from './StatusBar.js';
@@ -125,6 +125,17 @@ export const App = () => {
   const [draftError, setDraftError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<GeocodingCandidate[]>([]);
   const [pendingDraft, setPendingDraft] = useState<DraftValues | null>(null);
+
+  /*
+    Bearbeitetes Ziel. Immer hoechstens eines: Zwei offene Formulare haetten
+    zwei Stapel Adressvorschlaege, und in der Seitenleiste waere nicht zu
+    sehen, welcher zu welchem gehoert.
+  */
+  const [editTargetId, setEditTargetId] = useState<string | null>(null);
+  const [editBusy, setEditBusy] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editCandidates, setEditCandidates] = useState<GeocodingCandidate[]>([]);
+  const [pendingEdit, setPendingEdit] = useState<TargetEditValues | null>(null);
 
   const [conditions, setConditions] = useState<PoiCondition[]>(() =>
     restored?.pois !== null && restored?.pois !== undefined
@@ -442,12 +453,134 @@ export const App = () => {
     [colorCursor, loadIsochrone, markAnalysisStale],
   );
 
+  /** Ein offenes Formular gehoert zu seinem Ziel und geht mit ihm. */
+  const closeTargetEdit = useCallback(() => {
+    setEditTargetId(null);
+    setEditBusy(false);
+    setEditError(null);
+    setEditCandidates([]);
+    setPendingEdit(null);
+  }, []);
+
+  const startTargetEdit = useCallback(
+    (id: string) => {
+      closeTargetEdit();
+      setEditTargetId(id);
+    },
+    [closeTargetEdit],
+  );
+
   const removeTarget = useCallback(
     (id: string) => {
       setTargets((current) => current.filter((target) => target.id !== id));
+      if (editTargetId === id) closeTargetEdit();
       markAnalysisStale();
     },
-    [markAnalysisStale],
+    [editTargetId, closeTargetEdit, markAnalysisStale],
+  );
+
+  /**
+   * Name und Adresse eines bestehenden Ziels aendern -- der Teil, den die
+   * Kopfzeile nicht bedienen kann.
+   *
+   * Drei Faelle, und sie kosten unterschiedlich viel:
+   *
+   * - **Nur der Name.** Ein Ziel umzubenennen verschiebt keinen Punkt. Kein
+   *   Adressbuch, keine Isochrone, kein veraltetes Ergebnis.
+   * - **Andere Schreibweise, derselbe Ort.** Das Adressbuch antwortet mit
+   *   derselben Koordinate; dann bleibt die Flaeche stehen. Eine korrigierte
+   *   Hausnummer darf nicht die ganze Schnittmenge kosten.
+   * - **Anderer Ort.** Wie eine geaenderte Reisezeit: Isochrone sofort neu,
+   *   Analyse-Ergebnis veraltet.
+   */
+  const submitTargetEdit = useCallback(
+    async (id: string, values: TargetEditValues, candidate?: GeocodingCandidate) => {
+      const target = targets.find((item) => item.id === id);
+      if (target === undefined) return;
+
+      const name = values.name.trim();
+      const address = values.address.trim();
+      if (name.length === 0 || address.length === 0) return;
+
+      // Umbenennen ist keine Anfrage wert -- die Adresse steht ja noch.
+      if (candidate === undefined && address === target.address) {
+        if (name !== target.name) {
+          setTargets((current) =>
+            current.map((item) => (item.id === id ? { ...item, name } : item)),
+          );
+        }
+        closeTargetEdit();
+        return;
+      }
+
+      setEditBusy(true);
+      setEditError(null);
+
+      try {
+        let chosen = candidate;
+
+        if (chosen === undefined) {
+          const { candidates: found } = await geocode(address);
+
+          if (found.length === 0) {
+            setEditError(texts.target.addressNotFound(address));
+            setEditBusy(false);
+            return;
+          }
+
+          if (found.length > 1) {
+            // Nutzer entscheidet, welcher Treffer gemeint ist.
+            setEditCandidates(found);
+            setPendingEdit({ name, address });
+            setEditBusy(false);
+            return;
+          }
+
+          chosen = found[0];
+        }
+
+        if (chosen === undefined) return;
+
+        // Ohne bisherige Koordinate gibt es nichts zu behalten -- dann gilt
+        // der Ort als verschoben und die Flaeche wird geholt.
+        const previous = target.coordinate;
+        const moved =
+          previous === null ||
+          chosen.coordinate.latitude !== previous.latitude ||
+          chosen.coordinate.longitude !== previous.longitude;
+
+        // Auch ohne Ortswechsel neu holen, wenn gar keine Flaeche daliegt:
+        // Ein gescheitertes Ziel behielte sonst seinen Fehler, obwohl der
+        // Nutzer gerade die Adresse repariert hat.
+        const refetch = moved || target.isochrone === null;
+
+        const next: Target = {
+          ...target,
+          name,
+          address,
+          coordinate: chosen.coordinate,
+          resolvedLabel: chosen.label,
+          ...(moved ? { isochrone: null, bounds: null } : {}),
+        };
+
+        setTargets((current) => current.map((item) => (item.id === id ? next : item)));
+        closeTargetEdit();
+
+        if (!refetch) return;
+
+        // Nur ein anderer Ort entwertet die Schnittmenge. Wird ein
+        // gescheitertes Ziel fertig, merkt die Signatur das von selbst --
+        // sie zaehlt nur die fertigen Ziele.
+        if (moved) markAnalysisStale();
+
+        await loadIsochrone(next);
+      } catch (error) {
+        setEditError(translateError(texts, error));
+      } finally {
+        setEditBusy(false);
+      }
+    },
+    [targets, texts, closeTargetEdit, loadIsochrone, markAnalysisStale],
   );
 
   const changeMinutes = useCallback(
@@ -1117,11 +1250,24 @@ export const App = () => {
                   key={target.id}
                   target={target}
                   maxMinutes={maxMinutes}
+                  edit={
+                    editTargetId === target.id
+                      ? { busy: editBusy, error: editError, candidates: editCandidates }
+                      : null
+                  }
                   onRemove={removeTarget}
                   onChangeMinutes={changeMinutes}
                   onChangeTravelMode={changeTravelMode}
                   onToggleVisible={toggleVisible}
                   onRetry={retry}
+                  onStartEdit={startTargetEdit}
+                  onCancelEdit={closeTargetEdit}
+                  onSubmitEdit={(id, values) => void submitTargetEdit(id, values)}
+                  onPickEditCandidate={(candidate) => {
+                    if (editTargetId !== null && pendingEdit !== null) {
+                      void submitTargetEdit(editTargetId, pendingEdit, candidate);
+                    }
+                  }}
                 />
               ))}
 

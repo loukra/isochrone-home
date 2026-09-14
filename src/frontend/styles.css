@@ -310,10 +310,24 @@ h1 {
   color: var(--danger);
 }
 
+/* Adresse und Stift in einer Zeile: Die Kopfzeile hat für ein viertes
+   Zeichen keinen Platz mehr (gemessen blieben dem Namen dann 25,8 px), und
+   diese Zeile zeigt ohnehin, was der Stift ändert. */
 .card__address {
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   color: var(--muted);
+}
+
+/* Lange Adressen kürzen, statt den Stift aus der Karte zu schieben. */
+.card__address > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 label {
@@ -433,6 +447,32 @@ input:focus-visible {
 .card__minutes .card__apply {
   font-size: 12px;
   padding-inline: 0;
+}
+
+/* Am rechten Ende der Adresszeile, unter dem x der Kopfzeile. Ruhig wie das
+   Auge -- Bearbeiten ist umkehrbar, solange nichts gespeichert ist. */
+.card__edit {
+  margin-left: auto;
+  background: none;
+  border: none;
+  padding: 0 2px;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.card__edit:hover {
+  color: var(--text);
+}
+
+/* Steht an der Stelle der Adresszeile, also innerhalb der Karte -- deshalb
+   kein eigener Rahmen, nur der Abstand zwischen den Feldern. */
+.card__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .card__actions {
@@ -2047,12 +2087,16 @@ button.link {
   .poi-row__expand,
   .place-card__caret,
   .poi-cond__remove,
+  .card__edit,
   .numfield .numfield__step {
     /* Die gezeichnete Groesse bleibt; nur der Bereich darum waechst. */
     min-width: 28px;
   }
 
-  .poi-row__expand {
+  .poi-row__expand,
+  /* Der Stift steht in einer 12px hohen Textzeile -- ohne eigene Hoehe waere
+     er das kleinste Ziel der Oberflaeche. */
+  .card__edit {
     height: 28px;
   }
 }

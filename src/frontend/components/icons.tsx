@@ -79,6 +79,24 @@ export const CheckIcon = ({ size = 18 }: IconProps) => (
   </svg>
 );
 
+/**
+ * Stift: Name und Adresse eines Ziels ändern. Die Spitze zeigt nach links
+ * unten, weil der Knopf am rechten Rand der Kopfzeile steht -- so weist das
+ * Symbol auf das, was es bearbeitet, und nicht aus der Karte hinaus.
+ */
+export const PencilIcon = ({ size = 16 }: IconProps) => (
+  <svg {...box(size)}>
+    <path
+      d="M13.4 3.6a1.7 1.7 0 0 1 2.4 0l0.6 0.6a1.7 1.7 0 0 1 0 2.4L7.6 15.4l-3.4 1 1-3.4Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinejoin="round"
+    />
+    <path d="m12.2 4.8 3 3" fill="none" stroke="currentColor" strokeWidth="1.6" />
+  </svg>
+);
+
 /** Auge auf/zu: Sichtbarkeit eines Ziels auf der Karte. */
 export const EyeIcon = ({ open, size = 16 }: IconProps & { open: boolean }) => (
   <svg {...box(size)}>

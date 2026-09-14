@@ -70,6 +70,12 @@ export const de = {
     hideTitle: 'Auf der Karte ausblenden (zählt weiter mit)',
     showTitle: 'Wieder einblenden',
     removeLabel: (name: string) => `${name} entfernen`,
+    editTitle: 'Name und Adresse ändern',
+    editLabel: (name: string) => `${name} bearbeiten`,
+    editSave: 'Speichern',
+    // Bewusst nicht "Wird berechnet": Wer nur den Namen ändert, wartet auf
+    // nichts, und wer die Adresse ändert, wartet zuerst auf das Adressbuch.
+    editSaving: 'Wird geprüft…',
     // Bewusst nicht "Isochrone": Das Wort steht sonst nirgends in der
     // Oberfläche, und wer sie nur vorgelesen bekommt, hörte es ständig.
     computing: (travelMode: string) => `Erreichbarer Bereich wird berechnet (${travelMode})…`,
