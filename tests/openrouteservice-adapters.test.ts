@@ -164,6 +164,21 @@ describe('OpenRouteServiceIsochroneProvider', () => {
     expect(result.geometry.type).toBe('Polygon');
   });
 
+  it('schickt smoothing 0 mit', async () => {
+    // Nicht weglassen: ORS waehlt dann seine eigene Vorgabe, und die liegt
+    // gemessen zwischen 0 und 50 -- die Flaeche loest sich dabei vom
+    // Strassennetz und behauptet Erreichbarkeit, die es nicht gibt.
+    const spy = mockFetch(POLYGON_RESPONSE);
+
+    await new OpenRouteServiceIsochroneProvider('key').calculate(
+      { latitude: 51.96, longitude: 7.63 },
+      { travelMode: 'driving', maxTravelTimeMinutes: 30 },
+    );
+
+    const [, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({ smoothing: 0 });
+  });
+
   it('meldet eine Fahrzeit über dem Providerlimit als Eingabefehler', async () => {
     const spy = mockFetch({ json: async () => ({ features: [] }) });
     const provider = new OpenRouteServiceIsochroneProvider('key');
