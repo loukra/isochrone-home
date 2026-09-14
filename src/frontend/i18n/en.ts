@@ -45,6 +45,7 @@ export const en: Texts = {
     namePlaceholder: 'Parents A',
     addressPlaceholder: 'Münster',
     whichAddress: 'Which address do you mean?',
+    precision: { street: 'whole street', place: 'place only' },
     submit: 'Apply',
     submitHint: 'Confirm with Enter',
     submitting: 'Calculating…',

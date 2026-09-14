@@ -12,7 +12,18 @@ export type MapLayer = {
   geometry: AreaFeature;
 };
 
-export type GeocodingCandidate = { label: string; coordinate: Coordinate };
+/**
+ * Spiegelung von `domain/ports/geocoding-provider`. Wie genau ein Treffer ist,
+ * entscheidet darüber, ob die Liste einen Ortsteil als solchen ausweist --
+ * sonst sieht er aus wie eine Adresse.
+ */
+export type GeocodingPrecision = 'address' | 'street' | 'place';
+
+export type GeocodingCandidate = {
+  label: string;
+  coordinate: Coordinate;
+  precision: GeocodingPrecision;
+};
 
 /**
  * Auftrag an die Karte, etwas zu zeigen -- ein Ereignis, kein Zustand.

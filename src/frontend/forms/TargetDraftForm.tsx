@@ -132,6 +132,11 @@ export const TargetDraftForm = ({
               disabled={busy}
             >
               {candidate.label}
+              {candidate.precision !== 'address' && (
+                <span className="candidate__precision">
+                  {texts.target.precision[candidate.precision]}
+                </span>
+              )}
             </button>
           ))}
         </div>

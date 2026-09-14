@@ -72,11 +72,15 @@ describe('FileStore', () => {
 
   it('verwirft eine beschädigte Datei, statt zu scheitern', async () => {
     await store.set(NAMESPACES.geocoding, 'muenster', { latitude: 51, longitude: 7 });
-    const [file] = await readdir(join(directory, 'geocoding'));
-    await writeFile(join(directory, 'geocoding', file as string), '{kaputt', 'utf8');
+    const [file] = await readdir(join(directory, NAMESPACES.geocoding.name));
+    await writeFile(
+      join(directory, NAMESPACES.geocoding.name, file as string),
+      '{kaputt',
+      'utf8',
+    );
 
     expect(await store.get(NAMESPACES.geocoding, 'muenster')).toBeNull();
-    expect(await readdir(join(directory, 'geocoding'))).toHaveLength(0);
+    expect(await readdir(join(directory, NAMESPACES.geocoding.name))).toHaveLength(0);
   });
 
   it('wirft nicht, wenn das Verzeichnis nicht beschreibbar ist', async () => {

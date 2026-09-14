@@ -1,9 +1,17 @@
 import type { Coordinate } from '../models/geo.js';
 
+/**
+ * Wie genau ein Treffer die gestellte Frage beantwortet. Ein Ortsteil ist
+ * keine Hausnummer, und wer das nicht sieht, hält den Mittelpunkt eines Dorfes
+ * für seine Adresse -- gemessen bis zu einem Kilometer daneben.
+ */
+export type GeocodingPrecision = 'address' | 'street' | 'place';
+
 export type GeocodingCandidate = {
   /** Vom Provider normalisierte, anzeigbare Bezeichnung des Ortes. */
   label: string;
   coordinate: Coordinate;
+  precision: GeocodingPrecision;
 };
 
 export interface GeocodingProvider {
