@@ -40,7 +40,7 @@ export class FileCachedIsochroneProvider implements IsochroneProvider {
   ) {}
 
   async calculate(origin: Coordinate, options: IsochroneOptions): Promise<AreaFeature> {
-    const key = `${coordinateKey(origin)}|${options.travelMode}|${options.maxTravelTimeMinutes}`;
+    const key = `${coordinateKey(origin)}|${options.travelMode}|${options.maxTravelTimeMinutes}|${options.direction}`;
     const cached = await this.store.get<AreaFeature>(this.namespace, key);
 
     if (cached !== null) return cached;

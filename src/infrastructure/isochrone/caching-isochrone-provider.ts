@@ -56,7 +56,7 @@ export class CachingIsochroneProvider implements IsochroneProvider {
   }
 
   private keyOf(origin: Coordinate, options: IsochroneOptions): string {
-    return `${coordinateKey(origin)}|${options.travelMode}|${options.maxTravelTimeMinutes}`;
+    return `${coordinateKey(origin)}|${options.travelMode}|${options.maxTravelTimeMinutes}|${options.direction}`;
   }
 
   private evictIfNeeded(): void {

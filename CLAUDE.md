@@ -134,9 +134,44 @@ Daraus folgt:
   verworfen bzw. als veraltet markiert, bis erneut analysiert wird.
 - Die Schnittmenge wird trotzdem **ausschliesslich serverseitig** berechnet
   (Spec 9). Das Frontend schickt dafuer die Constraints an `/api/analyze`.
-- Ein serverseitiger Isochronen-Cache (Key: `lat,lon,mode,minutes`) sorgt dafuer,
-  dass `/api/analyze` die in Schritt 1 bereits geholten Isochronen nicht erneut
-  beim Provider anfragt (Spec 10: keine unnoetigen API-Aufrufe).
+- Ein serverseitiger Isochronen-Cache (Key: `lat,lon,mode,minutes,direction`)
+  sorgt dafuer, dass `/api/analyze` die in Schritt 1 bereits geholten Isochronen
+  nicht erneut beim Provider anfragt (Spec 10: keine unnoetigen API-Aufrufe).
+- **Ein Ziel wird in beide Fahrtrichtungen gerechnet und geschnitten**
+  (*ergaenzt am 14.09.2026 auf Entscheidung des Nutzers*; vorher nur eine
+  Richtung, und zwar unbeabsichtigt der Rueckweg -- ORS nimmt ohne Angabe
+  `location_type: start`). "25 Minuten zur Arbeit" heisst hoechstens 25
+  Minuten, **egal in welche Richtung**: Wer hin 25 und zurueck 30 braucht,
+  liegt bei der Einstellung 25 draussen und erst ab 30 drin.
+  - Die beiden Richtungen sind nicht dieselbe Flaeche. Einbahnstrassen,
+    Abbiegeverbote und Autobahnauffahrten trennen sie. Gemessen (Oldenburg,
+    25 Min. Auto, `smoothing: 0`): Hinweg 916 km², Rueckweg 933 km², beide
+    zusammen 846 km². Das ist kein verschobenes Gebiet, sondern ein schmaler
+    Saum am Rand, in dem sich die Richtungen um zwei bis drei Minuten
+    unterscheiden.
+  - Geschnitten, nicht vereinigt: Die Vereinigung hiesse "in *irgendeiner*
+    Richtung im Limit", und das will niemand -- man faehrt hin *und* zurueck.
+  - `reachableArea` (`application/analysis/reachable-area.ts`) ist die einzige
+    Stelle, die das tut. Schneiden sich die Richtungen wider Erwarten nicht,
+    gilt der Hinweg -- das ist die Frage, die im Formular steht, und eine
+    leere Karte waere die schlechtere Antwort.
+  - Kostet zwei Providercalls je Ziel statt einem. Bei einer Handvoll Zielen
+    von 500 Tagesanfragen belanglos, und beide Richtungen liegen getrennt im
+    Cache.
+- **Schritt 3 bleibt einseitig, Richtung Hinweg** (`direction: 'toTarget'`).
+  Nicht aus Nachlaessigkeit: Dort duerfen es 25 angehakte Orte sein, beidseitig
+  waeren das 50 Aufrufe von 500 am Tag -- fuer einen Unterschied, der am Rand
+  ein paar hundert Meter ausmacht. Die Richtung ist trotzdem ausdruecklich
+  gesetzt, weil "von wo aus erreiche ich dieses Studio" die Frage der Bedingung
+  ist; die Providervorgabe waere der Rueckweg gewesen.
+- Darum ist `IsochroneOptions.direction` ein **Pflichtfeld ohne Vorgabewert**.
+  Eine Aufrufstelle, die es vergaesse, bekaeme still die Providervorgabe, und
+  das saehe niemand der Flaeche an -- dieselbe Gefahr wie beim Vorfiltern von
+  POIs.
+- Offen und bewusst so: **Die Oberfläche sagt das nicht.** Im Formular steht
+  weiter "Max. Reisezeit"; dass die Zahl bei den Zielen beidseitig gilt und bei
+  den Bedingungen nicht, steht nur hier. Ein Wort dazu gehoerte in die
+  Oberflaeche, sobald der Text- und i18n-Stand steht.
 - Constraints duerfen eine bereits aufgeloeste `coordinate` mitliefern, dann
   entfaellt ein zweiter Geocoding-Call.
 - **Die POI-Punkte liegen immer ganz oben.** MapLibre haengt jeden neuen Layer

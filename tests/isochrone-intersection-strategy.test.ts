@@ -106,6 +106,23 @@ describe('IsochroneIntersectionStrategy', () => {
     expect(isochrones.calls[0]?.options).toEqual({
       travelMode: 'driving',
       maxTravelTimeMinutes: 45,
+      direction: 'toTarget',
     });
+  });
+
+  it('holt je Ziel beide Fahrtrichtungen', async () => {
+    // "45 Minuten" heisst 45 in beide Richtungen. Eine einzelne Isochrone
+    // kennt nur eine davon -- und die beiden sind nicht dieselbe Flaeche.
+    const { strategy, isochrones } = makeStrategy([square(0, 0, 10, 10)]);
+
+    await strategy.analyze({
+      constraints: [constraint('a', { maxTravelTimeMinutes: 45 })],
+    });
+
+    expect(isochrones.calls).toHaveLength(2);
+    expect(isochrones.calls.map((call) => call.options.direction).sort()).toEqual([
+      'fromTarget',
+      'toTarget',
+    ]);
   });
 });

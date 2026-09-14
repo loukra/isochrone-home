@@ -4,6 +4,7 @@ import type { GeocodingProvider } from '../../domain/ports/geocoding-provider.js
 import type { IsochroneProvider } from '../../domain/ports/isochrone-provider.js';
 import { validateAnalysisRequest } from '../../domain/services/constraint-validation.js';
 import { boundsOf } from '../../domain/services/geometry.js';
+import { reachableArea } from './reachable-area.js';
 
 export type SingleIsochroneResult = {
   constraintId: string;
@@ -30,7 +31,7 @@ export class IsochroneQuery {
     const coordinate =
       constraint.coordinate ?? (await this.geocoding.geocode(constraint.address));
 
-    const geometry = await this.isochrones.calculate(coordinate, {
+    const geometry = await reachableArea(this.isochrones, coordinate, {
       travelMode: constraint.travelMode,
       maxTravelTimeMinutes: constraint.maxTravelTimeMinutes,
     });

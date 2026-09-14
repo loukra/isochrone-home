@@ -50,8 +50,13 @@ const stubOrs = (options: {
   status?: number;
 }) => {
   let isochroneIndex = 0;
+  // Je *Ort* eine Geometrie, nicht je Aufruf: Fuer ein Ziel werden seit der
+  // Zweirichtungsrechnung zwei Isochronen geholt (Hin- und Rueckweg). Ein
+  // Zaehler ueber die Aufrufe verteilte sonst die Liste auf die Richtungen
+  // desselben Ziels, statt auf die Ziele.
+  const byLocation = new Map<string, unknown>();
 
-  const spy = vi.fn(async (url: string) => {
+  const spy = vi.fn(async (url: string, init?: { body?: string }) => {
     if (options.status !== undefined && options.status >= 400) {
       return { ok: false, status: options.status, json: async () => ({}) };
     }
@@ -72,7 +77,13 @@ const stubOrs = (options: {
       };
     }
 
-    const geometry = options.isochrones?.[isochroneIndex++] ?? polygon(0, 0, 10, 10);
+    const key = JSON.stringify(
+      (JSON.parse(init?.body ?? '{}') as { locations?: unknown }).locations ?? null,
+    );
+    if (!byLocation.has(key)) {
+      byLocation.set(key, options.isochrones?.[isochroneIndex++] ?? polygon(0, 0, 10, 10));
+    }
+    const geometry = byLocation.get(key);
     return {
       ok: true,
       status: 200,
