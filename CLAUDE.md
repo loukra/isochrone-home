@@ -76,8 +76,8 @@ gelten insoweit als ueberholt.
 **Schritt 3 — Orte in der Naehe (mehrere Bedingungen, zwei Klicks).**
 "Orte suchen" holt ueber Overpass alle Orte der Kategorie im Umkreis der
 gemeinsamen Region (kostenlos, kein ORS-Kontingent) und zeigt sie als kleine
-Punkte plus Liste. **Die Minutenangabe ist hier nur ein Suchradius**
-(`Minuten x 1.5 km`, Luftlinie) — noch keine Erreichbarkeit. Der Nutzer hakt
+Punkte plus Liste. **Zeit und Verkehrsmittel sind hier nur ein Suchradius**
+(`Minuten x km-je-Minute`, Luftlinie) — noch keine Erreichbarkeit. Der Nutzer hakt
 selbst an, was zaehlt; erst "Erreichbarkeit berechnen" (`/api/pois/region`) berechnet
 Isochronen um die angehakten Orte, vereinigt sie und schneidet sie mit der
 gemeinsamen Region. Erst dieses Ergebnis ist eine echte Fahrzeitaussage.
@@ -154,10 +154,28 @@ Daraus folgt:
   geaenderte Reisezeit: Isochrone sofort neu holen, Analyse-Ergebnis veraltet.
   Die Auswahl im Select ist bereits eine Bestaetigung -- das ist kein
   Tastendruck-Call.
-- Schritt 3 (POI-Isochronen) rechnet weiterhin fest mit `driving`. Bewusst
-  offen: Die Bedingung "ein Studio in der Naehe" hat kein eigenes
-  Verkehrsmittel in der UI, und es zu erraten waere schlechter als es zu
-  benennen.
+- **Jede POI-Bedingung traegt ihr eigenes Verkehrsmittel** (*geaendert am
+  14.09.2026 auf Wunsch des Nutzers*; vorher rechnete Schritt 3 fest mit
+  `driving`). Dieselbe Begruendung wie beim Ziel, nur schaerfer: Zum Supermarkt
+  geht man, ins Schwimmbad faehrt man, und beides fordert dieselbe Person
+  nebeneinander. Ein Wechsel verhaelt sich wie eine geaenderte Zeit -- sofort
+  neu suchen, verengte Region verwerfen; die Auswahl im Menue *ist* die
+  Bestaetigung. Voreingestellt bleibt `driving`: die weiteste Reichweite und
+  damit die Annahme, die am wenigsten still etwas ausschliesst.
+- **Der Suchradius haengt am Verkehrsmittel, nicht nur an der Zeit**
+  (`KM_PER_MINUTE` in `domain/services/search-area.ts`: Auto 1,5 km/min,
+  E-Bike 0,5, Rad 0,4, zu Fuss 0,12 -- jeweils rund die Haelfte ueber dem
+  Tempo, mit dem ORS fuer das Profil rechnet). Ein gemeinsamer Wert waere hier
+  nicht bloss unsauber, sondern unbrauchbar: Gemessen in der Referenzregion
+  (Oldenburg/Delmenhorst, je 25 Min. Auto) findet "10 Minuten" beim Supermarkt
+  mit 1,5 km/min **401** Treffer bis 14,9 km ausserhalb, mit dem Fussgaenger-
+  wert **80** bis 1,2 km. Die Liste stuende sonst voll mit Orten, zu denen
+  niemand laeuft, und die Angabe "x km ausserhalb" waere fuer die Entscheidung
+  wertlos. Nach oben gilt weiter: lieber zu viel finden als unbemerkt zu wenig.
+- Dass das Verkehrsmittel wirklich bis zum Provider durchschlaegt, haengt nicht
+  am Vertrauen: Derselbe Supermarkt, 10 Minuten, ergab ueber `/api/pois/region`
+  165 km² erreichbare Flaeche mit dem Auto, 14,4 km² mit dem Rad und 0,8 km²
+  zu Fuss.
 - POI-Bedingungen sind **Vereinigungen, nicht Schnitte**: Es genuegt, dass *ein*
   gewaehlter Ort erreichbar ist. Erst die Vereinigung wird mit der Familienregion
   geschnitten — O(N+M) statt jede Paarung einzeln zu pruefen.

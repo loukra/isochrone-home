@@ -6,6 +6,7 @@ import {
   type Coordinate,
   type PoiCategory,
   type Target,
+  type TravelMode,
 } from './types.js';
 
 const STORAGE_KEY = 'location-optimizer:state:v1';
@@ -57,6 +58,9 @@ const categorySchema = z.enum(POI_CATEGORIES);
 
 const persistedConditionSchema = z.object({
   category: categorySchema,
+  // Vor dem Verkehrsmittel-Schalter gespeicherte Bedingungen kennen das Feld
+  // nicht -- Schritt 3 rechnete damals ausnahmslos mit dem Auto.
+  travelMode: z.enum(TRAVEL_MODES).default('driving'),
   minutes: z.number().int().positive(),
   open: z.boolean(),
   sortMode: z.enum(['relevance', 'distance']),
@@ -119,6 +123,7 @@ const persistedStateSchema = z.object({
 
 export type PersistedPoiCondition = {
   category: PoiCategory;
+  travelMode: TravelMode;
   minutes: number;
   open: boolean;
   sortMode: 'relevance' | 'distance';
@@ -323,6 +328,7 @@ export const loadState = (): RestoredState | null => {
         : {
             conditions: stored.conditions.map((condition) => ({
               category: condition.category,
+              travelMode: condition.travelMode,
               minutes: condition.minutes,
               open: condition.open,
               sortMode: condition.sortMode,

@@ -1,3 +1,4 @@
+import type { TravelMode } from './analysis.js';
 import type { Coordinate } from './geo.js';
 
 /**
@@ -39,6 +40,11 @@ export type Poi = {
  */
 export type PoiConstraint = {
   category: PoiCategory;
+  /**
+   * Verkehrsmittel dieser Bedingung. Hängt an der Bedingung, nicht an der App:
+   * Zum Bäcker geht man, ins Schwimmbad fährt man.
+   */
+  travelMode: TravelMode;
   maxTravelTimeMinutes: number;
   /** Die vom Nutzer angehakten POIs. Leer = Bedingung inaktiv. */
   selectedPoiIds: string[];

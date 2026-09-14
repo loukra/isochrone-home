@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { PoiRegionRefinement } from '../src/application/analysis/poi-region.js';
 import { isDomainError } from '../src/domain/models/errors.js';
 import type { AreaFeature, Coordinate } from '../src/domain/models/geo.js';
-import type { LocationAnalysisResult } from '../src/domain/models/analysis.js';
+import type {
+  LocationAnalysisResult,
+  TravelMode,
+} from '../src/domain/models/analysis.js';
 import type { LocationAnalysisStrategy } from '../src/domain/ports/analysis-strategy.js';
 import { unionAreas } from '../src/domain/services/geometry.js';
 import { constraint, square, StubIsochroneProvider } from './helpers/fixtures.js';
@@ -24,16 +27,28 @@ class StubStrategy implements LocationAnalysisStrategy {
 
 const at = (longitude: number, latitude: number): Coordinate => ({ longitude, latitude });
 
-const request = (origins: Coordinate[], minutes = 10) => ({
+const request = (origins: Coordinate[], minutes = 10, travelMode: TravelMode = 'driving') => ({
   constraints: [constraint('a')],
-  conditions: [{ category: 'gym' as const, maxTravelTimeMinutes: minutes, origins }],
+  conditions: [
+    { category: 'gym' as const, travelMode, maxTravelTimeMinutes: minutes, origins },
+  ],
 });
 
 const twoConditions = (gyms: Coordinate[], markets: Coordinate[]) => ({
   constraints: [constraint('a')],
   conditions: [
-    { category: 'gym' as const, maxTravelTimeMinutes: 10, origins: gyms },
-    { category: 'supermarket' as const, maxTravelTimeMinutes: 5, origins: markets },
+    {
+      category: 'gym' as const,
+      travelMode: 'driving' as const,
+      maxTravelTimeMinutes: 10,
+      origins: gyms,
+    },
+    {
+      category: 'supermarket' as const,
+      travelMode: 'driving' as const,
+      maxTravelTimeMinutes: 5,
+      origins: markets,
+    },
   ],
 });
 
@@ -185,6 +200,51 @@ describe('PoiRegionRefinement', () => {
 
     expect(result.conditions).toHaveLength(1);
     expect(isochrones.calls).toHaveLength(1);
+  });
+
+  it('fragt die Isochrone im Verkehrsmittel der Bedingung ab', async () => {
+    // Vorher rechnete Schritt 3 ausnahmslos mit dem Auto -- ein Supermarkt
+    // "10 Minuten zu Fuß" bekam damit die Flaeche einer Autofahrt.
+    const isochrones = new StubIsochroneProvider([square(0, 0, 10, 10)]);
+    const refinement = new PoiRegionRefinement(
+      new StubStrategy(square(0, 0, 10, 10)),
+      isochrones,
+    );
+
+    await refinement.execute(request([at(1, 1)], 10, 'walking'));
+
+    expect(isochrones.calls[0]?.options.travelMode).toBe('walking');
+  });
+
+  it('trennt die Verkehrsmittel zweier Bedingungen', async () => {
+    const isochrones = new StubIsochroneProvider([square(0, 0, 10, 10)]);
+    const refinement = new PoiRegionRefinement(
+      new StubStrategy(square(0, 0, 10, 10)),
+      isochrones,
+    );
+
+    await refinement.execute({
+      constraints: [constraint('a')],
+      conditions: [
+        {
+          category: 'gym' as const,
+          travelMode: 'driving' as const,
+          maxTravelTimeMinutes: 15,
+          origins: [at(1, 1)],
+        },
+        {
+          category: 'supermarket' as const,
+          travelMode: 'walking' as const,
+          maxTravelTimeMinutes: 10,
+          origins: [at(2, 2)],
+        },
+      ],
+    });
+
+    expect(isochrones.calls.map((call) => call.options.travelMode)).toEqual([
+      'driving',
+      'walking',
+    ]);
   });
 
   it('verlangt mindestens einen Ort', async () => {

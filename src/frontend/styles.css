@@ -780,6 +780,16 @@ button.link {
   margin-left: auto;
 }
 
+/*
+ * Das Verkehrsmittel steht in derselben Zeile wie die Minuten -- "10 Min. zu
+ * Fuss" ist *eine* Angabe, und erst beide zusammen ergeben den Suchradius.
+ * Es muss darum die allgemeine Regel `margin-left: auto` zurueckdrehen, die
+ * die Sortierung eine Zeile tiefer an den rechten Rand schiebt.
+ */
+.poi-cond__mode {
+  margin-left: 0;
+}
+
 .poi-cond__body button {
   font-size: 13px;
   padding: 7px 11px;

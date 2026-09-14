@@ -1,4 +1,7 @@
-import type { LocationAnalysisRequest } from '../../domain/models/analysis.js';
+import type {
+  LocationAnalysisRequest,
+  TravelMode,
+} from '../../domain/models/analysis.js';
 import { DomainError } from '../../domain/models/errors.js';
 import type { BoundingBox } from '../../domain/models/geo.js';
 import type { PoiCategory, Poi } from '../../domain/models/poi.js';
@@ -10,7 +13,11 @@ import { distanceToAreaKm } from '../../domain/services/geometry.js';
 export type PoiSearchRequest = {
   constraints: LocationAnalysisRequest['constraints'];
   category: PoiCategory;
-  /** Bestimmt, wie weit über die Region hinaus gesucht wird. */
+  /**
+   * Zeit und Verkehrsmittel zusammen bestimmen, wie weit über die Region hinaus
+   * gesucht wird -- zehn Minuten zu Fuß reichen nicht so weit wie zehn im Auto.
+   */
+  travelMode: TravelMode;
   maxTravelTimeMinutes: number;
 };
 
@@ -51,7 +58,7 @@ export class PoiSearch {
     }
 
     const regionBounds = boundsOfFeature(analysis.intersection);
-    const radiusKm = reachRadiusKm(request.maxTravelTimeMinutes);
+    const radiusKm = reachRadiusKm(request.maxTravelTimeMinutes, request.travelMode);
     const searchArea = expandBounds(regionBounds, radiusKm);
 
     const found = await this.pois.search(request.category, searchArea);

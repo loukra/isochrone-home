@@ -4,7 +4,7 @@ import {
   type PoiCondition,
 } from './PoiConditionCard.js';
 import type { PoiGroup, PoiSortMode } from './selection.js';
-import type { FoundPoi, PoiCategory } from '../types.js';
+import type { FoundPoi, PoiCategory, TravelMode } from '../types.js';
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as PoiCategory[];
 
@@ -20,6 +20,7 @@ type PoiPanelProps = {
   onRemove: (category: PoiCategory) => void;
   onToggleOpen: (category: PoiCategory) => void;
   onMinutesChange: (category: PoiCategory, minutes: number) => void;
+  onTravelModeChange: (category: PoiCategory, mode: TravelMode) => void;
   onSearch: (category: PoiCategory) => void;
   onSortModeChange: (category: PoiCategory, mode: PoiSortMode) => void;
   onToggleGroup: (group: PoiGroup) => void;
@@ -39,6 +40,7 @@ export const PoiPanel = ({
   onRemove,
   onToggleOpen,
   onMinutesChange,
+  onTravelModeChange,
   onSearch,
   onSortModeChange,
   onToggleGroup,
@@ -72,6 +74,7 @@ export const PoiPanel = ({
             onToggleOpen={() => onToggleOpen(condition.category)}
             onRemove={() => onRemove(condition.category)}
             onMinutesChange={(minutes) => onMinutesChange(condition.category, minutes)}
+            onTravelModeChange={(mode) => onTravelModeChange(condition.category, mode)}
             onSearch={() => onSearch(condition.category)}
             onSortModeChange={(mode) => onSortModeChange(condition.category, mode)}
             onToggleGroup={onToggleGroup}

@@ -57,6 +57,9 @@ const messageOf = (error: unknown): string =>
 
 const newCondition = (category: PoiCategory): PoiCondition => ({
   category,
+  // Das Auto als Vorgabe, wie bei den Zielen: Es ist die weiteste Reichweite
+  // und damit die Annahme, die am wenigsten still etwas ausschließt.
+  travelMode: 'driving',
   minutes: 10,
   pois: [],
   busy: false,
@@ -91,6 +94,7 @@ export const App = () => {
     restored?.pois !== null && restored?.pois !== undefined
       ? restored.pois.conditions.map((condition) => ({
           category: condition.category,
+          travelMode: condition.travelMode,
           minutes: condition.minutes,
           open: condition.open,
           sortMode: condition.sortMode,
@@ -256,8 +260,9 @@ export const App = () => {
       checkedPlaces,
       pois: {
         conditions: conditions.map(
-          ({ category, minutes, open, sortMode, pois: found }) => ({
+          ({ category, travelMode, minutes, open, sortMode, pois: found }) => ({
             category,
+            travelMode,
             minutes,
             open,
             sortMode,
@@ -462,20 +467,25 @@ export const App = () => {
 
   /** Sucht Orte rund um die gemeinsame Region. Kostet kein ORS-Kontingent. */
   const runPoiSearch = useCallback(
-    async (category: PoiCategory, minutesOverride?: number) => {
-      // Beim Anlegen oder Ändern einer Bedingung steht der Wert noch nicht im
-      // State -- er wird mitgegeben, statt eine Runde auf React zu warten.
-      const minutes =
-        minutesOverride ?? conditions.find((item) => item.category === category)?.minutes;
+    async (
+      category: PoiCategory,
+      // Beim Anlegen oder Ändern einer Bedingung steht der neue Wert noch nicht
+      // im State -- er wird mitgegeben, statt eine Runde auf React zu warten.
+      override?: { minutes?: number; travelMode?: TravelMode },
+    ) => {
+      const current = conditions.find((item) => item.category === category);
+      const minutes = override?.minutes ?? current?.minutes;
+      const travelMode = override?.travelMode ?? current?.travelMode;
 
-      if (minutes === undefined || readyTargets.length === 0) return;
+      if (minutes === undefined || travelMode === undefined) return;
+      if (readyTargets.length === 0) return;
 
       patchCondition(category, { busy: true, error: null });
       setPopupPoiId(null);
       setFocusedPoiIds(new Set());
 
       try {
-        const result = await searchPois(readyTargets, category, minutes);
+        const result = await searchPois(readyTargets, category, travelMode, minutes);
         patchCondition(category, { pois: result.pois, busy: false });
         stepThree.current.searched.add(category);
       } catch (error) {
@@ -502,7 +512,7 @@ export const App = () => {
 
       // Ohne gemeinsame Region gibt es nichts zu durchsuchen -- dann bleibt es
       // beim Knopf, bis analysiert wurde.
-      if (intersection !== null) void runPoiSearch(category, angelegt.minutes);
+      if (intersection !== null) void runPoiSearch(category, angelegt);
     },
     [conditions, intersection, runPoiSearch],
   );
@@ -532,7 +542,23 @@ export const App = () => {
       // spaeter wieder auftauchen; alles darunter sprang mit.
       patchCondition(category, { minutes });
       invalidateRegion();
-      if (intersection !== null) void runPoiSearch(category, minutes);
+      if (intersection !== null) void runPoiSearch(category, { minutes });
+    },
+    [patchCondition, invalidateRegion, intersection, runPoiSearch],
+  );
+
+  /**
+   * Ein gewechseltes Verkehrsmittel verhält sich wie eine geänderte Zeit: Es
+   * verschiebt den Suchradius (zehn Minuten zu Fuß sind nicht zehn im Auto),
+   * also wird sofort neu gesucht -- die Auswahl im Menü *ist* die Bestätigung.
+   * Die verengte Region gehört zum alten Verkehrsmittel und fällt weg; neu
+   * berechnet wird sie erst auf Knopfdruck, denn sie kostet Kontingent.
+   */
+  const changeConditionTravelMode = useCallback(
+    (category: PoiCategory, travelMode: TravelMode) => {
+      patchCondition(category, { travelMode });
+      invalidateRegion();
+      if (intersection !== null) void runPoiSearch(category, { travelMode });
     },
     [patchCondition, invalidateRegion, intersection, runPoiSearch],
   );
@@ -612,6 +638,7 @@ export const App = () => {
     () =>
       conditions.map((condition) => ({
         category: condition.category,
+        travelMode: condition.travelMode,
         maxTravelTimeMinutes: condition.minutes,
         origins: condition.pois
           .filter((poi) => isPoiSelected(poi, selectedKeys))
@@ -932,6 +959,7 @@ export const App = () => {
                   patchCondition(category, { open: !current.open });
               }}
               onMinutesChange={changeConditionMinutes}
+              onTravelModeChange={changeConditionTravelMode}
               onSearch={(category) => void runPoiSearch(category)}
               onSortModeChange={(category, mode) =>
                 patchCondition(category, { sortMode: mode })

@@ -36,6 +36,10 @@ export const isochroneRequestSchema = constraintSchema;
 export const poiSearchRequestSchema = z.object({
   constraints: z.array(constraintSchema).min(1),
   category: z.enum(POI_CATEGORIES),
+  // Voreingestellt wie bei den Zielen: Ein vor dem Schalter gespeicherter
+  // Stand meinte das Auto, und eine fehlende Angabe darf den Aufruf nicht
+  // scheitern lassen.
+  travelMode: z.enum(TRAVEL_MODES).default(DEFAULT_TRAVEL_MODE),
   maxTravelTimeMinutes: z.number().int().min(1).max(60),
 });
 
@@ -53,6 +57,7 @@ export const poiRegionRequestSchema = z
       .array(
         z.object({
           category: z.enum(POI_CATEGORIES),
+          travelMode: z.enum(TRAVEL_MODES).default(DEFAULT_TRAVEL_MODE),
           maxTravelTimeMinutes: z
             .number()
             .int()

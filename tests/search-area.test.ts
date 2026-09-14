@@ -4,13 +4,32 @@ import type { BoundingBox } from '../src/domain/models/geo.js';
 
 describe('reachRadiusKm', () => {
   it('wächst linear mit der Fahrzeit', () => {
-    expect(reachRadiusKm(10)).toBe(15);
-    expect(reachRadiusKm(20)).toBe(30);
+    expect(reachRadiusKm(10, 'driving')).toBe(15);
+    expect(reachRadiusKm(20, 'driving')).toBe(30);
   });
 
   it('ist großzügig genug für Autobahnfahrt', () => {
     // 10 Minuten bei 90 km/h sind 15 km Luftlinie -- mehr geht im Auto nicht.
-    expect(reachRadiusKm(10)).toBeGreaterThanOrEqual(15);
+    expect(reachRadiusKm(10, 'driving')).toBeGreaterThanOrEqual(15);
+  });
+
+  it('ist je Verkehrsmittel großzügig, aber nicht großzügiger', () => {
+    // Untere Schranke: Was der Kartendienst für das Profil rechnet (Rad ~18,
+    // E-Bike ~20, zu Fuß ~5 km/h), muss der Radius sicher abdecken.
+    // Obere Schranke: Das Doppelte davon waere kein Puffer mehr, sondern eine
+    // Liste voller Orte, die diese Bedingung nie erfuellen koennen.
+    expect(reachRadiusKm(60, 'cycling')).toBeGreaterThanOrEqual(18);
+    expect(reachRadiusKm(60, 'cycling')).toBeLessThanOrEqual(36);
+    expect(reachRadiusKm(60, 'ebike')).toBeGreaterThanOrEqual(20);
+    expect(reachRadiusKm(60, 'ebike')).toBeLessThanOrEqual(40);
+    expect(reachRadiusKm(60, 'walking')).toBeGreaterThanOrEqual(5);
+    expect(reachRadiusKm(60, 'walking')).toBeLessThanOrEqual(10);
+  });
+
+  it('ordnet die Verkehrsmittel nach Reichweite', () => {
+    expect(reachRadiusKm(10, 'walking')).toBeLessThan(reachRadiusKm(10, 'cycling'));
+    expect(reachRadiusKm(10, 'cycling')).toBeLessThan(reachRadiusKm(10, 'ebike'));
+    expect(reachRadiusKm(10, 'ebike')).toBeLessThan(reachRadiusKm(10, 'driving'));
   });
 });
 

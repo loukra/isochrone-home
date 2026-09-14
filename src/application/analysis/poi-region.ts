@@ -1,4 +1,7 @@
-import type { LocationAnalysisRequest } from '../../domain/models/analysis.js';
+import type {
+  LocationAnalysisRequest,
+  TravelMode,
+} from '../../domain/models/analysis.js';
 import { DomainError } from '../../domain/models/errors.js';
 import type { AreaFeature, Coordinate } from '../../domain/models/geo.js';
 import type { PoiCategory } from '../../domain/models/poi.js';
@@ -8,6 +11,11 @@ import { intersectAreas, unionAreas } from '../../domain/services/geometry.js';
 
 export type PoiConditionRequest = {
   category: PoiCategory;
+  /**
+   * Verkehrsmittel dieser Bedingung. Zum Bäcker geht man, ins Schwimmbad
+   * fährt man -- und beides kann dieselbe Person nebeneinander fordern.
+   */
+  travelMode: TravelMode;
   maxTravelTimeMinutes: number;
   /** Die vom Nutzer angehakten Orte dieser Kategorie. */
   origins: Coordinate[];
@@ -115,6 +123,7 @@ export class PoiRegionRefinement {
         index,
         origin,
         minutes: condition.maxTravelTimeMinutes,
+        travelMode: condition.travelMode,
       })),
     );
 
@@ -126,7 +135,7 @@ export class PoiRegionRefinement {
       const areas = await Promise.all(
         batch.map((job) =>
           this.isochrones.calculate(job.origin, {
-            travelMode: 'driving',
+            travelMode: job.travelMode,
             maxTravelTimeMinutes: job.minutes,
           }),
         ),

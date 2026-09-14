@@ -8,6 +8,7 @@ import type {
   PoiSearchResponse,
   SingleIsochroneResponse,
   Target,
+  TravelMode,
   TravelTimesResponse,
 } from './types.js';
 
@@ -69,16 +70,21 @@ export const fetchIsochrone = (target: Target): Promise<SingleIsochroneResponse>
 export const searchPois = (
   targets: Target[],
   category: string,
+  travelMode: TravelMode,
   maxTravelTimeMinutes: number,
 ): Promise<PoiSearchResponse> =>
   post('/api/pois', {
     constraints: targets.map(toConstraint),
     category,
+    // Das Verkehrsmittel bestimmt hier nur den Suchradius -- gefahren wird
+    // erst in /api/pois/region.
+    travelMode,
     maxTravelTimeMinutes,
   });
 
 export type PoiRegionCondition = {
   category: string;
+  travelMode: TravelMode;
   maxTravelTimeMinutes: number;
   origins: Coordinate[];
 };

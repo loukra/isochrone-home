@@ -9,7 +9,14 @@ import {
   type PoiSortMode,
 } from './selection.js';
 import { CATEGORY_COLORS } from './icons.js';
-import type { FoundPoi, PoiCategory } from '../types.js';
+import {
+  TRAVEL_MODES,
+  TRAVEL_MODE_LABELS,
+  TRAVEL_MODE_SHORT,
+  type FoundPoi,
+  type PoiCategory,
+  type TravelMode,
+} from '../types.js';
 
 /**
  * Die Reihenfolge hier ist die Reihenfolge im Auswahlmenü: erst der Alltag,
@@ -45,6 +52,12 @@ export const CATEGORY_LABELS_PLURAL: Record<PoiCategory, string> = {
 
 export type PoiCondition = {
   category: PoiCategory;
+  /**
+   * Verkehrsmittel dieser Bedingung. Zum Supermarkt geht man vielleicht, ins
+   * Schwimmbad fährt man -- ein einziger Schalter für die ganze App könnte das
+   * nicht ausdrücken, genauso wenig wie bei den Zielen.
+   */
+  travelMode: TravelMode;
   minutes: number;
   pois: FoundPoi[];
   busy: boolean;
@@ -64,6 +77,7 @@ type PoiConditionCardProps = {
   onToggleOpen: () => void;
   onRemove: () => void;
   onMinutesChange: (minutes: number) => void;
+  onTravelModeChange: (mode: TravelMode) => void;
   onSearch: () => void;
   onSortModeChange: (mode: PoiSortMode) => void;
   onToggleGroup: (group: PoiGroup) => void;
@@ -83,6 +97,7 @@ export const PoiConditionCard = ({
   onToggleOpen,
   onRemove,
   onMinutesChange,
+  onTravelModeChange,
   onSearch,
   onSortModeChange,
   onToggleGroup,
@@ -133,7 +148,7 @@ export const PoiConditionCard = ({
           />
           <span className="poi-cond__name">{CATEGORY_LABELS[condition.category]}</span>
           <span className="poi-cond__summary">
-            {condition.minutes} Min.
+            {condition.minutes} Min. {TRAVEL_MODE_SHORT[condition.travelMode]}
             {selectedCount > 0 ? ` · ${selectedCount} gewählt` : ''}
             {condition.busy
               ? ' · sucht…'
@@ -167,6 +182,22 @@ export const PoiConditionCard = ({
               aria-label={`Fahrzeit ${CATEGORY_LABELS[condition.category]}`}
             />
             <span>Min.</span>
+            <select
+              className="poi-cond__mode"
+              value={condition.travelMode}
+              onChange={(event) =>
+                onTravelModeChange(event.target.value as TravelMode)
+              }
+              disabled={condition.busy}
+              aria-label={`Verkehrsmittel ${CATEGORY_LABELS[condition.category]}`}
+              title={TRAVEL_MODE_LABELS[condition.travelMode]}
+            >
+              {TRAVEL_MODES.map((mode) => (
+                <option key={mode} value={mode}>
+                  {TRAVEL_MODE_SHORT[mode]}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
               onClick={onSearch}

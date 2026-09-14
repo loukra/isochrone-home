@@ -1,14 +1,31 @@
+import type { TravelMode } from '../models/analysis.js';
 import type { BoundingBox } from '../models/geo.js';
 
 const KM_PER_DEGREE_LAT = 111.32;
 
 /**
- * Obergrenze der Luftlinie, die in der angegebenen Fahrzeit erreichbar ist.
- * Bewusst großzügig (90 km/h), damit kein erreichbarer POI durchrutscht --
- * zu viel gefunden kostet nur etwas Rechenzeit, zu wenig verfälscht das
- * Ergebnis unbemerkt.
+ * Luftlinie je Minute, je Verkehrsmittel bewusst über dem, was wirklich
+ * erreichbar ist: Zu viel gefunden kostet nur Rechenzeit, zu wenig verfälscht
+ * das Ergebnis unbemerkt. Auto 90 km/h (Autobahn), E-Bike 30, Rad 24, zu Fuß
+ * 7,2 -- jeweils rund die Hälfte über dem Tempo, mit dem der Kartendienst für
+ * dieses Profil rechnet.
+ *
+ * Ein gemeinsamer Wert ginge nicht: Mit 1,5 km/min durchsucht eine Bedingung
+ * "10 Minuten zu Fuß" einen Ring von 15 km um die Region -- ein Vielfaches
+ * dessen, was jemand in zehn Minuten läuft. Die Liste füllte sich mit Orten,
+ * die für diese Bedingung nie in Frage kommen, und die Entfernungsangabe
+ * ("x km außerhalb") wäre für die Entscheidung wertlos.
  */
-export const reachRadiusKm = (minutes: number): number => minutes * 1.5;
+const KM_PER_MINUTE: Record<TravelMode, number> = {
+  driving: 1.5,
+  ebike: 0.5,
+  cycling: 0.4,
+  walking: 0.12,
+};
+
+/** Obergrenze der Luftlinie, die in der angegebenen Zeit erreichbar ist. */
+export const reachRadiusKm = (minutes: number, travelMode: TravelMode): number =>
+  minutes * KM_PER_MINUTE[travelMode];
 
 /**
  * Erweitert den Suchbereich um die Reichweite.
