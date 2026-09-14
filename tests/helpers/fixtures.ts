@@ -58,7 +58,9 @@ export class StubGeocoder implements GeocodingProvider {
 
   async search(address: string): Promise<GeocodingCandidate[]> {
     const coordinate = this.byAddress[address];
-    return coordinate === undefined ? [] : [{ label: address, coordinate }];
+    return coordinate === undefined
+      ? []
+      : [{ label: address, coordinate, precision: 'address' }];
   }
 
   async geocode(address: string): Promise<Coordinate> {

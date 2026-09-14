@@ -591,6 +591,108 @@ die **einzelnen Isochronen**, §2/§17/§20 (Button) gilt fuer die **Schnittmeng
 Hinweis: Die Spec hat zweimal `# 11`. Gemeint sind API (§11) und
 Fehlerbehandlung (§12).
 
+## Adressen: die Bezeichnung setzt die App, nicht der Provider
+
+*Festgelegt am 14.09.2026 auf Wunsch des Nutzers* („Da steht zum Beispiel immer
+Germany, was natürlich nicht richtig ist"; „Burnhörn 32 in Ocholt Westerstede
+wird nicht korrekt angezeigt"). Betrifft `geocoding/pelias-label.ts` und
+`openrouteservice-geocoder.ts`.
+
+Pelias liefert zu jedem Treffer ein fertiges `label` und setzt es nach
+US-Muster zusammen: **„Straße, Ort, ST, Land"**, mit englischem Ländernamen und
+dem Kürzel des Bundeslandes. In der Zielliste stand damit viermal untereinander
+`…, NI, Germany`. Beides beantwortet in einer deutschen Adresse keine Frage:
+Das Kürzel steht in keinem Briefkopf, und das Land ist bei jedem Ziel dieser App
+dasselbe. Darum wird die Bezeichnung jetzt aus den Einzelfeldern selbst gesetzt:
+
+| | vorher | jetzt |
+| --- | --- | --- |
+| Adresse | Wehdestraße 7, Oldenburg (Oldb), NI, Germany | Wehdestraße 7, 26123 Oldenburg (Oldb) |
+| Ortsteil | Ocholt, Westerstede, NI, Germany | Ocholt, Westerstede |
+| Ort selbst | Westerstede, NI, Germany | Westerstede, Landkreis Ammerland |
+| Ausland | Kerkstraat 1, Groningen, GR, Netherlands | Kerkstraat 1, 9745CC Groningen, Niederlande |
+
+- **Das Land nennt nur, wer eines anderswo meint** (`HOME_COUNTRY = 'DEU'`).
+  Eine Angabe, die bei jeder Zeile gleich lautet, unterscheidet nichts --
+  derselbe Leitsatz wie beim Schweigen im Erfolgsfall. Die Postleitzahl kommt
+  dafür hinzu: Sie unterscheidet wirklich (Oldenburg gibt es zweimal), und die
+  Zeile wird dadurch kürzer, nicht länger.
+- **Ist der Ort selbst der Treffer, ordnet der Kreis ein** statt den Namen zu
+  wiederholen -- „Westerstede, Westerstede" wäre keine Auskunft.
+- **`lang=de` fest, nicht aus der Spracheinstellung.** Die Bezeichnung wird beim
+  Bestätigen festgehalten und in `localStorage` gespeichert; hinge sie an einer
+  Einstellung, die der Nutzer danach umlegen kann, stünden nach einem
+  Sprachwechsel zwei Sprachen in derselben Liste. Deutsch ist die Urfassung,
+  also gilt die Urfassung. Betroffen ist davon ohnehin nur der Ländername im
+  Ausland; Orts- und Straßennamen kommen so oder so örtlich zurück.
+
+### Die stille Rückfallebene auf den Ortsteil
+
+Das war der eigentliche Fehler, und er war keiner der Anzeige. Auf
+**„Burnhörn 32 Ocholt Westerstede"** antwortete Pelias mit genau **einem**
+Treffer: dem **Mittelpunkt des Ortsteils Ocholt**, `confidence: 0.6`,
+`accuracy: centroid` -- gemessen **rund 900 m neben dem Haus**. Das Haus selbst
+findet Pelias sehr wohl, sobald der Ortsteil fehlt („Burnhörn 32 Westerstede"
+→ `accuracy: point`). Es ist der Ortsteil in der Eingabe, der die Freitextsuche
+vom Haus abbringt.
+
+Zusammen mit `App.tsx` wurde daraus ein unsichtbarer Fehler: Bei **einem**
+Treffer übernimmt die Oberfläche ihn ohne Rückfrage. Der Nutzer hat also eine
+Hausnummer eingegeben, eine Isochrone um den Dorfmittelpunkt bekommen und
+nirgends erfahren, dass es eine andere Frage war, die beantwortet wurde --
+genau die Sorte Fehler, gegen die es das Vorfilter-Verbot bei den POIs und die
+Haltedauer im Cache gibt.
+
+- **Nach einer Hausnummer wird ausdrücklich nachgefragt.** Kommt auf eine
+  Anfrage, in der Pelias selbst eine `housenumber` erkannt hat, **kein** Treffer
+  der Genauigkeit `address` zurück, folgt eine zweite, **strukturierte** Anfrage
+  (`/search/structured`): Straße mit Hausnummer als `address`, Ort und
+  Postleitzahl getrennt daneben -- der Ortsteil bleibt weg.
+  Die Zerlegung stammt aus Pelias' eigenem `parsed_text`; deutsche Adressen
+  hier selbst zu zerlegen wäre eine zweite, schlechtere Kopie davon.
+- **Beide Ergebnisse stehen nebeneinander**, Häuser zuerst. Der Ortsteil bleibt
+  als Möglichkeit darunter -- vielleicht war er ja gemeint. Entschieden wird
+  oben, nicht im Adapter.
+- Gemessen: Aus einem stillen Treffer werden drei sichtbare --
+  „Burnhörn 32, 26655 Westerstede", „Burnhörn 32a, …", „Ocholt, Westerstede".
+- Kostet einen zweiten Geocoding-Aufruf, und zwar nur im Fehlerfall. Pelias ist
+  ein anderer Dienst als die Isochronen und hat sein eigenes Kontingent; die
+  Antwort liegt danach 30 Tage im Plattencache.
+
+### Genauigkeit steht am Treffer
+
+`GeocodingCandidate.precision` (`'address' | 'street' | 'place'`) ist
+Domänen-Vokabular, keine Pelias-Ebene: Was zählt, ist „Haus, Straße oder nur
+Gegend?". Die Auswahlliste schreibt es leise hinter die Zeile („nur der Ort",
+„ganze Straße"), ein Haus bekommt nichts -- **das ist der Normalfall und
+schweigt**. Ohne diesen Zusatz sehen „Ocholt, Westerstede" und
+„Burnhörn 32, 26655 Westerstede" gleich aus, und der Dorfmittelpunkt geht als
+Adresse durch. Entschieden wird weiter über den Namen links; die Angabe
+berichtet nur und ist deshalb 11px und gedämpft.
+
+- **Automatisch aussortiert wird nichts.** Ein Ortsteil ist ein vollkommen
+  legitimes Ziel -- wer „Sandkrug, Hatten" als Ziel setzt, meint das auch. Die
+  Angabe macht den Unterschied sichtbar, statt ihn zu entscheiden.
+- Sie wird **nicht** mitgespeichert. `resolvedLabel` bleibt ein Name; die
+  Genauigkeit gehört in den Moment der Auswahl.
+
+### Der Namensraum des Caches trägt die Fassung
+
+`geocoding-v2`, aus demselben Grund wie `isochrones-s0` bei der Glättung: Die
+Schlüssel sind die Eingaben des Nutzers und ändern sich nicht, die abgelegten
+Bezeichnungen schon. Ohne den Wechsel stünde dreißig Tage lang „NI, Germany"
+neben frisch gesetzten deutschen Bezeichnungen, und der Ortsteil-Zentroid, gegen
+den die Nachfrage gebaut ist, käme weiter von der Platte.
+
+**Bereits gespeicherte Ziele frischen sich nicht auf.** `resolvedLabel` und
+`coordinate` liegen im `localStorage` und sind Eingabe, kein Ergebnis -- sie
+werden beim Laden nicht neu geholt. Nur die Bezeichnung nachzuziehen wäre
+schlimmer als nichts zu tun: Wo Pelias auf den Ortsteil zurückgefallen war, ist
+auch die **Koordinate** falsch, und eine frische Bezeichnung schriebe „Burnhörn
+32" über einen Punkt, der 900 m entfernt liegt. Wer eine alte Zeile korrigiert
+haben will, bestätigt die Adresse über den Stift neu -- das setzt beides
+zugleich.
+
 ## Glättung der Isochronen
 
 *Festgelegt am 14.09.2026.* Anlass war der Einwand, die Fläche zeige Autobahnen

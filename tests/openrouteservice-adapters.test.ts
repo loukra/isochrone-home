@@ -25,7 +25,16 @@ describe('OpenRouteServiceGeocoder', () => {
         features: [
           {
             geometry: { coordinates: [7.63, 51.96] },
-            properties: { label: 'Münster, Deutschland' },
+            properties: {
+              layer: 'address',
+              name: 'Domplatz 1',
+              postalcode: '48143',
+              locality: 'Münster',
+              country: 'Deutschland',
+              country_a: 'DEU',
+              // Das Label des Providers wird bewusst nicht übernommen.
+              label: 'Domplatz 1, Münster, NW, Germany',
+            },
           },
         ],
       }),
@@ -38,10 +47,160 @@ describe('OpenRouteServiceGeocoder', () => {
     // Der Key darf nicht in der URL stehen.
     expect(url).not.toContain('api_key');
     expect((init?.headers as Record<string, string>).Authorization).toBe('key');
+    expect(url).toContain('lang=de');
 
     expect(candidates).toEqual([
-      { label: 'Münster, Deutschland', coordinate: { latitude: 51.96, longitude: 7.63 } },
+      {
+        label: 'Domplatz 1, 48143 Münster',
+        coordinate: { latitude: 51.96, longitude: 7.63 },
+        precision: 'address',
+      },
     ]);
+  });
+
+  it('nennt das Land nur, wenn es ein anderes ist', async () => {
+    mockFetch({
+      json: async () => ({
+        features: [
+          {
+            geometry: { coordinates: [6.57, 53.22] },
+            properties: {
+              layer: 'address',
+              name: 'Kerkstraat 1',
+              postalcode: '9745CC',
+              locality: 'Groningen',
+              country: 'Niederlande',
+              country_a: 'NLD',
+            },
+          },
+        ],
+      }),
+    });
+
+    const [candidate] = await new OpenRouteServiceGeocoder('key').search('Kerkstraat 1');
+
+    expect(candidate?.label).toBe('Kerkstraat 1, 9745CC Groningen, Niederlande');
+  });
+
+  it('wiederholt die Straße nicht, wenn der Ort selbst gemeint ist', async () => {
+    mockFetch({
+      json: async () => ({
+        features: [
+          {
+            geometry: { coordinates: [7.92, 53.25] },
+            properties: {
+              layer: 'locality',
+              name: 'Westerstede',
+              locality: 'Westerstede',
+              localadmin: 'Westerstede',
+              county: 'Landkreis Ammerland',
+              country_a: 'DEU',
+            },
+          },
+        ],
+      }),
+    });
+
+    const [candidate] = await new OpenRouteServiceGeocoder('key').search('Westerstede');
+
+    expect(candidate?.label).toBe('Westerstede, Landkreis Ammerland');
+    expect(candidate?.precision).toBe('place');
+  });
+
+  /**
+   * Der Fall, der den Anlass gab: Pelias liefert auf "Burnhörn 32 Ocholt
+   * Westerstede" nur den Zentroid des Ortsteils -- rund 900 m neben dem Haus,
+   * und die Oberfläche übernimmt einen einzigen Treffer ohne Rückfrage.
+   */
+  it('fragt strukturiert nach, wenn zur Hausnummer nur ein Ortsteil kommt', async () => {
+    const spy = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          geocoding: {
+            query: {
+              parsed_text: {
+                street: 'burnhörn',
+                housenumber: '32',
+                neighbourhood: 'ocholt',
+                city: 'westerstede',
+              },
+            },
+          },
+          features: [
+            {
+              geometry: { coordinates: [7.88386, 53.20476] },
+              properties: {
+                layer: 'neighbourhood',
+                name: 'Ocholt',
+                locality: 'Westerstede',
+                country_a: 'DEU',
+              },
+            },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          features: [
+            {
+              geometry: { coordinates: [7.896892, 53.201599] },
+              properties: {
+                layer: 'address',
+                name: 'Burnhörn 32',
+                postalcode: '26655',
+                locality: 'Westerstede',
+                country_a: 'DEU',
+              },
+            },
+          ],
+        }),
+      });
+    vi.stubGlobal('fetch', spy);
+
+    const candidates = await new OpenRouteServiceGeocoder('key').search(
+      'Burnhörn 32 Ocholt Westerstede',
+    );
+
+    const [second] = spy.mock.calls[1] as [string];
+    expect(second).toContain('/search/structured');
+    // Pelias gibt die zerlegte Eingabe klein zurück; die Suche ist unempfindlich dafür.
+    expect(second).toContain('address=burnh%C3%B6rn+32');
+    expect(second).toContain('locality=westerstede');
+    // Der Ortsteil bleibt weg -- genau er bringt die Freitextsuche vom Haus ab.
+    expect(second).not.toContain('ocholt');
+
+    // Das Haus steht oben, der Ortsteil bleibt als Möglichkeit darunter stehen.
+    expect(candidates.map((candidate) => candidate.label)).toEqual([
+      'Burnhörn 32, 26655 Westerstede',
+      'Ocholt, Westerstede',
+    ]);
+    expect(candidates[0]?.coordinate).toEqual({
+      latitude: 53.201599,
+      longitude: 7.896892,
+    });
+  });
+
+  it('fragt nicht nach, wenn die Hausnummer schon getroffen ist', async () => {
+    const spy = mockFetch({
+      json: async () => ({
+        geocoding: { query: { parsed_text: { street: 'domplatz', housenumber: '1' } } },
+        features: [
+          {
+            geometry: { coordinates: [7.63, 51.96] },
+            properties: { layer: 'address', name: 'Domplatz 1', country_a: 'DEU' },
+          },
+        ],
+      }),
+    });
+
+    await new OpenRouteServiceGeocoder('key').search('Domplatz 1 Münster');
+
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it('wirft ADDRESS_NOT_FOUND bei leerer Trefferliste', async () => {
@@ -119,9 +278,7 @@ describe('OpenRouteServiceIsochroneProvider', () => {
     );
 
     const [url] = spy.mock.calls[0] as [string];
-    expect(url).toBe(
-      `https://api.heigit.org/openrouteservice/v2/isochrones/${profile}`,
-    );
+    expect(url).toBe(`https://api.heigit.org/openrouteservice/v2/isochrones/${profile}`);
   });
 
   it('schickt Sekunden und das driving-car-Profil', async () => {

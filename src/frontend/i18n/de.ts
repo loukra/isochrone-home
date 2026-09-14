@@ -57,6 +57,9 @@ export const de = {
     namePlaceholder: 'Eltern A',
     addressPlaceholder: 'Münster',
     whichAddress: 'Welche Adresse meinst du?',
+    // Ein Ortsteil ist keine Hausnummer. Steht das nicht dabei, sehen beide
+    // Zeilen gleich aus und der Mittelpunkt eines Dorfes geht als Adresse durch.
+    precision: { street: 'ganze Straße', place: 'nur der Ort' },
     submit: 'Übernehmen',
     submitHint: 'Mit Enter bestätigen',
     submitting: 'Wird berechnet…',

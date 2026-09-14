@@ -43,8 +43,16 @@ export const cacheNamespaces = (config: {
   /**
    * Adressen: Ein Ort bleibt, wo er ist. Hier geht es nur darum, dass die
    * Datenbasis des Geocoders gelegentlich korrigiert wird.
+   *
+   * Der Namensraum trägt die Fassung des Adapters, aus demselben Grund wie die
+   * Glättung bei den Isochronen: Die Schlüssel sind die Eingaben des Nutzers
+   * und ändern sich nicht, die abgelegten Bezeichnungen und die zweite,
+   * strukturierte Anfrage schon. Ohne den Wechsel stünde dreißig Tage lang
+   * "NI, Germany" neben frisch gesetzten deutschen Bezeichnungen -- und der
+   * Ortsteil-Zentroid, gegen den die Nachfrage gebaut ist, käme weiter aus
+   * der Platte.
    */
-  geocoding: { name: 'geocoding', maxAgeMs: config.geocodeDays * DAY },
+  geocoding: { name: 'geocoding-v2', maxAgeMs: config.geocodeDays * DAY },
 
   /**
    * Fahrzeiten: dieselbe Wirklichkeit wie bei den Isochronen -- beide beruhen

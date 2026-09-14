@@ -505,6 +505,23 @@ button.link {
   text-align: left;
   font-size: 13px;
   padding: 7px 9px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/*
+ * Ein Ortsteil sieht in dieser Liste aus wie eine Adresse -- "Ocholt,
+ * Westerstede" neben "Burnhörn 32, 26655 Westerstede". Wer den ersten nimmt,
+ * bekommt den Mittelpunkt eines Dorfes, gemessen rund 900 m neben dem Haus,
+ * und sieht der Fläche danach nichts an. Also steht die Genauigkeit dabei --
+ * leise, denn sie berichtet nur; entschieden wird über den Namen links.
+ */
+.candidate__precision {
+  flex: none;
+  font-size: 11px;
+  color: var(--muted);
 }
 
 /*
